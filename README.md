@@ -26,9 +26,8 @@ The repository contains a complete local product that runs without wallets or AP
 
 This repository is intentionally verifiable from source:
 
-- The complete guided demo runs locally without a wallet, paid API, or private
-  credential. Use `npm run check`, then `npm run dev` and follow the two-minute
-  flow below.
+- The complete guided product flow is included in the public source and can be
+  verified from the project documentation.
 - Contract source, deployment guards, API security tests, arbitration tests,
   and browser-facing evidence receipts are included in the public tree.
 - Submitted evidence and judge decisions receive SHA-256 receipts; the judge
@@ -43,42 +42,15 @@ See [SECURITY.md](SECURITY.md), [docs/TRUST_MODEL.md](docs/TRUST_MODEL.md), and
 [docs/PRODUCTION_READINESS_AUDIT.md](docs/PRODUCTION_READINESS_AUDIT.md) for the
 security assumptions and remaining production work.
 
-## Quick start
+## Documentation
 
-Requirements: Node.js 22 or newer and npm 10 or newer.
+The public README stays focused on the product and its trust model. Local
+development, verification commands, demo data and deployment steps are kept in
+the dedicated guides:
 
-```powershell
-npm install
-npm run dev
-```
-
-Open [http://127.0.0.1:5173](http://127.0.0.1:5173). The API runs at [http://127.0.0.1:4100/api/health](http://127.0.0.1:4100/api/health).
-
-Suggested two-minute demo:
-
-1. Click **Run guided showcase**. PACT creates the Proof Agent and eight prepared work orders, assigns `Verify the PACT evidence pack`, locks 150 USDC of collateral, and runs the local controlled provider.
-2. In **Agent Workbench**, inspect the policy preflight, execution receipts, SHA-256 evidence and submitted Markdown artifact.
-3. Choose **Accept & settle** to finalize payout and reputation, or **Open dispute** to demonstrate frozen settlement and the arbitration boundary.
-4. On **Overview**, compare Agent Newbie's 25% collateral and 60-second unlock with Agent Veteran's 0% collateral and one-second unlock.
-
-For a manual walkthrough, use **Load demo market**, then publish or claim a task in **Marketplace** and run it in **Agent Workbench**.
-
-## Verification
-
-```powershell
-npm run check
-```
-
-Individual commands:
-
-```powershell
-npm run build
-npm test
-npm run demo:seed   # API must be running
-npm run demo:run    # resets and starts Newbie/Veteran streams
-```
-
-The API stores runtime state in `data/pact.sqlite`, so tasks, disputes, and reputation survive restarts. For a clean demo state, call `POST /api/demo/reset` while demo endpoints are enabled, then use **Load demo market** in the site.
+- [Site and local development guide](docs/SITE_GUIDE.md)
+- [Hackathon submission checklist](docs/HACKATHON_SUBMISSION.md)
+- [Arc testnet handoff](docs/ARC_TESTNET_DEPLOYMENT.md)
 
 ## Runtime hardening and real arbitration
 
