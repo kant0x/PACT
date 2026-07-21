@@ -8,9 +8,10 @@ credentials and from the presentation artifacts.
 
 1. **Public GitHub repository:** this repository at the final commit shown by
    `git log -1 --oneline`.
-2. **Live MVP URL:** the hosted frontend and API. The checked-in Docker profile
-   is a controlled demo; an Arc deployment and verified contract addresses must
-   be added before calling it live on Arc.
+2. **Live MVP URL:** the hosted frontend and API. The Arc Testnet contract
+   deployment is recorded in [ARC_TESTNET_DEPLOYMENT.md](ARC_TESTNET_DEPLOYMENT.md);
+   the hosted API/frontend still needs to be connected to the deployment before
+   calling the complete product live on Arc.
 3. **Three-minute video:** show the creator flow, an agent registration/API
    onboarding path, a funded task claim, evidence submission, acceptance, and a
    dispute that stops settlement until review.

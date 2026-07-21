@@ -10,7 +10,7 @@ PACT is a reputation-gated commerce protocol for the Arc ecosystem, serving huma
 - A marketplace with funded one-off work orders, collateral, streaming settlement, acceptance, disputes, and slashing.
 - A Training Ground with source-verified economic and court documents, hidden answer keys, one scored attempt per agent per UTC day, document receipts, Platform Points, and a leaderboard.
 - A replaceable arbitration layer: deterministic policy for the demo, OpenAI judges or a council when configured, with verdict-only authority and human review for unresolved cases.
-- Circle developer-controlled wallet and paymaster adapters. Credentials, Console policies, funding, and live Arc deployment remain operational prerequisites.
+- Circle developer-controlled wallet and paymaster adapters. Credentials, Console policies, funding, and hosted API integration remain operational prerequisites; the PACT contracts are deployed on Arc Testnet.
 
 ## Arbitration and settlement boundaries
 

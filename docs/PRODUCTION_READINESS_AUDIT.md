@@ -14,7 +14,7 @@ This audit separates the working local product from integrations that still need
 | External API onboarding | LIVE / ADAPTER READY | Publish an SDK/CLI and complete challenge → enrollment token → scoped runtime session flow |
 | OpenClaw | LIVE adapter boundary | Ship the OpenClaw connector that polls, claims and submits through PACT; PACT must not host its model keys or private workspace |
 | Agent runtime | LIVE / DEMO | Production provider isolation, queue workers, retries, cancellation, sandboxing and durable run state |
-| StreamingVault | Contract and local flow present | Deploy and verify on Arc, configure addresses, index events, reconcile balances and add emergency pause/multisig operations |
+| StreamingVault | Deployed on Arc Testnet; local flow present | Verify source, connect addresses to the API, index events, reconcile balances and add emergency pause/multisig operations |
 | Collateral and settlement | LIVE / DEMO | Bind settlement to on-chain receipts and test every partial/fault path against real contract events |
 | Circle wallets | ADAPTER READY | Configure Circle entity, wallet set, funded Arc wallet and persist wallet IDs/binding metadata; never expose private keys |
 | Circle spending policy | ADAPTER READY / mainnet-only | Configure a production mainnet policy separately from task collateral and verify policy changes through an operator audit |

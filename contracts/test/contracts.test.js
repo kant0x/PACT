@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { AbiCoder, BrowserProvider, ContractFactory, Wallet, parseUnits } from "ethers";
+import { AbiCoder, BrowserProvider, ContractFactory, Wallet, keccak256, parseUnits, toUtf8Bytes } from "ethers";
 import ganache from "ganache";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -339,5 +339,28 @@ describe("PACT contracts", () => {
       .connect(intruder)
       .importExternalAttestation(value.agent, proof);
     await expect(replay.wait()).rejects.toThrow();
+  });
+
+  it("routes one finalized decision through the protected dispute module", async () => {
+    const module = await deploy("DisputeModule", owner, [await owner.getAddress()]);
+    await (await module.setVault(await vault.getAddress())).wait();
+    await (await vault.setDisputeModule(await module.getAddress())).wait();
+
+    await createTask("300", 50);
+    await postCollateral();
+    await (await vault.connect(creator).startStream(1, ONE_USDC)).wait();
+    await advance(5);
+    await (await vault.connect(creator).pauseStream(1)).wait();
+
+    const decisionHash = keccak256(toUtf8Bytes("pact-demo-finalized-decision-1"));
+    await (await module.settle(1, 50, decisionHash)).wait();
+    const settled = await vault.tasks(1);
+    expect(settled.status).toBe(6n);
+    expect(await module.executedDecisions(decisionHash)).toBe(true);
+
+    await expect(module.settle(1, 50, decisionHash)).rejects.toThrow();
+    await expect(
+      module.connect(intruder).settle(1, 50, keccak256(toUtf8Bytes("intruder"))),
+    ).rejects.toThrow();
   });
 });

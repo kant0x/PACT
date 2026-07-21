@@ -17,7 +17,7 @@ const ARC_RPC_URL = process.env.ARC_RPC_URL || 'https://rpc.testnet.arc.network'
 const EXPECTED_CHAIN_ID = BigInt(process.env.EXPECTED_CHAIN_ID || '5042002');
 const PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY || process.env.PRIVATE_KEY;
 const USDC_ADDRESS = process.env.ARC_USDC_ADDRESS;
-const DISPUTE_MODULE_ADDRESS = process.env.DISPUTE_MODULE_ADDRESS;
+const CONFIGURED_DISPUTE_MODULE_ADDRESS = process.env.DISPUTE_MODULE_ADDRESS?.trim() || null;
 const COLLATERAL_TIMEOUT_SECONDS = Number(process.env.COLLATERAL_TIMEOUT_SECONDS || 86_400);
 const AUTHORIZED_OPERATOR_ADDRESS = process.env.AUTHORIZED_OPERATOR_ADDRESS;
 
@@ -36,12 +36,27 @@ async function main() {
     process.exit(1);
   }
   requiredAddress('ARC_USDC_ADDRESS', USDC_ADDRESS);
-  requiredAddress('DISPUTE_MODULE_ADDRESS', DISPUTE_MODULE_ADDRESS);
+  if (CONFIGURED_DISPUTE_MODULE_ADDRESS) {
+    requiredAddress('DISPUTE_MODULE_ADDRESS', CONFIGURED_DISPUTE_MODULE_ADDRESS);
+  }
+  if (AUTHORIZED_OPERATOR_ADDRESS) {
+    requiredAddress('AUTHORIZED_OPERATOR_ADDRESS', AUTHORIZED_OPERATOR_ADDRESS);
+  }
   if (!Number.isSafeInteger(COLLATERAL_TIMEOUT_SECONDS) || COLLATERAL_TIMEOUT_SECONDS <= 0 || COLLATERAL_TIMEOUT_SECONDS > 0xffffffffffffffff) {
     throw new Error('COLLATERAL_TIMEOUT_SECONDS must be a positive uint64');
   }
 
-  const provider = new ethers.JsonRpcProvider(ARC_RPC_URL);
+  // Arc's public endpoint can rate-limit repeated network discovery calls.
+  // Pin the expected chain so ethers does not issue an extra eth_chainId call
+  // before every read; the explicit chain check below still guards deployment.
+  const provider = new ethers.JsonRpcProvider(
+    ARC_RPC_URL,
+    {
+      name: EXPECTED_CHAIN_ID === 5042002n ? 'arc-testnet' : 'configured-evm',
+      chainId: Number(EXPECTED_CHAIN_ID)
+    },
+    { staticNetwork: true }
+  );
   const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 
   const network = await provider.getNetwork();
@@ -71,6 +86,31 @@ async function main() {
 
   const reputationArtifact = loadContract('ReputationRegistry');
   const vaultArtifact = loadContract('StreamingVault');
+  const disputeModuleArtifact = loadContract('DisputeModule');
+
+  let disputeModuleContract = null;
+  let disputeModuleAddress = CONFIGURED_DISPUTE_MODULE_ADDRESS;
+  let disputeModuleSource = 'external';
+
+  if (!disputeModuleAddress) {
+    console.log('\nDeploying PACT DisputeModule...');
+    const DisputeModuleFactory = new ethers.ContractFactory(
+      disputeModuleArtifact.abi,
+      disputeModuleArtifact.bytecode,
+      wallet
+    );
+    disputeModuleContract = await DisputeModuleFactory.deploy(wallet.address);
+    await disputeModuleContract.waitForDeployment();
+    disputeModuleAddress = await disputeModuleContract.getAddress();
+    disputeModuleSource = 'pact-controlled-demo';
+    console.log(`DisputeModule deployed at: ${disputeModuleAddress}`);
+  } else {
+    const moduleCode = await provider.getCode(disputeModuleAddress);
+    if (moduleCode === '0x') {
+      throw new Error(`No contract code found at DISPUTE_MODULE_ADDRESS ${disputeModuleAddress}`);
+    }
+    console.log(`Using configured dispute module: ${disputeModuleAddress}`);
+  }
 
   // 1. Deploy ReputationRegistry
   console.log('\nDeploying ReputationRegistry...');
@@ -94,12 +134,25 @@ async function main() {
   const vaultContract = await VaultFactory.deploy(
     USDC_ADDRESS,
     reputationAddress,
-    DISPUTE_MODULE_ADDRESS,
+    disputeModuleAddress,
     COLLATERAL_TIMEOUT_SECONDS
   );
   await vaultContract.waitForDeployment();
   const vaultAddress = await vaultContract.getAddress();
   console.log(`StreamingVault deployed at: ${vaultAddress}`);
+
+  if (disputeModuleContract) {
+    console.log('\nConfiguring DisputeModule vault...');
+    const moduleVaultTx = await disputeModuleContract.setVault(vaultAddress);
+    await moduleVaultTx.wait();
+    if ((await disputeModuleContract.vault()).toLowerCase() !== vaultAddress.toLowerCase()) {
+      throw new Error('DisputeModule vault configuration did not persist');
+    }
+    if (AUTHORIZED_OPERATOR_ADDRESS && AUTHORIZED_OPERATOR_ADDRESS.toLowerCase() !== wallet.address.toLowerCase()) {
+      const ownershipTx = await disputeModuleContract.transferOwnership(AUTHORIZED_OPERATOR_ADDRESS);
+      await ownershipTx.wait();
+    }
+  }
 
   // The vault records outcomes in the registry. This writer authorization must
   // be completed before any real task can settle successfully.
@@ -120,7 +173,7 @@ async function main() {
   if (
     configuredUsdc.toLowerCase() !== USDC_ADDRESS.toLowerCase()
     || configuredRegistry.toLowerCase() !== reputationAddress.toLowerCase()
-    || configuredDisputeModule.toLowerCase() !== DISPUTE_MODULE_ADDRESS.toLowerCase()
+    || configuredDisputeModule.toLowerCase() !== disputeModuleAddress.toLowerCase()
     || configuredTimeout !== BigInt(COLLATERAL_TIMEOUT_SECONDS)
   ) {
     throw new Error('StreamingVault constructor configuration does not match the requested deployment inputs');
@@ -128,7 +181,6 @@ async function main() {
 
   let operatorTxHash = null;
   if (AUTHORIZED_OPERATOR_ADDRESS) {
-    requiredAddress('AUTHORIZED_OPERATOR_ADDRESS', AUTHORIZED_OPERATOR_ADDRESS);
     console.log(`\nAuthorizing operator ${AUTHORIZED_OPERATOR_ADDRESS} on StreamingVault...`);
     const operatorTx = await vaultContract.setAuthorizedOperator(AUTHORIZED_OPERATOR_ADDRESS, true);
     await operatorTx.wait();
@@ -142,7 +194,9 @@ async function main() {
     chainId: network.chainId.toString(),
     deployer: wallet.address,
     usdc: USDC_ADDRESS,
-    disputeModule: DISPUTE_MODULE_ADDRESS,
+    disputeModule: disputeModuleAddress,
+    disputeModuleSource,
+    disputeModuleOwner: AUTHORIZED_OPERATOR_ADDRESS || wallet.address,
     collateralTimeoutSeconds: COLLATERAL_TIMEOUT_SECONDS,
     registryWriterAuthorizationTx: writerTx.hash,
     vaultOperatorAuthorizationTx: operatorTxHash,

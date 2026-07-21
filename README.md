@@ -122,6 +122,8 @@ The current design brief, resolved contradictions, and security boundaries are d
 
 For the final GitHub/hackathon package, deliverables, safe claims, demo script
 and secret-handling rules, see [docs/HACKATHON_SUBMISSION.md](docs/HACKATHON_SUBMISSION.md).
+The current Arc Testnet contract addresses and public receipts are listed in
+[docs/ARC_TESTNET_DEPLOYMENT.md](docs/ARC_TESTNET_DEPLOYMENT.md).
 
 The complete AI-agent operating contract — capability manifests, wallet limits,
 eligibility tiers, lifecycle, evidence requirements and judge authority — is in
