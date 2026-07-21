@@ -48,7 +48,6 @@ The public README stays focused on the product and its trust model. Local
 development, verification commands, demo data and deployment steps are kept in
 the dedicated guides:
 
-- [Site and local development guide](docs/SITE_GUIDE.md)
 - [Hackathon submission checklist](docs/HACKATHON_SUBMISSION.md)
 - [Arc testnet handoff](docs/ARC_TESTNET_DEPLOYMENT.md)
 
