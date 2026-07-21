@@ -58,7 +58,7 @@ async function main() {
 
   // Load compiled artifacts
   const artifactsDir = path.join(__dirname, '../artifacts');
-  
+
   if (!fs.existsSync(artifactsDir)) {
     console.error('ERROR: Artifacts not found. Run npm run build first.');
     process.exit(1);

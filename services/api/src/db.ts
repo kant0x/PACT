@@ -5,8 +5,14 @@ config(); // Load environment variables from .env
 
 const { Pool } = pg;
 
+// The hosted demo uses SQLite and does not need PostgreSQL. When the repository
+// adapters are enabled, supply DATABASE_URL through the deployment secret
+// manager (or standard PG* variables) instead of relying on checked-in demo
+// credentials.
+const databaseUrl = process.env.DATABASE_URL;
+
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/pact',
+  ...(databaseUrl ? { connectionString: databaseUrl } : {}),
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,

@@ -18,4 +18,3 @@ def export_traces(api_url: str, output: Path, token: str | None = None) -> int:
         raise ValueError("Training export must be a JSON array")
     write_json(output, payload)
     return len(payload)
-

@@ -110,7 +110,7 @@ Return ONLY valid JSON matching this schema:
     });
 
     const output = JSON.parse(response.choices[0].message.content || '{}');
-    
+
     // Always append the final mandatory steps to produce bounds and evidence
     const steps = Array.isArray(output.steps) ? output.steps : [];
     steps.push({
@@ -286,11 +286,11 @@ export class AgentRuntime {
 
     const task = await taskRepository.findById(taskId);
     if (!task) throw new ApiProblem(404, 'TASK_NOT_FOUND', 'Task not found');
-    
+
     // Find an existing run or create one
     let runs = await agentRunRepository.findByTaskId(taskId);
     let run = runs.find(r => r.agentAddress === agentAddress.toLowerCase());
-    
+
     if (!run) {
       run = await agentRunRepository.create({
         taskId,
@@ -314,7 +314,7 @@ export class AgentRuntime {
       if (!plan.steps.length || plan.steps.length > 16) throw new ApiProblem(400, 'UNSAFE_AGENT_PLAN', 'Plan must contain 1..16 steps');
       const forbidden = plan.steps.find((step) => !allowedTools.includes(step.tool) || !this.tools.has(step.tool));
       if (forbidden) throw new ApiProblem(403, 'TOOL_NOT_ALLOWED', `Tool ${forbidden.tool} is not allowed by the agent manifest`);
-      
+
       const planTimestamp = nowSeconds();
       const planStep = {
         id: randomUUID(),
@@ -347,7 +347,7 @@ export class AgentRuntime {
         messages.push({ role: 'assistant', content: `${step.rationale} Provider mode: ${this.provider.mode}.` });
         messages.push({ role: 'tool', toolName: tool.name, content: result.summary });
         toolCalls.push({ name: tool.name, inputHash, outputHash, status: 'SUCCESS', durationMs });
-        
+
         const toolStep = {
           id: randomUUID(),
           kind: 'TOOL' as const, label: tool.name, status: 'SUCCESS' as const, detail: result.summary,
@@ -360,7 +360,7 @@ export class AgentRuntime {
       const artifactHash = sha256(artifact.content);
       evidence.add(artifactHash);
       const summary = `${this.provider.mode}: ${task.title} is ready for creator review; external claims remain unverified.`;
-      
+
       const deliverable = await deliverableRepository.create({
         taskId,
         agentAddress: agentAddress.toLowerCase(),
@@ -399,8 +399,8 @@ export class AgentRuntime {
         inputHash: artifactHash, outputHash: sha256(JSON.stringify(deliverable)), startedAt: nowSeconds(), completedAt: nowSeconds()
       };
 
-      run = await agentRunRepository.update(run.id, { 
-        status: 'SUBMITTED', 
+      run = await agentRunRepository.update(run.id, {
+        status: 'SUBMITTED',
         deliverableId: deliverable.id,
         completedAt: nowSeconds(),
         steps: [...run.steps, delStep]

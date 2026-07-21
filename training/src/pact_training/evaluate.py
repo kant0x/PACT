@@ -28,4 +28,3 @@ def score_responses(eval_file: Path, response_file: Path, output: Path) -> dict[
     }
     write_json(output, result)
     return result
-

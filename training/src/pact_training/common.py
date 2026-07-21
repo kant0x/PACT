@@ -45,4 +45,3 @@ def write_jsonl(path: Path, rows: Iterable[dict[str, Any]]) -> None:
         for row in rows:
             handle.write(canonical_json(row))
             handle.write("\n")
-

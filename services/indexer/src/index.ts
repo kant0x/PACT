@@ -7,8 +7,9 @@ dotenv.config();
 
 // PostgreSQL connection
 const { Pool } = pg;
+const databaseUrl = process.env.DATABASE_URL;
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/pact'
+  ...(databaseUrl ? { connectionString: databaseUrl } : {})
 });
 
 // Configure Viem client for Arc Testnet (or local anvil)
@@ -42,7 +43,7 @@ async function main() {
       for (const log of logs) {
         const { streamId, creator, agent, totalAmount } = log.args as any;
         console.log(`[Event] StreamCreated: ${streamId} by ${creator} for ${agent}`);
-        
+
         // Update PostgreSQL
         try {
           await pool.query(
@@ -65,7 +66,7 @@ async function main() {
       for (const log of logs) {
         const { streamId } = log.args as any;
         console.log(`[Event] StreamPaused: ${streamId}`);
-        
+
         // Update PostgreSQL
         try {
           await pool.query(
@@ -88,7 +89,7 @@ async function main() {
       for (const log of logs) {
         const { streamId, slashAmount } = log.args as any;
         console.log(`[Event] CollateralSlashed: ${streamId} for amount ${slashAmount}`);
-        
+
         try {
           await pool.query(
             'UPDATE tasks SET status = $1 WHERE chain_task_id = $2',

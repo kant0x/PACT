@@ -284,5 +284,3 @@ export const evaluateArenaAnswer = (question: ArenaPrivateQuestion, answer: stri
   const matched = question.rule.required.filter((keyword) => normalized.includes(normalizeText(keyword))).length;
   return Math.round((matched / question.rule.required.length) * 100);
 };
-
-

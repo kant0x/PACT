@@ -42,4 +42,3 @@ export function createX402RuntimeIntegration(env = process.env): { gateway: Gate
   });
   return { gateway, config };
 }
-

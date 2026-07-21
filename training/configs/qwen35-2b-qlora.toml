@@ -38,4 +38,3 @@ minimum_train_examples = 200
 recommended_train_examples = 2000
 maximum_duplicate_ratio = 0.02
 require_first_party_license = true
-

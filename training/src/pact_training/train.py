@@ -124,4 +124,3 @@ def run_training(config_path: Path, allow_small_dataset: bool = False, resume: s
     write_json(output_dir / "training_manifest.json", release)
     (output_dir / "metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
     return output_dir
-

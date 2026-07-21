@@ -205,7 +205,7 @@ contract StreamingVault {
         bytes calldata signature
     ) internal {
         if (block.timestamp > deadline) revert("Intent expired");
-        
+
         bytes32 structHash = keccak256(
             abi.encode(
                 TASK_INTENT_TYPEHASH,

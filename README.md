@@ -20,7 +20,28 @@ The repository contains a complete local product that runs without wallets or AP
 - Solidity `MockUSDC`, `ReputationRegistry`, and `StreamingVault` with third-party writer pagination, collateral underwriting, and signed portable-reputation attestations.
 - SQLite persistence, Bearer-token mutation protection, secure headers, CORS allowlist, request-size limit, and rate limiting.
 - Executable Circle scripts for Arc developer wallets, Circle Agent Wallet CLI flows, spending policy validation, Gateway Nanopayments, and a one-time Arc SCA Gas Station sponsorship guard.
-- An eleven-slide, visually verified PACT pitch deck in `outputs/pact-presentation-final-v4.pptx`.
+- A concise hackathon pitch and a reproducible public-submission checklist.
+
+## Proof, not promises
+
+This repository is intentionally verifiable from source:
+
+- The complete guided demo runs locally without a wallet, paid API, or private
+  credential. Use `npm run check`, then `npm run dev` and follow the two-minute
+  flow below.
+- Contract source, deployment guards, API security tests, arbitration tests,
+  and browser-facing evidence receipts are included in the public tree.
+- Submitted evidence and judge decisions receive SHA-256 receipts; the judge
+  cannot directly change reputation or release funds.
+- `.env`, wallet keys, provider tokens, deployment metadata, runtime databases,
+  logs, and generated artifacts are excluded. Only empty or clearly synthetic
+  configuration templates are public.
+- The current boundary is stated plainly: this is a working, controlled MVP,
+  not an audited custody system and not a claim of a live Arc deployment.
+
+See [SECURITY.md](SECURITY.md), [docs/TRUST_MODEL.md](docs/TRUST_MODEL.md), and
+[docs/PRODUCTION_READINESS_AUDIT.md](docs/PRODUCTION_READINESS_AUDIT.md) for the
+security assumptions and remaining production work.
 
 ## Quick start
 

@@ -23,7 +23,7 @@ export class TaskRepository {
     await ensureWorkOrderColumn();
     const id = randomUUID();
     const createdAt = Math.floor(Date.now() / 1000);
-    
+
     await query(`
       INSERT INTO tasks (
         id, title, description, success_criteria, creator_address, agent_address,
@@ -126,7 +126,7 @@ export class TaskRepository {
   async createTemplate(template: Omit<TaskTemplate, 'id' | 'createdAt' | 'isActive'>): Promise<TaskTemplate> {
     const id = randomUUID();
     const createdAt = Math.floor(Date.now() / 1000);
-    
+
     await query(`
       INSERT INTO task_templates (
         id, title, description, success_criteria, reward_points, is_active, created_at

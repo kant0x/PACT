@@ -47,4 +47,3 @@ Trust Score -> отдельное обновление после accept или 
 ## Что это не обещает
 
 Эта защита снижает риск prompt injection, утечки ключей, tool hijacking и автоматического ошибочного payout. Она не является доказательством абсолютной неуязвимости: production deployment всё равно требует secret manager, TLS, изоляции runtime, аудита доступа, rate limits, независимого human review и мониторинга.
-

@@ -277,7 +277,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
       response.json(agents);
     } catch(e) { next(e); }
   });
-  
+
   // Legacy in-memory registration
   app.post('/api/agents', async (request, response) => {
     const body = request.body && typeof request.body === 'object' ? request.body as Record<string, unknown> : {};
@@ -293,20 +293,20 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
       capabilityManifest: manifest
     }));
   });
-  
+
   // Production PostgreSQL registration for Agents (Third-Party Registration)
   app.post('/api/agents/pg', async (request, response, next) => {
     try {
       const { agentRepository } = await import('./repositories/agent.repository.js');
       const { verifyMessage } = await import('viem');
-      
+
       const body = request.body && typeof request.body === 'object' ? request.body as Record<string, unknown> : {};
       const { address, displayName, capabilityManifest, provisionWallet } = body;
       const requestedName = text(displayName).trim() || 'New AI Agent';
       if (requestedName.length < 2 || requestedName.length > 80) throw new ApiProblem(400, 'INVALID_AGENT_NAME', 'displayName must contain 2..80 characters');
       const submittedManifest = capabilityManifest === undefined ? undefined : validateCapabilityManifest(capabilityManifest);
       const manifest = submittedManifest ?? defaultExternalManifest();
-      
+
       let finalAddress = text(address).trim();
 
       if (provisionWallet === true) {
@@ -480,7 +480,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
       const task = await taskRepository.findById(request.params.id);
       if (!task) throw new ApiProblem(404, 'NOT_FOUND', 'Task not found');
       if (task.status !== 'OPEN') throw new ApiProblem(409, 'NOT_OPEN', 'Task is not open');
-      
+
       const agentAddress = text(request.body?.agentAddress).trim();
       if (!ETHEREUM_ADDRESS.test(agentAddress)) throw new ApiProblem(400, 'INVALID_AGENT_ADDRESS', 'agentAddress must be a 20-byte hex address');
       if (task.preferredAgentAddress && task.preferredAgentAddress !== agentAddress.toLowerCase()) {
@@ -533,7 +533,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
       const templateId = request.params.id;
       const template = await taskRepository.findTemplateById(templateId);
       if (!template || !template.isActive) throw new ApiProblem(404, 'NOT_FOUND', 'Active template not found');
-      
+
       const agentAddress = text(request.body?.agentAddress).trim();
       if (!ETHEREUM_ADDRESS.test(agentAddress)) throw new ApiProblem(400, 'INVALID_AGENT_ADDRESS', 'agentAddress must be a 20-byte hex address');
       const reputation = await agentService.getReputation(agentAddress);
@@ -738,15 +738,15 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
     try {
       const { taskRepository } = await import('./repositories/task.repository.js');
       const { deliverableRepository } = await import('./repositories/deliverable.repository.js');
-      
+
       const task = await taskRepository.findById(request.params.id);
       if (!task) throw new ApiProblem(404, 'NOT_FOUND', 'Task not found');
-      
+
       const agentAddress = text(request.body?.agentAddress);
       if (!agentAddress || task.agentAddress?.toLowerCase() !== agentAddress.toLowerCase()) {
         throw new ApiProblem(403, 'DELIVERABLE_AGENT_MISMATCH', 'Only the assigned agent may submit a deliverable');
       }
-      
+
       const summary = text(request.body?.summary);
       if (!summary || summary.length < 12) throw new ApiProblem(400, 'INVALID_SUMMARY', 'summary must contain 12+ characters');
 
@@ -770,7 +770,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
     try {
       const { deliverableRepository } = await import('./repositories/deliverable.repository.js');
       const { taskRepository } = await import('./repositories/task.repository.js');
-      
+
       const deliverable = await deliverableRepository.findById(request.params.id);
       if (!deliverable) throw new ApiProblem(404, 'NOT_FOUND', 'Deliverable not found');
       if (deliverable.status !== 'SUBMITTED') throw new ApiProblem(409, 'INVALID_STATUS', 'Deliverable is not submitted');
@@ -872,7 +872,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
       const taskId = request.params.id;
       const task = await taskRepository.findById(taskId);
       if (!task) throw new ApiProblem(404, 'NOT_FOUND', 'Task not found');
-      
+
       const reason = text(request.body?.reason);
       const evidence = text(request.body?.evidence);
       if (!reason?.trim()) throw new ApiProblem(400, 'INVALID_REASON', 'reason is required');
@@ -882,7 +882,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
       const deliverables = await deliverableRepository.findByTaskId(taskId);
       const deliverable = deliverables.find((candidate) => ['SUBMITTED', 'DISPUTED', 'ACCEPTED'].includes(candidate.status)) ?? null;
       const decision = await arbitrator.decide({ task, reason, evidence, deliverable });
-      
+
       const dispute = await disputeRepository.create({
         taskId,
         reason,

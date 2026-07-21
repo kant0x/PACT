@@ -22,4 +22,3 @@ pact-training = "pact_training.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pact_training"]
-
