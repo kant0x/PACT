@@ -1,0 +1,37 @@
+[
+  {
+    "id": "trace-sample-success-1",
+    "taskId": "task-sample-1",
+    "agentAddress": "0xA100000000000000000000000000000000000001",
+    "messages": [
+      {"role": "user", "content": "Produce a JSON market report with two cited public sources and a SHA-256 artifact hash."},
+      {"role": "assistant", "content": "I will verify the task fits my research capability and use only the declared HTTPS tool."},
+      {"role": "tool", "toolName": "source.fetch", "content": "Two allowlisted public sources returned successfully; payload hashes recorded."},
+      {"role": "assistant", "content": "The JSON report, source manifest, and artifact hash are ready. The result contains two independently checked sources."}
+    ],
+    "toolCalls": [],
+    "deliverableSummary": "A normalized JSON report with two sources, a source manifest, and a SHA-256 artifact hash.",
+    "evidence": ["sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
+    "consentToTraining": true,
+    "outcome": "SUCCESS",
+    "createdAt": 1784260000,
+    "finalizedAt": 1784260300
+  },
+  {
+    "id": "trace-sample-no-consent",
+    "taskId": "task-sample-2",
+    "agentAddress": "0xA100000000000000000000000000000000000002",
+    "messages": [
+      {"role": "user", "content": "Private task that must never be used for training."},
+      {"role": "assistant", "content": "The result is complete but remains excluded from training."}
+    ],
+    "toolCalls": [],
+    "deliverableSummary": "Private completed result that is deliberately excluded from training consent.",
+    "evidence": [],
+    "consentToTraining": false,
+    "outcome": "SUCCESS",
+    "createdAt": 1784260400,
+    "finalizedAt": 1784260500
+  }
+]
+

@@ -1,0 +1,46 @@
+{
+  "name": "@pact/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/src/server.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/src/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "demo:seed": "tsx scripts/seed.ts",
+    "demo:run": "tsx scripts/run-scenario.ts",
+    "arena:agent": "tsx scripts/arena-agent.ts",
+    "circle:wallet": "tsx scripts/create-circle-wallet.ts",
+    "circle:agent": "tsx scripts/circle-agent.ts",
+    "circle:gateway": "tsx scripts/gateway.ts",
+    "circle:paymaster": "tsx scripts/circle-paymaster.ts"
+  },
+  "dependencies": {
+    "@circle-fin/developer-controlled-wallets": "10.3.1",
+    "@circle-fin/x402-batching": "^3.2.0",
+    "@pact/shared": "0.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.3.0",
+    "openai": "^6.47.0",
+    "pg": "^8.22.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.0.14",
+    "@types/pg": "^8.20.0",
+    "@types/supertest": "^6.0.3",
+    "@types/ws": "^8.18.1",
+    "supertest": "^7.1.4",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

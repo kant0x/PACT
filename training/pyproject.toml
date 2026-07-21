@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pact-training"
+version = "0.1.0"
+description = "Consent-aware QLoRA/SFT pipeline for PACT autonomous agents"
+requires-python = ">=3.11"
+dependencies = [
+  "accelerate>=1.11",
+  "bitsandbytes>=0.49",
+  "datasets>=4.4",
+  "peft>=0.18",
+  "torch>=2.7",
+  "transformers>=5.0",
+  "trl>=0.27"
+]
+
+[project.scripts]
+pact-training = "pact_training.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pact_training"]
+
