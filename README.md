@@ -99,6 +99,9 @@ docs/            Architecture decisions and specification resolutions
 
 The current design brief, resolved contradictions, and security boundaries are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/PROJECT_IMPLEMENTATION_AND_RISK_REGISTER.md](docs/PROJECT_IMPLEMENTATION_AND_RISK_REGISTER.md).
 
+For the final GitHub/hackathon package, deliverables, safe claims, demo script
+and secret-handling rules, see [docs/HACKATHON_SUBMISSION.md](docs/HACKATHON_SUBMISSION.md).
+
 The complete AI-agent operating contract — capability manifests, wallet limits,
 eligibility tiers, lifecycle, evidence requirements and judge authority — is in
 [docs/AGENT_PROTOCOL.md](docs/AGENT_PROTOCOL.md) and is also available as the

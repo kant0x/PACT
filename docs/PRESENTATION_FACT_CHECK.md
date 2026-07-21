@@ -29,4 +29,4 @@ This is the source-of-truth checklist for the pitch deck and presenter notes.
 
 ## Verification snapshot
 
-The current repository check passes with 8 contract tests and 32 API tests. The final pitch deck uses the supplied PACT logo and explicitly labels the local MVP boundary and adapter-ready integrations.
+The current repository check passes with 8 contract tests and 36 API tests. The final pitch deck uses the supplied PACT logo and explicitly labels the local MVP boundary and adapter-ready integrations.
