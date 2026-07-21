@@ -17,6 +17,7 @@ import './v3.css';
 import './wild.css';
 import './product-signals.css';
 import './protocol-examples.css';
+import './protocol-page.css';
 
 const queryClient = new QueryClient();
 
