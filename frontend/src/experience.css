@@ -1,0 +1,1309 @@
+/*
+ * PACT experience refresh
+ * Editorial workspace for people who hire agents and agents who do the work.
+ * The product uses one visual language across public pages and the private app:
+ * quiet paper surfaces, a confident ink header, and rust only for actions.
+ */
+
+:root {
+  --pact-bg: #f3f0e8;
+  --pact-surface: #fffdf8;
+  --pact-surface-warm: #f8f3ea;
+  --pact-surface-soft: #ece9df;
+  --pact-ink: #17201b;
+  --pact-muted: #69736c;
+  --pact-faint: #9aa099;
+  --pact-line: rgba(23, 32, 27, .14);
+  --pact-line-strong: rgba(23, 32, 27, .24);
+  --pact-rust: #b85a3d;
+  --pact-rust-deep: #8f3f29;
+  --pact-mint: #dcebd0;
+  --pact-night: #101814;
+  --pact-radius-lg: 24px;
+  --pact-radius-md: 16px;
+  --pact-shadow: 0 18px 44px rgba(23, 32, 27, .08);
+}
+
+html,
+body,
+#root,
+.app-shell,
+.main-area,
+.content-wrap {
+  min-height: 100%;
+  background: var(--pact-bg) !important;
+}
+
+body {
+  color: var(--pact-ink) !important;
+  font-family: "Archivo Narrow", sans-serif !important;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+::selection {
+  color: var(--pact-surface);
+  background: var(--pact-rust);
+}
+
+.noise {
+  z-index: 0;
+  opacity: .018 !important;
+  mix-blend-mode: multiply !important;
+}
+
+/* Shared chrome --------------------------------------------------------- */
+.sidebar {
+  height: 82px !important;
+  padding: 0 32px !important;
+  grid-template-columns: 280px minmax(0, 1fr) !important;
+  gap: 26px !important;
+  color: #f4efe6 !important;
+  background: var(--pact-night) !important;
+  border-bottom: 1px solid rgba(255,255,255,.12) !important;
+}
+
+.brand {
+  gap: 13px !important;
+}
+
+.brand__mark {
+  width: 46px !important;
+  height: 46px !important;
+  flex-basis: 46px !important;
+  border-width: 1px !important;
+  background: radial-gradient(circle at 50% 50%, var(--pact-rust) 0 17%, transparent 18% 100%) !important;
+}
+
+.brand__mark::before {
+  width: 12px !important;
+  height: 12px !important;
+  border: 0 !important;
+  background: var(--pact-rust) !important;
+}
+
+.brand__mark::after {
+  width: 28px !important;
+  height: 1px !important;
+  background: #f4efe6 !important;
+  box-shadow: 0 -6px 0 rgba(244,239,230,.42), 0 6px 0 var(--pact-rust) !important;
+}
+
+.brand strong {
+  color: #f4efe6 !important;
+  font-size: 22px !important;
+  letter-spacing: -.03em !important;
+}
+
+.brand small {
+  margin-top: 5px !important;
+  color: rgba(244,239,230,.48) !important;
+  font-size: 7px !important;
+  letter-spacing: .15em !important;
+}
+
+.primary-nav {
+  gap: 7px !important;
+}
+
+.nav-item {
+  min-height: 36px !important;
+  padding: 8px 13px !important;
+  color: rgba(244,239,230,.64) !important;
+  border: 1px solid transparent !important;
+  border-radius: 999px !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  transition: color .18s ease, background .18s ease, border-color .18s ease !important;
+}
+
+.nav-item:hover,
+.nav-item--active {
+  color: #f4efe6 !important;
+  border-color: rgba(244,239,230,.22) !important;
+  background: rgba(244,239,230,.08) !important;
+}
+
+.nav-item--active::after,
+.nav-item:hover::after {
+  display: none !important;
+}
+
+.main-area {
+  padding-top: 132px !important;
+}
+
+.topbar {
+  top: 82px !important;
+  height: 50px !important;
+  padding: 0 32px !important;
+  color: #f4efe6 !important;
+  border-top: 0 !important;
+  border-bottom: 1px solid rgba(255,255,255,.12) !important;
+  background: rgba(16,24,20,.96) !important;
+  backdrop-filter: blur(14px) !important;
+}
+
+.topbar__title {
+  color: rgba(244,239,230,.58) !important;
+  font-size: 9px !important;
+  letter-spacing: .08em !important;
+  text-transform: uppercase !important;
+}
+
+.topbar__title span {
+  color: #e08461 !important;
+}
+
+.topbar__title strong {
+  color: #f4efe6 !important;
+  font-size: 9px !important;
+  font-weight: 500 !important;
+}
+
+.topbar__tools {
+  gap: 8px !important;
+}
+
+.topbar:not(.topbar--workspace) .operator {
+  display: none !important;
+}
+
+.topbar--workspace .operator {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  padding-left: 10px;
+  border-left: 1px solid rgba(244,239,230,.18);
+}
+
+.topbar--workspace .operator__avatar {
+  display: grid !important;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: var(--pact-night);
+  border: 0;
+  border-radius: 9px;
+  background: var(--pact-rust);
+  font: 700 7px/1 "IBM Plex Mono", monospace;
+}
+
+.topbar--workspace .operator > span:nth-child(2) {
+  display: flex !important;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.topbar--workspace .operator strong {
+  color: #f4efe6 !important;
+  font-size: 11px !important;
+}
+
+.topbar--workspace .operator small {
+  color: rgba(244,239,230,.52) !important;
+  font-size: 7px !important;
+}
+
+.topbar--workspace .operator .button {
+  min-height: 30px !important;
+  padding: 0 10px !important;
+  color: #f4efe6 !important;
+  border-color: rgba(244,239,230,.32) !important;
+  background: transparent !important;
+  font-size: 9px !important;
+}
+
+.topbar--workspace .operator .button:hover {
+  color: var(--pact-night) !important;
+  border-color: var(--pact-rust) !important;
+  background: var(--pact-rust) !important;
+}
+
+.icon-button--top {
+  width: 31px !important;
+  height: 31px !important;
+  color: #f4efe6 !important;
+  border-color: rgba(244,239,230,.2) !important;
+  background: transparent !important;
+}
+
+.language-switcher {
+  min-height: 31px !important;
+  padding: 0 8px !important;
+  color: rgba(244,239,230,.64) !important;
+  border-color: rgba(244,239,230,.2) !important;
+  background: transparent !important;
+}
+
+.language-switcher select {
+  color: #f4efe6 !important;
+  background: transparent !important;
+}
+
+.content-wrap {
+  width: min(1440px, 100%) !important;
+  margin: 0 auto !important;
+  padding: 28px 34px 88px !important;
+}
+
+.view-stack {
+  gap: 24px !important;
+}
+
+.eyebrow {
+  color: var(--pact-rust) !important;
+  font: 600 9px/1 "IBM Plex Mono", monospace !important;
+  letter-spacing: .1em !important;
+  text-transform: uppercase !important;
+}
+
+.button {
+  min-height: 42px !important;
+  padding: 0 17px !important;
+  border-radius: 11px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: .02em !important;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease !important;
+}
+
+.button:hover:not(:disabled) {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 18px rgba(23,32,27,.12) !important;
+}
+
+.button--primary {
+  color: #fff9f1 !important;
+  border-color: var(--pact-rust) !important;
+  background: var(--pact-rust) !important;
+}
+
+.button--primary:hover:not(:disabled) {
+  border-color: var(--pact-rust-deep) !important;
+  background: var(--pact-rust-deep) !important;
+}
+
+.button--outline,
+.button--secondary {
+  color: var(--pact-ink) !important;
+  border-color: var(--pact-line-strong) !important;
+  background: rgba(255,253,248,.72) !important;
+}
+
+.button--outline:hover:not(:disabled),
+.button--secondary:hover:not(:disabled) {
+  border-color: var(--pact-rust) !important;
+  background: #fff !important;
+}
+
+.button--small {
+  min-height: 32px !important;
+  padding-inline: 11px !important;
+  font-size: 10px !important;
+}
+
+/* Public landing -------------------------------------------------------- */
+.overview-page {
+  gap: 18px !important;
+}
+
+.overview-hero {
+  min-height: 430px !important;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr) !important;
+  gap: 28px !important;
+  padding: clamp(32px, 5vw, 64px) !important;
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-lg) !important;
+  background: linear-gradient(135deg, #fffdf8 0%, #f7e7db 100%) !important;
+  box-shadow: var(--pact-shadow) !important;
+}
+
+.overview-hero__main h1 {
+  max-width: 700px !important;
+  margin-top: 16px !important;
+  color: var(--pact-ink) !important;
+  font-size: clamp(52px, 6.5vw, 92px) !important;
+  line-height: .84 !important;
+}
+
+.overview-hero__main p {
+  max-width: 560px !important;
+  margin-top: 20px !important;
+  color: var(--pact-muted) !important;
+  font: 12px/1.6 "IBM Plex Mono", monospace !important;
+}
+
+.overview-hero__actions {
+  margin-top: 24px !important;
+}
+
+.overview-hero__loop {
+  align-self: stretch !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 24px !important;
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-md) !important;
+  background: rgba(255,253,248,.72) !important;
+}
+
+.overview-hero__loop li {
+  padding: 15px 0 !important;
+  border-color: var(--pact-line) !important;
+}
+
+.overview-hero__loop strong {
+  color: var(--pact-ink) !important;
+  font-size: 22px !important;
+}
+
+.overview-hero__loop small {
+  color: var(--pact-muted) !important;
+  font-size: 9px !important;
+}
+
+.overview-paths,
+.overview-live,
+.overview-proof {
+  padding: 28px !important;
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-lg) !important;
+  background: rgba(255,253,248,.64) !important;
+}
+
+.overview-section-heading {
+  padding-bottom: 18px !important;
+  border-color: var(--pact-line) !important;
+}
+
+.overview-section-heading h2 {
+  color: var(--pact-ink) !important;
+  font-size: clamp(32px, 4vw, 52px) !important;
+}
+
+.overview-section-heading p {
+  color: var(--pact-muted) !important;
+}
+
+.overview-paths__grid,
+.overview-live__grid,
+.overview-live__columns,
+.overview-proof__grid {
+  gap: 14px !important;
+}
+
+.overview-path {
+  min-height: 230px !important;
+  padding: 24px !important;
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-md) !important;
+  background: var(--pact-surface) !important;
+}
+
+.overview-path--client {
+  background: #f6d9cb !important;
+}
+
+.overview-path--agent {
+  background: #e6eadf !important;
+}
+
+.overview-path h3 {
+  margin-top: 30px !important;
+  color: var(--pact-ink) !important;
+  font-size: clamp(28px, 3.2vw, 43px) !important;
+}
+
+.overview-path p {
+  color: var(--pact-muted) !important;
+}
+
+.overview-live__stats,
+.overview-feed,
+.overview-live__stats > div {
+  border-color: var(--pact-line) !important;
+}
+
+.overview-live__stats > div,
+.overview-feed {
+  background: var(--pact-surface) !important;
+}
+
+.overview-live__stats > div:first-child {
+  background: #f6d9cb !important;
+}
+
+.overview-live__stats strong,
+.overview-feed__item b,
+.overview-agent-row > b {
+  color: var(--pact-rust) !important;
+}
+
+.overview-feed--agents {
+  background: #e6eadf !important;
+}
+
+.overview-proof__grid article {
+  padding: 22px !important;
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-md) !important;
+  background: var(--pact-surface) !important;
+}
+
+.overview-cta {
+  border-radius: var(--pact-radius-lg) !important;
+  background: var(--pact-night) !important;
+  box-shadow: var(--pact-shadow) !important;
+}
+
+/* Shared page headers --------------------------------------------------- */
+.page-intro,
+.agents-page__hero,
+.marketplace-intro,
+.dapp-hero,
+.protocol-simple__hero {
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-lg) !important;
+  box-shadow: var(--pact-shadow) !important;
+}
+
+.page-intro {
+  min-height: 270px !important;
+  padding: 38px 42px !important;
+  color: var(--pact-ink) !important;
+  background: linear-gradient(135deg, #fffdf8, #f3e1d5) !important;
+}
+
+.page-intro h1 {
+  max-width: 760px !important;
+  margin-top: 14px !important;
+  color: var(--pact-ink) !important;
+  font-size: clamp(48px, 6vw, 78px) !important;
+  line-height: .86 !important;
+}
+
+.page-intro p {
+  max-width: 650px !important;
+  margin-top: 16px !important;
+  color: var(--pact-muted) !important;
+  font: 11px/1.55 "IBM Plex Mono", monospace !important;
+}
+
+/* Marketplace ----------------------------------------------------------- */
+.marketplace-page {
+  gap: 16px !important;
+}
+
+.marketplace-page .marketplace-intro {
+  min-height: 270px !important;
+  padding: 36px 42px !important;
+  background: linear-gradient(135deg, #fffdf8, #f6dfd4) !important;
+}
+
+.marketplace-page .marketplace-intro h1 {
+  max-width: 710px !important;
+  margin-top: 12px !important;
+  color: var(--pact-ink) !important;
+  font-size: clamp(50px, 6vw, 82px) !important;
+  line-height: .84 !important;
+}
+
+.marketplace-page .marketplace-intro p {
+  max-width: 620px !important;
+  color: var(--pact-muted) !important;
+}
+
+.marketplace-page .marketplace-intro__action {
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-md) !important;
+  background: rgba(255,253,248,.68) !important;
+}
+
+.marketplace-page .marketplace-intro__action > span strong {
+  color: var(--pact-rust) !important;
+}
+
+.marketplace-page .market-summary,
+.marketplace-page .market-toolbar {
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-md) !important;
+  background: rgba(255,253,248,.78) !important;
+}
+
+.marketplace-page .market-summary > div {
+  min-height: 78px !important;
+  border-color: var(--pact-line) !important;
+}
+
+.marketplace-page .market-summary span {
+  color: var(--pact-muted) !important;
+}
+
+.marketplace-page .market-summary strong {
+  color: var(--pact-ink) !important;
+  font-size: 29px !important;
+}
+
+.marketplace-page .market-toolbar {
+  padding: 12px 16px !important;
+}
+
+.marketplace-page .market-filter {
+  min-height: 31px !important;
+  padding-inline: 10px !important;
+  color: var(--pact-muted) !important;
+  border-color: var(--pact-line) !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  font-size: 9px !important;
+}
+
+.marketplace-page .market-filter--active {
+  color: #fff9f1 !important;
+  border-color: var(--pact-ink) !important;
+  background: var(--pact-ink) !important;
+}
+
+.marketplace-page .task-grid {
+  gap: 16px !important;
+  padding: 0 !important;
+}
+
+.marketplace-page .task-card {
+  min-height: 0 !important;
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-md) !important;
+  background: var(--pact-surface) !important;
+  box-shadow: 0 8px 24px rgba(23,32,27,.05) !important;
+}
+
+.marketplace-page .task-card:hover {
+  border-color: var(--pact-rust) !important;
+  box-shadow: 0 14px 28px rgba(23,32,27,.1) !important;
+}
+
+.marketplace-page .task-card h3 {
+  color: var(--pact-ink) !important;
+  font-size: clamp(28px, 3vw, 40px) !important;
+  line-height: .92 !important;
+}
+
+.marketplace-page .task-card__content > p,
+.marketplace-page .task-card__work-order p {
+  color: var(--pact-muted) !important;
+}
+
+.marketplace-page .task-card__outcome,
+.marketplace-page .task-card__quick-facts,
+.marketplace-page .task-card__details,
+.marketplace-page .task-card__facts {
+  border-color: var(--pact-line) !important;
+}
+
+.marketplace-page .task-card__outcome {
+  border-radius: 11px !important;
+  background: var(--pact-surface-soft) !important;
+}
+
+.marketplace-page .task-card__outcome strong,
+.marketplace-page .task-card__quick-facts b,
+.marketplace-page .task-card__facts dd {
+  color: var(--pact-ink) !important;
+}
+
+.marketplace-page .claim-zone {
+  margin-top: 18px !important;
+  padding: 16px !important;
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-md, 16px) !important;
+  background: #f8f6ef !important;
+}
+
+.marketplace-page .training-ground-panel,
+.marketplace-page .arena-leaderboard {
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-lg) !important;
+  background: var(--pact-surface) !important;
+  box-shadow: 0 8px 24px rgba(23,32,27,.04) !important;
+}
+
+/* Agent directory ------------------------------------------------------ */
+.agents-page {
+  gap: 16px !important;
+}
+
+.agents-page__hero {
+  min-height: 330px !important;
+  padding: 42px !important;
+  color: var(--pact-ink) !important;
+  background: linear-gradient(135deg, #fffdf8 0%, #f4e1d6 100%) !important;
+}
+
+.agents-page__hero h1 {
+  max-width: 620px !important;
+  margin-top: 14px !important;
+  color: var(--pact-ink) !important;
+  font-size: clamp(48px, 5.8vw, 78px) !important;
+  line-height: .86 !important;
+}
+
+.agents-page__hero p {
+  max-width: 620px !important;
+  margin-top: 16px !important;
+  color: var(--pact-muted) !important;
+  font: 11px/1.6 "IBM Plex Mono", monospace !important;
+}
+
+.agents-page__hero-aside {
+  display: flex !important;
+  min-width: 260px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.agents-page .registry-seal {
+  min-height: 76px;
+  border: 1px solid rgba(88,132,69,.26) !important;
+  border-radius: var(--pact-radius-md) !important;
+  background: rgba(255,253,248,.72) !important;
+}
+
+.agents-page__hero-stats {
+  border-top: 1px solid var(--pact-line) !important;
+}
+
+.agents-page__hero-stats > div {
+  border-color: var(--pact-line) !important;
+}
+
+.agents-page__hero-stats strong {
+  color: var(--pact-rust) !important;
+  font-size: 40px !important;
+}
+
+.registry-entry-note {
+  min-height: 52px !important;
+  padding: 14px 18px !important;
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-md) !important;
+  color: var(--pact-muted) !important;
+  background: rgba(255,253,248,.72) !important;
+  font: 10px/1.4 "IBM Plex Mono", monospace !important;
+}
+
+.registry-entry-note strong {
+  color: var(--pact-ink) !important;
+}
+
+.agent-catalog {
+  padding: 28px !important;
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-lg) !important;
+  background: var(--pact-surface) !important;
+  box-shadow: var(--pact-shadow) !important;
+}
+
+.agent-catalog .section-heading {
+  padding-bottom: 18px !important;
+  border-color: var(--pact-line) !important;
+}
+
+.agent-catalog .section-heading h2 {
+  color: var(--pact-ink) !important;
+  font-size: clamp(36px, 4.2vw, 58px) !important;
+  line-height: .9 !important;
+}
+
+.agent-catalog .section-heading p {
+  color: var(--pact-muted) !important;
+  font: 10px/1.45 "IBM Plex Mono", monospace !important;
+}
+
+.agent-catalog__controls {
+  display: grid !important;
+  grid-template-columns: minmax(220px,1fr) auto auto !important;
+  align-items: end !important;
+  gap: 12px !important;
+  padding: 20px 0 !important;
+  border-bottom: 1px solid var(--pact-line) !important;
+}
+
+.agent-search input,
+.agent-sort select {
+  min-height: 40px !important;
+  border: 1px solid var(--pact-line-strong) !important;
+  border-radius: 10px !important;
+  color: var(--pact-ink) !important;
+  background: var(--pact-surface) !important;
+}
+
+.agent-filter-pills {
+  display: flex !important;
+  gap: 5px !important;
+}
+
+.agent-filter-pill {
+  min-height: 31px !important;
+  padding: 0 10px !important;
+  color: var(--pact-muted) !important;
+  border: 1px solid var(--pact-line) !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  font-size: 9px !important;
+}
+
+.agent-filter-pill--active {
+  color: #fff9f1 !important;
+  border-color: var(--pact-ink) !important;
+  background: var(--pact-ink) !important;
+}
+
+.agent-catalog__grid {
+  grid-template-columns: repeat(3, minmax(0,1fr)) !important;
+  gap: 14px !important;
+  margin-top: 20px !important;
+}
+
+.agent-catalog-card {
+  min-width: 0 !important;
+  padding: 20px !important;
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-md) !important;
+  background: #fbfaf6 !important;
+  box-shadow: none !important;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease !important;
+}
+
+.agent-catalog-card:hover,
+.agent-catalog-card--active {
+  border-color: var(--pact-rust) !important;
+  box-shadow: 0 12px 26px rgba(23,32,27,.08) !important;
+  transform: translateY(-2px) !important;
+}
+
+.agent-catalog-card header {
+  gap: 10px !important;
+  padding-bottom: 15px !important;
+  border-color: var(--pact-line) !important;
+}
+
+.agent-catalog-card h3 {
+  color: var(--pact-ink) !important;
+  font-size: 25px !important;
+  line-height: .9 !important;
+}
+
+.agent-catalog-card__score strong {
+  color: var(--pact-rust) !important;
+  font-size: 37px !important;
+}
+
+.agent-catalog-card__activity,
+.agent-catalog-card__terms,
+.agent-catalog-card__runtime {
+  border-color: var(--pact-line) !important;
+}
+
+.agent-catalog-card__activity small,
+.agent-catalog-card__runtime {
+  color: var(--pact-muted) !important;
+}
+
+.agent-catalog-card__skills span {
+  color: var(--pact-muted) !important;
+  border-color: var(--pact-line) !important;
+  border-radius: 999px !important;
+  background: var(--pact-surface) !important;
+}
+
+.agent-catalog-card__terms b {
+  color: var(--pact-ink) !important;
+}
+
+.agent-rank-strip {
+  padding: 20px 24px !important;
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-md) !important;
+  background: #e8ecdf !important;
+}
+
+/* Client dashboard ------------------------------------------------------ */
+.dapp-page {
+  gap: 16px !important;
+}
+
+.dapp-hero {
+  min-height: 224px !important;
+  padding: 34px 42px !important;
+  color: var(--pact-ink) !important;
+  background: linear-gradient(135deg, #fffdf8, #f0ddd3) !important;
+}
+
+.dapp-hero h1 {
+  margin-top: 10px !important;
+  color: var(--pact-ink) !important;
+  font-size: clamp(54px, 7vw, 88px) !important;
+  line-height: .82 !important;
+}
+
+.dapp-identity {
+  width: fit-content;
+  margin-top: 20px !important;
+  padding: 9px 12px !important;
+  border: 1px solid var(--pact-line) !important;
+  border-radius: 10px !important;
+  color: var(--pact-muted) !important;
+  background: rgba(255,253,248,.7) !important;
+  font: 9px/1 "IBM Plex Mono", monospace !important;
+}
+
+.dapp-identity strong {
+  color: var(--pact-ink) !important;
+}
+
+.dapp-hero__status {
+  align-self: center !important;
+  min-width: 210px;
+  padding: 18px !important;
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-md) !important;
+  background: rgba(255,253,248,.72) !important;
+}
+
+.dapp-hero__status strong {
+  color: var(--pact-ink) !important;
+  font-size: 26px !important;
+  line-height: .9 !important;
+}
+
+.role-launcher,
+.client-orders {
+  padding: 24px !important;
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-lg) !important;
+  background: var(--pact-surface) !important;
+  box-shadow: 0 8px 24px rgba(23,32,27,.04) !important;
+}
+
+.role-launcher .panel-heading,
+.client-orders .panel-heading {
+  padding-bottom: 16px !important;
+  border-color: var(--pact-line) !important;
+}
+
+.role-launcher .panel-heading h2,
+.client-orders .panel-heading h2 {
+  color: var(--pact-ink) !important;
+  font-size: 35px !important;
+}
+
+.role-launcher__grid,
+.client-orders__grid {
+  gap: 14px !important;
+}
+
+.role-launch-card {
+  min-height: 190px !important;
+  padding: 22px !important;
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-md) !important;
+}
+
+.role-launch-card--creator {
+  background: #f6d9cb !important;
+}
+
+.role-launch-card--developer {
+  background: #e6eadf !important;
+}
+
+.role-launch-card h3 {
+  margin-top: 25px !important;
+  color: var(--pact-ink) !important;
+  font-size: 34px !important;
+}
+
+.dapp-quick-card,
+.client-order-card {
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-md) !important;
+  color: var(--pact-ink) !important;
+  background: var(--pact-surface) !important;
+  transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease !important;
+}
+
+.dapp-quick-card:hover,
+.client-order-card:hover {
+  border-color: var(--pact-rust) !important;
+  box-shadow: 0 12px 24px rgba(23,32,27,.07) !important;
+  transform: translateY(-2px) !important;
+}
+
+.dapp-quick-card > span {
+  color: var(--pact-rust) !important;
+  background: #f6d9cb !important;
+}
+
+.client-order-card h3 {
+  color: var(--pact-ink) !important;
+  font-size: 25px !important;
+}
+
+.dapp-readonly-note {
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-md) !important;
+  color: var(--pact-muted) !important;
+  background: #e8ecdf !important;
+}
+
+/* How it works ---------------------------------------------------------- */
+.protocol-simple {
+  gap: 16px !important;
+}
+
+.protocol-simple__hero {
+  min-height: 360px !important;
+  padding: 48px !important;
+  color: var(--pact-ink) !important;
+  background: linear-gradient(135deg, #fffdf8, #e6eadf) !important;
+}
+
+.protocol-simple__hero h1 {
+  margin-top: 15px !important;
+  color: var(--pact-ink) !important;
+  font-size: clamp(52px, 7vw, 94px) !important;
+  line-height: .82 !important;
+}
+
+.protocol-simple__hero p {
+  max-width: 620px !important;
+  margin-top: 18px !important;
+  color: var(--pact-muted) !important;
+  font: 11px/1.6 "IBM Plex Mono", monospace !important;
+}
+
+.protocol-simple__loop {
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-md) !important;
+  background: rgba(255,253,248,.72) !important;
+}
+
+.protocol-simple__roles,
+.protocol-simple__steps,
+.protocol-simple__trust,
+.protocol-simple__builder {
+  border: 1px solid var(--pact-line) !important;
+  border-radius: var(--pact-radius-lg) !important;
+  background: var(--pact-surface) !important;
+  box-shadow: 0 8px 24px rgba(23,32,27,.04) !important;
+}
+
+.protocol-simple__heading h2,
+.protocol-simple__trust h2,
+.protocol-simple__builder h2 {
+  color: var(--pact-ink) !important;
+  font-size: clamp(34px, 4.5vw, 56px) !important;
+  line-height: .88 !important;
+}
+
+.protocol-simple__heading p,
+.protocol-simple__trust p,
+.protocol-simple__builder p {
+  color: var(--pact-muted) !important;
+  font: 10px/1.55 "IBM Plex Mono", monospace !important;
+}
+
+.protocol-simple__role-grid article,
+.protocol-simple__step-list article,
+.protocol-simple__layers article {
+  border-color: var(--pact-line) !important;
+  background: var(--pact-surface-warm) !important;
+}
+
+/* Modals, forms and loading -------------------------------------------- */
+.modal-backdrop {
+  background: rgba(16,24,20,.72) !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+.modal {
+  max-height: calc(100vh - 36px) !important;
+  border: 1px solid var(--pact-line-strong) !important;
+  border-radius: 22px !important;
+  background: var(--pact-surface) !important;
+  box-shadow: 0 24px 70px rgba(0,0,0,.24) !important;
+}
+
+.modal__header h2 {
+  color: var(--pact-ink) !important;
+  font-size: 38px !important;
+}
+
+.field input,
+.field textarea,
+.field select {
+  border-color: var(--pact-line-strong) !important;
+  border-radius: 10px !important;
+  color: var(--pact-ink) !important;
+  background: #fff !important;
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus,
+.agent-search input:focus,
+.agent-sort select:focus {
+  outline: 2px solid rgba(184,90,61,.28) !important;
+  border-color: var(--pact-rust) !important;
+}
+
+.toast {
+  border-color: var(--pact-rust) !important;
+  border-radius: 14px !important;
+  background: var(--pact-night) !important;
+}
+
+/* Responsive ----------------------------------------------------------- */
+@media (max-width: 1080px) {
+  .sidebar {
+    position: fixed !important;
+    inset: 0 auto 0 0 !important;
+    width: min(300px, 88vw) !important;
+    height: 100dvh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 28px !important;
+    padding: 24px !important;
+    border-right: 1px solid rgba(255,255,255,.12) !important;
+    border-bottom: 0 !important;
+    transform: translateX(-103%) !important;
+    transition: transform .24s ease !important;
+  }
+
+  .sidebar--open {
+    transform: translateX(0) !important;
+  }
+
+  .brand {
+    padding-bottom: 20px !important;
+    border-bottom: 1px solid rgba(255,255,255,.12) !important;
+  }
+
+  .primary-nav {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 6px !important;
+  }
+
+  .nav-item {
+    width: 100% !important;
+    justify-content: flex-start !important;
+    padding: 12px 14px !important;
+    border-radius: 11px !important;
+  }
+
+  .nav-item__index,
+  .nav-item svg {
+    display: inline !important;
+  }
+
+  .nav-item__index {
+    margin-right: 8px !important;
+  }
+
+  .sidebar__footer {
+    display: block !important;
+    margin-top: auto !important;
+  }
+
+  .main-area {
+    padding-top: 76px !important;
+  }
+
+  .topbar {
+    top: 0 !important;
+    height: 76px !important;
+    padding: 0 18px !important;
+  }
+
+  .menu-button {
+    display: grid !important;
+    width: 38px !important;
+    height: 38px !important;
+    margin-right: 10px !important;
+    place-items: center !important;
+    color: #f4efe6 !important;
+    border: 1px solid rgba(244,239,230,.2) !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+  }
+
+  .content-wrap {
+    padding: 18px 18px 82px !important;
+  }
+
+  .overview-hero,
+  .agents-page__hero,
+  .dapp-hero,
+  .protocol-simple__hero {
+    grid-template-columns: 1fr !important;
+  }
+
+  .overview-hero__loop,
+  .agents-page__hero-aside,
+  .dapp-hero__status,
+  .protocol-simple__loop {
+    align-self: stretch !important;
+  }
+
+  .agent-catalog__grid {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .brand small,
+  .topbar__title span,
+  .topbar__tools > .icon-button--top {
+    display: none !important;
+  }
+
+  .topbar__title strong {
+    font-size: 10px !important;
+  }
+
+  .topbar__tools {
+    margin-left: auto !important;
+  }
+
+  .topbar--workspace .operator {
+    padding-left: 0 !important;
+    border-left: 0 !important;
+  }
+
+  .topbar--workspace .operator > span:nth-child(2),
+  .topbar--workspace .operator__avatar {
+    display: none !important;
+  }
+
+  .topbar--workspace .operator .button {
+    min-height: 34px !important;
+    padding-inline: 10px !important;
+  }
+
+  .content-wrap {
+    padding: 14px 12px 78px !important;
+  }
+
+  .overview-hero,
+  .page-intro,
+  .marketplace-page .marketplace-intro,
+  .agents-page__hero,
+  .dapp-hero,
+  .protocol-simple__hero {
+    padding: 28px 22px !important;
+    border-radius: 18px !important;
+  }
+
+  .overview-hero,
+  .overview-hero__main {
+    min-height: 0 !important;
+  }
+
+  .overview-hero__main h1,
+  .page-intro h1,
+  .marketplace-page .marketplace-intro h1,
+  .agents-page__hero h1,
+  .dapp-hero h1,
+  .protocol-simple__hero h1 {
+    font-size: clamp(44px, 14vw, 68px) !important;
+  }
+
+  .overview-paths,
+  .overview-live,
+  .overview-proof,
+  .agent-catalog,
+  .role-launcher,
+  .client-orders {
+    padding: 18px !important;
+    border-radius: 18px !important;
+  }
+
+  .overview-paths__grid,
+  .overview-live__grid,
+  .overview-live__columns,
+  .overview-proof__grid,
+  .role-launcher__grid,
+  .client-orders__grid,
+  .agent-catalog__grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .overview-section-heading,
+  .agent-catalog .section-heading,
+  .registry-entry-note {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+
+  .overview-section-heading h2,
+  .agent-catalog .section-heading h2 {
+    font-size: 38px !important;
+  }
+
+  .agent-catalog__controls {
+    grid-template-columns: 1fr !important;
+    align-items: stretch !important;
+  }
+
+  .agent-filter-pills {
+    overflow-x: auto !important;
+  }
+
+  .agent-filter-pill {
+    flex: 0 0 auto !important;
+  }
+
+  .marketplace-page .market-summary {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  }
+
+  .marketplace-page .market-toolbar {
+    align-items: stretch !important;
+    flex-direction: column !important;
+  }
+
+  .marketplace-page .market-filters {
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .marketplace-page .market-filter {
+    flex: 0 0 auto !important;
+  }
+
+  .protocol-simple__roles,
+  .protocol-simple__steps,
+  .protocol-simple__trust,
+  .protocol-simple__builder {
+    border-radius: 18px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
