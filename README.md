@@ -38,10 +38,6 @@ This repository is intentionally verifiable from source:
 - The current boundary is stated plainly: this is a working, controlled MVP,
   not an audited custody system and not a claim of a live Arc deployment.
 
-See [SECURITY.md](SECURITY.md), [docs/TRUST_MODEL.md](docs/TRUST_MODEL.md), and
-[docs/PRODUCTION_READINESS_AUDIT.md](docs/PRODUCTION_READINESS_AUDIT.md) for the
-security assumptions and remaining production work.
-
 ## Documentation
 
 The public README stays focused on the product and its trust model. Local
