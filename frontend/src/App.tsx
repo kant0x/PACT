@@ -1365,31 +1365,29 @@ function DappDashboard({
       <section className="dapp-hero reveal">
         <div>
           <div className="eyebrow">{t('Кабинет')}</div>
-          <h1>{connected ? t('Ваш кабинет') : t('Добро пожаловать')}</h1>
-          <p>{connected ? t('Создавайте задания, выбирайте агентов и следите за результатом.') : t('Подключите кошелёк, чтобы начать работать с агентами.')}</p>
+          <h1>{connected ? t('Ваш кабинет') : t('Подключите кошелёк')}</h1>
           {!connected ? <button className="button button--primary" onClick={onConnect} type="button"><WalletCards /> {t('Подключить кошелёк')}</button> : <div className="dapp-identity"><span className="live-dot" /><span>{t('Ваш кошелёк')}</span><strong>{shortAddress(connectedAddress!)}</strong></div>}
         </div>
         <div className="dapp-hero__status">
           <span>{t('Ваш статус')}</span>
           <strong>{connected ? t('Кошелёк подключён') : t('Подключите кошелёк')}</strong>
-          <small>{connected ? `${myOrders.length} ${t(myOrders.length === 1 ? 'задание' : 'заданий')} ${t('в вашем кабинете')}` : t('Пока можно только просматривать задания и агентов')}</small>
+          {connected ? <small>{`${myOrders.length} ${t(myOrders.length === 1 ? 'задание' : 'заданий')} ${t('в вашем кабинете')}`}</small> : null}
         </div>
       </section>
 
       <section className="role-launcher reveal">
         <header className="panel-heading panel-heading--wide">
-          <div><div className="eyebrow">{t('Быстрый старт')}</div><h2>{t('Что вы хотите сделать?')}</h2></div>
-          <span className="role-launcher__note">{t('Выберите действие — остальное сделаем вместе.')}</span>
+          <div><div className="eyebrow">{t('CLIENT ACTIONS')}</div><h2>{t('Что вы хотите сделать?')}</h2></div>
         </header>
         <div className="role-launcher__grid">
           <article className="role-launch-card role-launch-card--creator">
-            <span className="role-launch-card__number">01</span><Users />
-            <h3>{t('Создать задание')}</h3><p>{t('Describe the outcome, budget and optional delivery window. Then choose the right agent.')}</p>
+            <span className="role-launch-card__number">01 / {t('CLIENT')}</span><Users />
+            <h3>{t('Создать задание')}</h3>
             <button className="button button--primary" onClick={onPublish} type="button"><Plus /> {t('Создать задание')}</button>
           </article>
           <article className="role-launch-card role-launch-card--developer">
-            <span className="role-launch-card__number">02</span><Bot />
-            <h3>{t('Подключить своего агента')}</h3><p>{t('Добавьте агента, которым вы управляете, и укажите его навыки.')}</p>
+            <span className="role-launch-card__number">02 / {t('FOR AGENTS')}</span><Bot />
+            <h3>{t('Подключить своего агента')}</h3>
             <button className="button button--outline" onClick={onCreateAgent} type="button"><Bot /> {t('Подключить агента')}</button>
           </article>
         </div>
@@ -1430,7 +1428,7 @@ function DappDashboard({
           </section>
         </>
       ) : (
-        <section className="dapp-readonly-note reveal"><ShieldCheck /><div><strong>{t('Подключите кошелёк, чтобы начать')}</strong><span>{t('Сейчас можно только просматривать задания и профили агентов.')}</span></div></section>
+        <section className="dapp-readonly-note dapp-readonly-note--compact reveal"><ShieldCheck /><strong>{t('Подключите кошелёк')}</strong></section>
       )}
     </div>
   );
