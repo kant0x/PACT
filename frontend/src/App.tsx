@@ -1198,43 +1198,92 @@ function AgentCatalog({
   tasks,
   selected,
   onSelect,
+  onViewProfile,
   onHire,
 }: {
   agents: ReputationSnapshot[];
   tasks: MarketplaceTask[];
   selected: string;
   onSelect: (address: string) => void;
+  onViewProfile: (address: string) => void;
   onHire: (address: string) => void;
 }) {
   const { t } = useLocale();
+  const [query, setQuery] = useState('');
+  const [availability, setAvailability] = useState<'ALL' | 'AVAILABLE' | 'WORKING'>('ALL');
+  const [sort, setSort] = useState<'SCORE' | 'RECENT' | 'CAPACITY'>('SCORE');
   const openTasks = tasks.filter((task) => task.status === 'OPEN');
+  const agentActivity = useMemo(() => new Map(agents.map((agent) => [
+    agent.agentAddress,
+    tasks.filter((task) => task.agentAddress?.toLowerCase() === agent.agentAddress.toLowerCase() && ['ASSIGNED', 'STREAMING', 'PAUSED', 'DISPUTED'].includes(task.status)),
+  ])), [agents, tasks]);
+  const visibleAgents = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return [...agents]
+      .filter((agent) => {
+        const activeTasks = agentActivity.get(agent.agentAddress) ?? [];
+        const matchesAvailability = availability === 'ALL'
+          || (availability === 'WORKING' && activeTasks.length > 0)
+          || (availability === 'AVAILABLE' && activeTasks.length === 0);
+        const matchesQuery = !normalizedQuery
+          || `${agent.displayName} ${agent.agentAddress} ${agent.capabilityManifest.capabilities.map((capability) => `${capability.label} ${capability.description}`).join(' ')}`.toLowerCase().includes(normalizedQuery);
+        return matchesAvailability && matchesQuery;
+      })
+      .sort((left, right) => {
+        if (sort === 'CAPACITY') return asNumber(right.terms.maxTaskSize) - asNumber(left.terms.maxTaskSize);
+        if (sort === 'RECENT') return right.lastUpdated - left.lastUpdated;
+        return right.score - left.score;
+      });
+  }, [agents, agentActivity, availability, query, sort]);
+
   return (
     <section className="agent-catalog" aria-labelledby="agent-catalog-title">
       <header className="section-heading">
-        <div><div className="eyebrow">Who can take work</div><h2 id="agent-catalog-title">Agent catalog</h2></div>
-        <span>{agents.length} registered agents · {openTasks.length} open tasks</span>
+        <div><div className="eyebrow">Public profiles</div><h2 id="agent-catalog-title">Choose an agent</h2><p>Compare skills, availability and settlement terms before you hire.</p></div>
+        <span>{visibleAgents.length} of {agents.length} profiles</span>
       </header>
+      <div className="agent-catalog__controls" aria-label="Agent directory filters">
+        <label className="agent-search"><span>Search profiles</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, wallet or skill" /></label>
+        <div className="agent-filter-pills" role="group" aria-label="Availability">
+          {(['ALL', 'AVAILABLE', 'WORKING'] as const).map((option) => <button className={availability === option ? 'agent-filter-pill agent-filter-pill--active' : 'agent-filter-pill'} type="button" key={option} onClick={() => setAvailability(option)}>{option === 'ALL' ? 'All agents' : option === 'AVAILABLE' ? 'Available' : 'Working now'}</button>)}
+        </div>
+        <label className="agent-sort"><span>Sort</span><select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}><option value="SCORE">Highest score</option><option value="RECENT">Recently active</option><option value="CAPACITY">Largest task limit</option></select></label>
+      </div>
       <div className="agent-catalog__grid">
-        {agents.map((agent) => {
-          const eligible = openTasks.filter((task) => agent.terms.maxTaskSize === null || asNumber(task.totalAmount) <= asNumber(agent.terms.maxTaskSize)).length;
-          const activeTasks = tasks.filter((task) => task.agentAddress?.toLowerCase() === agent.agentAddress.toLowerCase() && ['ASSIGNED', 'STREAMING', 'PAUSED', 'DISPUTED'].includes(task.status));
+        {visibleAgents.map((agent) => {
+          const eligible = openTasks.filter((task) => {
+            const underCeiling = agent.terms.maxTaskSize === null || asNumber(task.totalAmount) <= asNumber(agent.terms.maxTaskSize);
+            return underCeiling && manifestSupportsTaskCategory(agent.capabilityManifest, taskCategory(task)) && manifestSupportsWorkOrder(agent.capabilityManifest, task.workOrder);
+          }).length;
+          const activeTasks = agentActivity.get(agent.agentAddress) ?? [];
           const capabilities = agent.capabilityManifest.capabilities.slice(0, 3);
           return (
             <article className={selected === agent.agentAddress ? 'agent-catalog-card agent-catalog-card--active' : 'agent-catalog-card'} key={agent.agentAddress}>
               <header>
                 <AgentMark agent={agent} />
                 <div><h3>{agent.displayName}</h3><span className="mono">{shortAddress(agent.agentAddress)}</span></div>
-                <strong className="agent-catalog-card__score">{agent.score}<small>/1000</small></strong>
+                <div className="agent-catalog-card__score"><strong>{agent.score}</strong><small>/1000</small></div>
               </header>
               <div className="agent-catalog-card__activity"><span className={activeTasks.length ? 'agent-availability agent-availability--active' : 'agent-availability'}>{activeTasks.length ? t('WORKING NOW') : t('AVAILABLE NOW')}</span><small>{activeTasks[0]?.title ?? `${agent.completedTasks} ${t('settled outcomes')}`}</small></div>
-              {agent.capabilityManifest.runtime ? <div className="agent-catalog-card__runtime"><Server /> {agent.capabilityManifest.runtime.kind === 'OPENCLAW_GATEWAY' ? 'OpenClaw Gateway' : 'External API'} <span>·</span> {agent.capabilityManifest.runtime.paymentRail === 'X402_METERED' ? 'x402' : 'PACT escrow'}</div> : null}
-              <div className="agent-catalog-card__terms"><span><b>{activeTasks.length}</b> {t('active now')}</span><span><b>{eligible}</b> {t('can take')}</span><span><b>{agent.completedTasks}</b> {t('settled')}</span><span><b>{agent.terms.collateralPct}%</b> {t('collateral')}</span></div>
               <div className="agent-catalog-card__skills">{capabilities.length ? capabilities.map((capability) => <span key={capability.id}>{capability.label}</span>) : <span>Manifest pending</span>}</div>
-              <div className="agent-catalog-card__actions"><button className="button button--outline" type="button" onClick={() => onSelect(agent.agentAddress)}>{selected === agent.agentAddress ? 'Profile selected' : 'View full profile'} <ChevronRight /></button><button className="button button--primary" type="button" onClick={() => onHire(agent.agentAddress)}><WalletCards /> Hire</button></div>
+              <div className="agent-catalog-card__terms"><span><b>{activeTasks.length ? 'Busy' : eligible ? 'Ready' : '—'}</b><small>{activeTasks.length ? 'active work' : 'open tasks'}</small></span><span><b>{agent.completedTasks}</b><small>{t('settled')}</small></span><span><b>{agent.terms.collateralPct}%</b><small>{t('collateral')}</small></span></div>
+              {agent.capabilityManifest.runtime ? <div className="agent-catalog-card__runtime"><Server /> {agent.capabilityManifest.runtime.kind === 'OPENCLAW_GATEWAY' ? 'OpenClaw Gateway' : 'External API'} <span>·</span> {agent.capabilityManifest.runtime.paymentRail === 'X402_METERED' ? 'x402' : 'PACT escrow'}</div> : null}
+              <div className="agent-catalog-card__actions"><button className="button button--outline" type="button" onClick={() => { onSelect(agent.agentAddress); onViewProfile(agent.agentAddress); }}>View profile <ChevronRight /></button><button className="button button--primary" type="button" onClick={() => onHire(agent.agentAddress)}><WalletCards /> Hire</button></div>
             </article>
           );
         })}
       </div>
+      {!visibleAgents.length ? <div className="agent-catalog__empty"><Users /><strong>No agents match this view.</strong><span>Try another search or availability filter.</span></div> : null}
+    </section>
+  );
+}
+
+function AgentRankStrip({ agents, selected, onSelect }: { agents: ReputationSnapshot[]; selected: string; onSelect: (address: string) => void }) {
+  const ranked = useMemo(() => [...agents].sort((left, right) => right.score - left.score).slice(0, 3), [agents]);
+  return (
+    <section className="agent-rank-strip" aria-label="Top agents">
+      <div className="agent-rank-strip__intro"><div className="eyebrow">Public ranking</div><strong>Top agents</strong><span>Trust Score is earned through finalized work.</span></div>
+      <div className="agent-rank-strip__list">{ranked.map((agent, index) => <button className={selected === agent.agentAddress ? 'agent-rank-chip agent-rank-chip--active' : 'agent-rank-chip'} type="button" key={agent.agentAddress} onClick={() => onSelect(agent.agentAddress)}><span>0{index + 1}</span><AgentMark agent={agent} /><strong>{agent.displayName}</strong><b>{agent.score}</b><ChevronRight /></button>)}</div>
     </section>
   );
 }
@@ -1576,6 +1625,7 @@ export default function App() {
   const [view, setView] = useState<View>(() => viewFromLocation());
   const [trustModel, setTrustModel] = useState<TrustModel | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<string>(DEMO_ADDRESSES.newbie);
+  const [registryProfile, setRegistryProfile] = useState<string | null>(null);
   const [hireAgentAddress, setHireAgentAddress] = useState<string | null>(null);
   // New agents should land on the risk-free platform challenges first. Paid
   // work remains one click away through the other category filters.
@@ -1689,6 +1739,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (view !== 'agents') setRegistryProfile(null);
+  }, [view]);
+
+  useEffect(() => {
     const timer = window.setInterval(() => void loadDashboard(true), 5_000);
     return () => window.clearInterval(timer);
   }, [loadDashboard]);
@@ -1700,11 +1754,11 @@ export default function App() {
   }, [toast]);
 
   useEffect(() => {
-    if (!publishOpen && !registerOpen && !disputeTask && !reviewDispute && !arenaChallenge) return undefined;
+    if (!publishOpen && !registerOpen && !disputeTask && !reviewDispute && !arenaChallenge && !registryProfile) return undefined;
     const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = previous; };
-  }, [publishOpen, disputeTask, reviewDispute, arenaChallenge]);
+  }, [publishOpen, registerOpen, disputeTask, reviewDispute, arenaChallenge, registryProfile]);
 
   const perform = useCallback(async (key: string, successMessage: string | ((result: unknown) => string), action: () => Promise<unknown>): Promise<unknown | false> => {
     setBusyKey(key);
@@ -1912,10 +1966,11 @@ export default function App() {
 
               {view === 'agents' ? (
                 <div className="view-stack agents-page">
-                  <section className="page-intro reveal"><div><div className="eyebrow">Finalized outcome ledger</div><h1>{t('Agent registry')}</h1><p>Finalized settlement outcomes become deterministic commercial terms.</p></div><div className="registry-seal"><ShieldCheck /><span>APPEND-ONLY<strong>PUBLIC SCORE</strong></span></div></section>
-                  <div className="section-actions"><button className="button button--primary" onClick={() => isConnected ? requestCreateAgent() : connectAgent()} type="button"><Bot /> {isConnected ? 'Create agent profile' : 'Connect wallet'}</button><span>The runtime remains external. This profile flow is for a human owner. External agents can connect without a human through the API onboarding on the public home page.</span></div>
-                  <AgentCatalog agents={snapshot.agents} tasks={snapshot.tasks} selected={currentAgent?.agentAddress ?? selectedAgent} onSelect={setSelectedAgent} onHire={requestHire} />
-                  {currentAgent ? <section className="agents-layout"><AgentProfile agent={currentAgent} tasks={snapshot.tasks} onHire={requestHire} /><Leaderboard agents={snapshot.agents} selected={currentAgent.agentAddress} onSelect={setSelectedAgent} /></section> : <EmptyState icon={<Users />} title={t('No registered agents')} copy="Seed the demo to populate the reputation registry." />}
+                  <section className="page-intro agents-page__hero reveal"><div><div className="eyebrow">Public agent directory</div><h1>Find the right agent for the job.</h1><p>Browse registered agents by skills, availability and settlement terms. Open a profile when you are ready to review the evidence history or send a funded invitation.</p><div className="agents-page__hero-actions"><button className="button button--primary" onClick={() => isConnected ? requestCreateAgent() : connectAgent()} type="button"><Bot /> {isConnected ? 'Create an agent' : 'Connect wallet'}</button><button className="button button--outline" onClick={() => changeView('marketplace')} type="button"><Boxes /> Browse tasks</button></div></div><div className="agents-page__hero-aside"><div className="registry-seal"><ShieldCheck /><span>PUBLIC REGISTRY<strong>FINALIZED SCORE</strong></span></div><div className="agents-page__hero-stats"><div><strong>{snapshot.agents.length}</strong><span>registered agents</span></div><div><strong>{openTasks.length}</strong><span>open tasks</span></div><div><strong>{snapshot.agents.length ? Math.max(...snapshot.agents.map((agent) => agent.score)) : 0}</strong><span>top score</span></div></div></div></section>
+                  <div className="registry-entry-note"><span><strong>Looking to hire?</strong> Connect a creator wallet to invite an agent. External runtimes can join directly through API onboarding.</span><button className="text-link" type="button" onClick={() => changeView('protocol')}>How the flow works <ArrowRight /></button></div>
+                  {snapshot.agents.length ? <AgentCatalog agents={snapshot.agents} tasks={snapshot.tasks} selected={registryProfile ?? selectedAgent} onSelect={setSelectedAgent} onViewProfile={setRegistryProfile} onHire={requestHire} /> : <EmptyState icon={<Users />} title={t('No registered agents')} copy="Seed the demo to populate the reputation registry." />}
+                  {snapshot.agents.length ? <AgentRankStrip agents={snapshot.agents} selected={registryProfile ?? selectedAgent} onSelect={setSelectedAgent} /> : null}
+                  {registryProfile ? (() => { const profileAgent = snapshot.agents.find((agent) => agent.agentAddress === registryProfile); return profileAgent ? <Modal title={profileAgent.displayName} eyebrow="Agent profile" className="agent-profile-modal" onClose={() => setRegistryProfile(null)}><AgentProfile agent={profileAgent} tasks={snapshot.tasks} onHire={(address) => { setRegistryProfile(null); requestHire(address); }} /></Modal> : null; })() : null}
                 </div>
               ) : null}
 
