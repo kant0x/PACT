@@ -66,6 +66,7 @@ import { useLocale } from './locale';
 import { useAccount, useConnect, useDisconnect, useSignMessage } from 'wagmi';
 
 function WalletHeader() {
+  const { t } = useLocale();
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
@@ -75,10 +76,10 @@ function WalletHeader() {
       <div className="operator">
         <span className="operator__avatar">WEB3</span>
         <span>
-          <strong>Connected</strong>
+          <strong>{t('Connected')}</strong>
           <small>{shortAddress(address)}</small>
         </span>
-        <button className="button button--small" onClick={() => disconnect()} type="button">Disconnect</button>
+        <button className="button button--small" onClick={() => disconnect()} type="button">{t('Disconnect')}</button>
       </div>
     );
   }
@@ -86,7 +87,7 @@ function WalletHeader() {
   return (
     <div className="operator">
       <button className="button button--primary button--small" onClick={() => connect({ connector: connectors[0] })} type="button">
-        Connect Wallet
+        {t('Connect Wallet')}
       </button>
     </div>
   );
