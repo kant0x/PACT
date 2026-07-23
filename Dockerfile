@@ -17,7 +17,13 @@ RUN npm prune --omit=dev
 
 FROM node:22-bookworm-slim AS runtime
 
-ENV NODE_ENV=production
+ENV NODE_ENV=demo
+ENV PACT_MODE=demo
+ENV PACT_ENABLE_DEMO_ENDPOINTS=true
+ENV PACT_ALLOW_DETERMINISTIC_PROVIDERS=true
+ENV PACT_ALLOW_UNSIGNED_TASKS=true
+ENV PACT_CORS_ORIGINS=*
+ENV PACT_DB_PATH=/tmp/pact.sqlite
 WORKDIR /app
 RUN apt-get update \
   && apt-get install -y --no-install-recommends docker.io ca-certificates \
