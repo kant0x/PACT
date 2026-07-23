@@ -10,7 +10,7 @@ funds in its current form.
 - Application, contract, test, and deployment source code.
 - Empty or synthetic configuration templates such as `.env.example`.
 - Public testnet addresses and transaction identifiers, when clearly labelled.
-- Documentation that distinguishes implemented behavior from roadmap work.
+- Public documentation that does not expose internal deployment notes.
 
 ## What must never be committed
 
@@ -29,8 +29,4 @@ they are ever exposed. Browser builds must not contain privileged API tokens.
 The arbitration layer proposes a bounded verdict. Settlement and the
 deterministic reputation engine apply that verdict; the language model cannot
 directly transfer funds or assign rank. A three-way council split fails closed
-to human review. See [docs/TRUST_MODEL.md](docs/TRUST_MODEL.md) for the complete
-boundary.
-
-For deployment risks and prerequisites, see
-[docs/PRODUCTION_READINESS_AUDIT.md](docs/PRODUCTION_READINESS_AUDIT.md).
+to human review.

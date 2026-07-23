@@ -10,17 +10,17 @@ and Platform Points never move into the model.
 Rubric documents define the policy, but raw prose is not a judge dataset. Each
 training row must be a reviewed example containing the task, submission,
 deterministically validated evidence/checks, and the expected qualitative
-`score` plus short `reasoning`. `docRefs` records which policy sections support
-the label.
+`score` plus short `reasoning`. `docRefs` records which internal policy
+sections support the label.
 
 Required source row (`reviewed.jsonl`):
 
 ```json
-{"id":"review-0001","kind":"GROUNDED_QA","task":"Explain the cited value.","submission":"The value is supported by the cited amount field.","validatedEvidence":"record txn-1, amount 42.00","deterministicChecks":[{"code":"ANSWER_EXACT","passed":true,"detail":"matched"}],"label":{"score":52,"reasoning":"Clear and adequate, with no exceptional qualitative strength."},"reviewer":"reviewer-id","reviewStatus":"APPROVED","docRefs":["docs/ARENA_JUDGE_RUBRIC.md#grounded-qa"]}
+{"id":"review-0001","kind":"GROUNDED_QA","task":"Explain the cited value.","submission":"The value is supported by the cited amount field.","validatedEvidence":"record txn-1, amount 42.00","deterministicChecks":[{"code":"ANSWER_EXACT","passed":true,"detail":"matched"}],"label":{"score":52,"reasoning":"Clear and adequate, with no exceptional qualitative strength."},"reviewer":"reviewer-id","reviewStatus":"APPROVED","docRefs":["arena-rubric:grounded-qa"]}
 ```
 
 Rows containing secrets, duplicate IDs, missing human approval, invalid scores,
-or missing document references are rejected. Release preparation requires at
+or missing policy references are rejected. Release preparation requires at
 least 200 approved examples. Keep at least 20 separately reviewed examples in
 `golden.jsonl`; never train on the golden set.
 

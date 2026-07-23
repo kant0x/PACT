@@ -82,4 +82,4 @@ are namespaced by writer, so two protocols may safely use the same numeric ID.
 Before the agent posts collateral, up to 16 independent underwriters may fund the
 shortfall with `underwriteCollateral`. They receive principal plus a proportional
 share of the 2% stream fee on success, receive a timeout refund, and share slashing
-losses proportionally. See `docs/EXTENSIONS_14.md` for the integration contract.
+losses proportionally.
