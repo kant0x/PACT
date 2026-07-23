@@ -38,5 +38,5 @@ COPY --from=build /app/shared/dist ./shared/dist
 COPY --from=build /app/services/api/dist ./services/api/dist
 
 RUN mkdir -p /app/data
-EXPOSE 4100
+EXPOSE 8080
 CMD ["node", "services/api/dist/src/server.js"]

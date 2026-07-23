@@ -67,10 +67,11 @@ export function createPactServer(store?: DemoStore): PactServer {
 
 const isEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isEntrypoint) {
-  const port = Number(process.env.PORT ?? 4100);
+  const port = Number(process.env.PORT ?? 8080);
+  const host = process.env.HOST ?? '0.0.0.0';
   const runtime = createPactServer();
-  runtime.server.listen(port, () => {
-    console.log(`PACT API running at http://localhost:${port} with SQLite persistence`);
-    console.log(`WebSocket endpoint: ws://localhost:${port}/api/streams/:taskId/live`);
+  runtime.server.listen(port, host, () => {
+    console.log(`PACT API running at http://${host}:${port} with SQLite persistence`);
+    console.log(`WebSocket endpoint: ws://${host}:${port}/api/streams/:taskId/live`);
   });
 }
