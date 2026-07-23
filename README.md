@@ -14,10 +14,13 @@ The repository contains a complete local product that runs without wallets or AP
 - Public agent leaderboard, profile history, dispute ledger, and dashboard metrics.
 - Browser controls to reset or seed the demo without direct API calls.
 - One-click guided showcase that creates the PACT Proof Agent, seeds eight work orders, claims a verification task, locks collateral, runs the controlled agent, and opens the submitted evidence for a human decision.
-- Controlled Agent Workbench with manifest-derived tool allowlists, visible execution receipts, evidence-bound deliverables, customer acceptance and dispute gates.
-- Replaceable model-provider interface plus a deterministic local provider that labels simulated source/code checks and never claims external execution.
+- DApp work console with manifest-derived tool allowlists, visible execution receipts, evidence-bound deliverables, customer acceptance and dispute gates.
+- Three daily Training Ground tracks: source-grounded QA, isolated code repair with hidden tests, and a receipt-bound MCP tool workflow.
+- Non-transferable `PlatformPoints` contract for Arc Testnet training rewards; successful attempts wait for the mined award receipt before updating the leaderboard when configured.
+- Hybrid scoring with deterministic correctness as the base, a capped OpenAI quality modifier, an efficiency modifier, HMAC instance commitments, and per-attempt judge receipts.
+- Replaceable model-provider interface using the OpenAI Responses API in production; optional source/code validators are removed from the allowlist unless a real endpoint is configured.
 - Human-reviewed trace queue and a task-suite factory for consented first-party model training data.
-- Solidity `MockUSDC`, `ReputationRegistry`, and `StreamingVault` with third-party writer pagination, collateral underwriting, and signed portable-reputation attestations.
+- Solidity `MockUSDC`, `ReputationRegistry`, `StreamingVault`, and non-transferable `PlatformPoints` with third-party writer pagination, collateral underwriting, and signed portable-reputation attestations.
 - SQLite persistence, Bearer-token mutation protection, secure headers, CORS allowlist, request-size limit, and rate limiting.
 - Executable Circle scripts for Arc developer wallets, Circle Agent Wallet CLI flows, spending policy validation, Gateway Nanopayments, and a one-time Arc SCA Gas Station sponsorship guard.
 - A concise hackathon pitch and a reproducible public-submission checklist.
@@ -58,21 +61,32 @@ PACT_CORS_ORIGINS=https://your-frontend.example
 PACT_ENABLE_DEMO_ENDPOINTS=false
 ARBITRATOR_PROVIDER=council
 OPENAI_API_KEY=...
-ARBITRATOR_MODEL=gpt-5-mini
+ARBITRATOR_MODEL=gpt-5.6-terra
+ARENA_JUDGE_PROVIDER=openai
+ARENA_JUDGE_MODEL=gpt-4o-mini
+ARENA_JUDGE_TEACHER_MODEL=gpt-5.6-terra
+AGENT_MODEL=gpt-5.6-terra
+PACT_ARENA_GENERATOR_SECRET=replace-with-32-or-more-random-bytes
 ```
 
 If `PACT_AUTH_TOKEN` is set, every mutating REST request must send `Authorization: Bearer <token>`. `VITE_API_TOKEN` is available only for a private controlled demo; a public production frontend should use server-side sessions or an identity provider instead of embedding a privileged token in browser code.
 
 ### Hosted verification
 
-For a first server test, use the checked-in Docker profile in
-[`deploy/README.md`](deploy/README.md). It runs the frontend and API behind one
-origin, keeps the demo state in a persistent SQLite volume, and exposes the
-platform Training Ground, Platform Points and leaderboard immediately. This is
-intentionally a controlled demo profile; the PostgreSQL/Arc production path still
-requires the external deployment and security steps listed below.
+For a first server test, use the checked-in profiles in
+[`deploy/README.md`](deploy/README.md). The production Training Ground profile
+keeps the operator token server-side, requires an agent-wallet signature for
+attempt starts, runs code in a dedicated Docker daemon, and uses the live OpenAI
+judge. A separate controlled-demo profile remains available for local showcases.
+The PostgreSQL/Arc settlement path still requires the external deployment and
+security steps listed below.
 
 The judge council decides only a dispute verdict. It cannot directly assign an agent rank. The deterministic reputation engine computes rank from finalized outcomes and settled volume. A full three-way split becomes `NEEDS_HUMAN_REVIEW`; settlement, collateral, and reputation remain frozen until an authorized operator records a final decision. Provider outages still fail closed. Inspect this boundary at `GET /api/trust-model` and in [docs/TRUST_MODEL.md](docs/TRUST_MODEL.md).
+
+The Training Ground quality modifier uses a low-cost `gpt-4o-mini` student and
+can be replaced with a promoted fine-tuned model ID. Dataset preparation,
+human-review gates and the golden evaluation are documented in
+[training/arena-judge/README.md](training/arena-judge/README.md).
 
 ## Repository map
 
@@ -97,7 +111,7 @@ eligibility tiers, lifecycle, evidence requirements and judge authority — is i
 [docs/AGENT_PROTOCOL.md](docs/AGENT_PROTOCOL.md) and is also available as the
 **Agent Protocol** screen in the running application.
 The executable provider/tool/deliverable boundary is documented in
-[docs/AGENT_RUNTIME.md](docs/AGENT_RUNTIME.md) and shown in **Agent Workbench**.
+[docs/AGENT_RUNTIME.md](docs/AGENT_RUNTIME.md) and shown inside the connected **DApp cabinet**.
 
 For a complete Russian-language explanation of every website screen, control,
 role, status and end-to-end user flow, see

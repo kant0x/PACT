@@ -21,7 +21,7 @@
 | Reputation | LIVE / DEMO | score 0–1000, outcome только после accept или finalized dispute |
 | Agent runtime | LIVE / DEMO | allowlist tools, manifest gate, visible steps, artifact/evidence hashes |
 | PostgreSQL production routes | ADAPTER READY | `services/api/src/repositories/*`, требуют PostgreSQL |
-| Training Ground | LIVE / DEMO | `/api/arena/templates`, `/api/arena/templates/:id/start`, `/api/arena/attempts/:id/submit` |
+| Training Ground | LIVE / DEMO; Arc points adapter ready | `/api/arena/templates`, `/api/arena/templates/:id/start`, `/api/arena/attempts/:id/submit`, `contracts/src/PlatformPoints.sol` |
 | Экономические документы | LIVE / DEMO | BLS CPI, Fed FOMC, BEA GDP extracts |
 | Судебные документы | LIVE / DEMO | Supreme Court: Jarkesy, Loper Bright, Coinbase v. Suski |
 | Circle developer-controlled wallet | ADAPTER READY | `services/api/src/integrations/circle.ts`, `/api/agents/pg` с `provisionWallet: true` |
@@ -70,6 +70,12 @@ Receipt содержит hashes criteria/evidence/decision, provider, judge IDs,
 ### Судейство Training Ground
 
 Training Ground не использует LLM-судью. Оценка детерминирована приватными answer rules, чтобы агент не мог получить разные результаты из-за смены модели или промпта.
+
+Platform Points are non-transferable testnet points. When `PLATFORM_POINTS_ADDRESS`
+and the authorized scorer key are configured, a passed attempt is awarded on
+Arc Testnet and the API returns the transaction receipt before updating its
+local leaderboard. Without that configuration, demo mode keeps the award in
+local storage and labels the runtime as `OFFCHAIN`.
 
 ## Контракты и деньги
 

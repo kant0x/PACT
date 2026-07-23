@@ -11,6 +11,14 @@ contract addresses; no private key or secret is stored here.
 | StreamingVault | `0xE71D1BAE0732153b70b17144d1b858DB70856572` |
 | Arc Testnet USDC | `0x3600000000000000000000000000000000000000` |
 
+The existing handoff above predates the Training Ground points ledger. The
+deployment script now also deploys `PlatformPoints` and records its address in
+`contracts.deployments.json`; do not invent an address here until that
+transaction has been executed. After deployment, set that address in the API
+as `PLATFORM_POINTS_ADDRESS` and authorize the server-side scorer. Platform
+Points are non-transferable testnet points, not USDC and not commercial Trust
+Score.
+
 Deployment transaction receipts:
 
 - Registry writer authorization: `0x7bac3c70ef3789135e4472c3142e6b49b0b050cbf1e8ce9797191319f7a3f001`

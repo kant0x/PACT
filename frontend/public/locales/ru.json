@@ -104,10 +104,10 @@
     "SETTLEMENT": "РАСЧЁТ",
     "Filter work orders by category": "Фильтр заданий по категории",
     "ALL": "ВСЕ",
-    "CREATIVE": "CREATIVE",
-    "SECURITY": "SECURITY",
-    "RESEARCH": "RESEARCH",
-    "ENGINEERING": "ENGINEERING",
+    "CREATIVE": "КРЕАТИВ",
+    "SECURITY": "БЕЗОПАСНОСТЬ",
+    "RESEARCH": "ИССЛЕДОВАНИЯ",
+    "ENGINEERING": "ИНЖЕНЕРИЯ",
     "TRAINING": "ТРЕНИРОВКА",
     "Choose another category or publish a funded work order.": "Выберите другую категорию или опубликуйте оплачиваемое задание.",
     "Connect a wallet or paste an agent address to create a public profile.": "Подключите кошелёк или вставьте адрес агента, чтобы создать публичный профиль.",
@@ -116,7 +116,7 @@
     "e.g. Atlas Research Agent": "например, Atlas Research Agent",
     "0x…": "0x…",
     "Controlled agent execution": "Управляемое выполнение агента",
-    "Plan, execute, prove, then settle. Every tool call is policy-gated and every artifact is bound to a SHA-256 receipt.": "Спланируйте, выполните, докажите и рассчитайтесь. Каждый вызов инструмента проходит policy-gate, а каждый артефакт связан с SHA-256 receipt.",
+    "Plan, execute, prove, then settle. Every tool call is policy-gated and every artifact is bound to a SHA-256 receipt.": "Спланируйте, выполните, докажите и рассчитайтесь. Каждый вызов инструмента проходит проверку политики, а каждый артефакт связан с SHA-256 квитанцией.",
     "ACTIVE PROVIDER": "АКТИВНЫЙ ПРОВАЙДЕР",
     "DEMO_SIMULATION": "DEMO-СИМУЛЯЦИЯ",
     "No active agent work": "Нет активной работы агента",
@@ -162,7 +162,6 @@
     "Training Ground": "Тренировочный полигон",
     "Training leaderboard": "Таблица тренировок",
     "Platform Points": "Баллы платформы",
-    "Agent registry": "Реестр агентов",
     "Live value rails": "Активные денежные потоки",
     "Dispute ledger": "Реестр споров",
     "Open": "Открыта",
@@ -184,14 +183,13 @@
     "Create registration": "Создать регистрацию",
     "Cancel": "Отмена",
     "Registration creates a public profile with an initial trust score of 100.": "Регистрация создаёт публичный профиль с начальным Trust Score 100.",
-    "Funded work orders / verifiable delivery": "Оплачиваемые задания / проверяемый результат",
     "Finalized outcome ledger": "Реестр завершённых результатов",
     "Streaming vault monitor": "Мониторинг StreamingVault",
     "Deterministic demo arbitration": "Детерминированный demo-арбитраж",
     "Three-role judge council": "Совет судей из трёх ролей",
     "Daily document verification": "Ежедневная проверка документов",
     "One attempt per agent per UTC day": "Одна попытка агента в сутки по UTC",
-    "Browse tasks": "Смотреть задания",
+    "Browse tasks": "Открыть задания",
     "THE MARKETPLACE FOR AI WORK": "МАРКЕТПЛЕЙС РАБОТЫ ДЛЯ ИИ",
     "Hire an AI agent.": "Наймите ИИ-агента.",
     "Get the result.": "Получите результат.",
@@ -233,7 +231,6 @@
     "THE WORKFLOW": "КАК ИДЁТ РАБОТА",
     "What happens after “Post a task”": "Что происходит после «Разместить задание»",
     "Every task follows the same visible path, whether the agent is built by us or connected by an outside developer.": "Каждое задание проходит один и тот же понятный путь — независимо от того, создали агента мы или подключил внешний разработчик.",
-    "Post a task": "Разместить задание",
     "Describe the result you need, set a budget and add a simple acceptance checklist.": "Опишите нужный результат, задайте бюджет и добавьте простой список критериев.",
     "Choose and accept": "Выбрать и принять",
     "An agent checks its skills, price and availability before it commits to the work.": "Агент проверяет свои навыки, цену и доступность до принятия работы.",
@@ -277,7 +274,7 @@
     "Editing a Trust Score directly.": "Менять Trust Score напрямую.",
     "IF SOMETHING GOES WRONG": "ЕСЛИ ЧТО-ТО ПОШЛО НЕ ТАК",
     "Disputes are private and evidence-based.": "Споры закрытые и основаны на доказательствах.",
-    "Open private workspace": "Открыть закрытый раздел",
+    "Open private workspace": "Открыть закрытый кабинет",
     "A judge evaluates the delivered work and returns only a fault verdict. Settlement decides what happens to collateral; Trust Score changes separately, after acceptance or a finalized dispute.": "Судья оценивает только переданную работу и возвращает тип нарушения. Settlement решает судьбу залога, а Trust Score обновляется отдельно после приёмки или финализированного спора.",
     "Criteria": "Критерии",
     "Evidence": "Доказательства",
@@ -291,7 +288,6 @@
     "FULL_FAULT": "ПОЛНОЕ НАРУШЕНИЕ",
     "pays the agent.": "выплата агенту.",
     "applies the settlement policy. A split goes to": "применяет политику settlement. При разделении решение уходит в",
-    "FOR AGENT BUILDERS": "ДЛЯ СОЗДАТЕЛЕЙ АГЕНТОВ",
     "Bring your own agent.": "Подключите собственного агента.",
     "Connect runtime": "Подключить runtime",
     "Declare skills": "Заявить навыки",
@@ -332,16 +328,15 @@
     "Publish a task": "Опубликовать задание",
     "Open Agent Workbench": "Открыть рабочую панель агента",
     "Run guided showcase": "Запустить демонстрацию",
-    "DEMO CONTROL": "УПРАВЛЕНИЕ DEMO",
     "Reset": "Сбросить",
     "Market": "Загрузить рынок",
     "Accept": "Принять",
     "Dispute": "Открыть спор",
     "Claim task": "Взять задание",
     "No scored attempts yet. Be the first agent on the board.": "Пока нет оценённых попыток. Станьте первым агентом в таблице.",
-    "Scores reset only by operator action": "Баллы сбрасываются только оператором",
+    "Scores reset only by operator action": "Баллы сбрасывает только оператор",
     "Collateral is not a fee. It locks only when an agent claims a paid marketplace task; Training Ground uses Platform Points and carries no USDC risk.": "Залог — не комиссия. Он блокируется только при принятии платного задания; Тренировочный полигон использует баллы и не несёт риска USDC.",
-    "Why a deposit exists": "Зачем нужен депозит",
+    "Why a deposit exists": "Зачем нужен залог",
     "Finalized settlement outcomes become deterministic commercial terms.": "Завершённые расчёты превращаются в предсказуемые коммерческие условия.",
     "Evidence produces a verdict; only finalized outcomes may update reputation.": "Доказательства формируют вердикт; Trust Score меняется только после финализации.",
     "Withdrawable USDC accrues as agents work; collateral stays locked until settlement.": "Доступный USDC начисляется по мере работы; залог остаётся заблокированным до расчёта.",
@@ -356,8 +351,8 @@
     "Decision source": "Источник решения",
     "Evidence submitted": "Предоставленные доказательства",
     "Opened": "Открыт",
-    "Settlement is frozen until an authorized operator records the final verdict.": "Расчёт заморожен, пока авторизованный оператор не внесёт финальный вердикт."
-    ,"Enter DApp": "Войти в DApp",
+    "Settlement is frozen until an authorized operator records the final verdict.": "Расчёт заморожен, пока авторизованный оператор не внесёт финальный вердикт.",
+    "Enter DApp": "Войти в DApp",
     "DApp dashboard": "Рабочий стол DApp",
     "Workspace": "Рабочее пространство",
     "Tasks": "Задания",
@@ -369,11 +364,8 @@
     "Choose how you want to use PACT.": "Как вы хотите использовать PACT?",
     "Order work for your team, or connect an agent you own.": "Закажите работу для команды или подключите своего агента.",
     "Get a job done": "Получить готовый результат",
-    "Describe the outcome, set a budget, and choose an agent to deliver it.": "Опишите результат, задайте бюджет и выберите агента.",
-    "Browse tasks": "Смотреть задания",
     "Bring your agent": "Подключить своего агента",
     "Connect an existing runtime, declare its skills, and let it take eligible work through PACT.": "Подключите runtime, укажите его навыки и разрешите ему брать подходящие задания через PACT.",
-    "Connect an agent": "Подключить агента",
     "Guest mode is read-only": "Гостевой режим — только просмотр",
     "You can inspect public task briefs and agent profiles. Claiming, publishing, registration, and disputes require a wallet.": "Можно смотреть открытые задания и профили агентов. Для публикации, регистрации, взятия задания и споров нужен кошелёк.",
     "PACT / PRIVATE WORKSPACE": "PACT / ЛИЧНОЕ ПРОСТРАНСТВО",
@@ -386,7 +378,6 @@
     "PRIVATE DAPP WORKSPACE": "ЗАКРЫТАЯ РАБОЧАЯ ОБЛАСТЬ DAPP",
     "My workbench is locked.": "Рабочая панель закрыта.",
     "Connect the wallet that claimed or published work to see execution, evidence, deliverables, and settlement actions.": "Подключите кошелёк, который взял или опубликовал задание, чтобы видеть выполнение, доказательства, результат и расчёт.",
-    "Connect wallet": "Подключить кошелёк",
     "Connect to publish": "Подключиться для публикации",
     "Connect to register": "Подключиться для регистрации",
     "Connect wallet to claim": "Подключить кошелёк для получения",
@@ -396,10 +387,7 @@
     "PRIVATE DAPP SECTION": "ЗАКРЫТЫЙ РАЗДЕЛ DAPP",
     "Disputes are locked.": "Споры закрыты.",
     "Connect the wallet that created or claimed a work order to see its evidence, verdict, and settlement history.": "Подключите кошелёк, который создал или взял задание, чтобы увидеть доказательства, вердикт и историю расчёта.",
-    "Private disputes": "Закрытые споры"
-    ,"Controlled agent execution": "Управляемое выполнение агента",
-    "Plan, execute, prove, then settle. Every tool call is policy-gated and every artifact is bound to a SHA-256 receipt.": "Спланируйте, выполните, докажите и рассчитайтесь. Каждый вызов инструмента проходит проверку политики, а каждый артефакт связан с SHA-256 квитанцией.",
-    "ACTIVE PROVIDER": "АКТИВНЫЙ ПРОВАЙДЕР",
+    "Private disputes": "Закрытые споры",
     "LOCAL SAFE MODE": "ЛОКАЛЬНЫЙ БЕЗОПАСНЫЙ РЕЖИМ",
     "01 / PREFLIGHT": "01 / ПРЕДПРОВЕРКА",
     "Identity + wallet limits": "Идентичность и лимиты кошелька",
@@ -419,8 +407,8 @@
     "Open dispute": "Открыть спор",
     "Acceptance finalizes payout and updates reputation.": "Приёмка завершает выплату и обновляет репутацию.",
     "Agent not registered": "Агент не зарегистрирован",
-    "Register this wallet in the Agent Registry before claiming paid work.": "Зарегистрируйте этот кошелёк в Реестре агентов перед получением оплачиваемого задания."
-    ,"Work orders": "Задания",
+    "Register this wallet in the Agent Registry before claiming paid work.": "Зарегистрируйте этот кошелёк в Реестре агентов перед получением оплачиваемого задания.",
+    "Work orders": "Задания",
     "Open work orders": "Открытые задания",
     "Open work": "Открытая работа",
     "OPEN WORK": "ОТКРЫТЫЕ ЗАДАНИЯ",
@@ -434,257 +422,255 @@
     "Claim a work order to begin streaming USDC.": "Возьмите задание, чтобы начать потоковую выплату USDC.",
     "Browse work orders": "Смотреть задания",
     "Work order published to open work.": "Задание опубликовано в открытой ленте работ.",
-    "Demo work orders loaded.": "Демо-задания загружены."
-    ,"01 / Identity": "01 / ИДЕНТИЧНОСТЬ"
-    ,"Who is this agent?": "КТО ЭТОТ АГЕНТ?"
-    ,"These details are visible to creators before they fund a work order.": "Эти данные видны заказчикам до финансирования задания."
-    ,"Primary specialty": "Основная специализация"
-    ,"Research & analysis": "Исследования и анализ"
-    ,"Engineering & code": "Инженерия и код"
-    ,"Security & policy": "Безопасность и политики"
-    ,"Data & documents": "Данные и документы"
-    ,"Creative & media": "Креатив и медиа"
-    ,"Max parallel tasks": "Максимум параллельных заданий"
-    ,"Capability description": "Описание возможностей"
-    ,"02 / Capability manifest": "02 / МАНИФЕСТ ВОЗМОЖНОСТЕЙ"
-    ,"Make the agent selectable": "Сделайте агента понятным для выбора"
-    ,"Use comma-separated values. This is the signed operating envelope used for eligibility and audit.": "Перечисляйте значения через запятую. Это подписанный рабочий контур для допуска и аудита."
-    ,"Accepted inputs": "Принимаемые входы"
-    ,"Produced outputs": "Выходные результаты"
-    ,"Tools / integrations": "Инструменты / интеграции"
-    ,"Evidence returned": "Возвращаемые доказательства"
-    ,"03 / Settlement envelope": "03 / РАСЧЁТНЫЙ КОНТУР"
-    ,"Set safe economic limits": "Задайте безопасные экономические лимиты"
-    ,"The wallet policy is an additional cap; it never replaces the StreamingVault escrow.": "Политика кошелька — дополнительный лимит; она не заменяет escrow в StreamingVault."
-    ,"Per-task wallet cap / USDC": "Лимит кошелька на задание / USDC"
-    ,"Human approval above / USDC": "Ручное подтверждение выше / USDC"
-    ,"Allow transaction preparation": "Разрешить подготовку транзакций"
-    ,"Only prepares unsigned Arc transactions; signing remains subject to the connected wallet policy.": "Только подготавливает неподписанные транзакции Arc; подпись остаётся под контролем политики подключённого кошелька."
-    ,"New capabilities are self-declared. Demo verification or external attestation can be added later from the agent profile.": "Новые возможности заявляются самостоятельно. Демо-проверку или внешнюю аттестацию можно добавить позже из профиля агента."
-    ,"Runtime endpoint is connected through API onboarding later; never publish secrets in this profile.": "Endpoint runtime подключается позже через API onboarding; никогда не публикуйте секреты в этом профиле."
-    ,"Registration creates a public profile with an initial trust score of 80.": "Регистрация создаёт публичный профиль с начальным Trust Score 80."
-    ,"Connected agent wallet address": "Адрес подключённого кошелька агента"
-    ,"Registration is bound to the connected wallet: ": "Регистрация привязана к подключённому кошельку: "
-    ,"Registration is bound to the connected wallet:": "Регистрация привязана к подключённому кошельку:"
-    ,"Connect the wallet that owns this agent address before registering.": "Перед регистрацией подключите кошелёк владельца этого адреса агента."
-    ,"Connect the wallet that owns this agent address before registering on Arc.": "Перед регистрацией в Arc подключите кошелёк владельца этого адреса агента."
-    ,"Describe the agent in at least 20 characters so creators can judge fit before assigning work.": "Опишите агента минимум 20 символами, чтобы заказчик мог оценить соответствие до назначения работы."
-    ,"Add at least one item to inputs, outputs, tools, and evidence methods. Separate items with commas.": "Добавьте минимум один пункт во входы, выходы, инструменты и методы доказательств. Разделяйте пункты запятыми."
-    ,"Concurrency must be 1–32 and the per-task wallet limit must be greater than zero.": "Параллельность должна быть от 1 до 32, а лимит кошелька на задание — больше нуля."
-    ,"The manual approval threshold must be empty or a positive USDC amount.": "Порог ручного подтверждения должен быть пустым или положительной суммой USDC."
-    ,"ALL": "ВСЕ"
-    ,"CREATIVE": "КРЕАТИВ"
-    ,"SECURITY": "БЕЗОПАСНОСТЬ"
-    ,"RESEARCH": "ИССЛЕДОВАНИЯ"
-    ,"ENGINEERING": "ИНЖЕНЕРИЯ"
-    ,"TRAINING": "ТРЕНИРОВКА"
-    ,"AVAILABLE VALUE": "ДОСТУПНАЯ СУММА"
-    ,"REGISTERED AGENTS": "ЗАРЕГИСТРИРОВАННЫЕ АГЕНТЫ"
-    ,"CLAIMING AS": "ВЗЯТЬ ОТ ИМЕНИ"
-    ,"Connect to publish": "Подключиться для публикации"
-    ,"Creator wallet required": "Нужен кошелёк заказчика"
-    ,"Connect an agent wallet": "Подключите кошелёк агента"
-    ,"Connect to register": "Подключиться для регистрации"
-    ,"Register agent": "Зарегистрировать агента"
-    ,"Escrow": "Escrow"
-    ,"Expected": "\u041e\u0436\u0438\u0434\u0430\u0435\u043c\u043e\u0435"
-    ,"\u041f\u043e\u0434\u043a\u043b\u044e\u0447\u0438\u0442\u0435 \u043a\u043e\u0448\u0435\u043b\u0451\u043a": "\u041f\u043e\u0434\u043a\u043b\u044e\u0447\u0438\u0442\u0435 \u043a\u043e\u0448\u0435\u043b\u0451\u043a"
-    ,"Target": "Срок"
-    ,"Posted": "Опубликовано"
-    ,"Claim & calculate terms": "Взять и рассчитать условия"
-    ,"Deposit required: ": "Требуемый залог: "
-    ,"Reward": "Награда"
-    ,"Documents": "Документы"
-    ,"Today": "Сегодня"
-    ,"DONE": "ГОТОВО"
-    ,"OPEN": "ОТКРЫТО"
-    ,"LOCKED": "ЗАКРЫТО"
-    ,"Completed today": "Выполнено сегодня"
-    ,"Open daily challenge": "Открыть задание дня"
-    ,"OUTCOME": "\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442"
-    ,"Task summary": "\u041a\u0440\u0430\u0442\u043a\u0438\u0435 \u0443\u0441\u043b\u043e\u0432\u0438\u044f"
-    ,"judge checks": "\u043f\u0440\u043e\u0432\u0435\u0440\u043e\u043a \u0441\u0443\u0434\u044c\u0438"
-    ,"required skills": "\u043d\u0443\u0436\u043d\u044b\u0445 \u043d\u0430\u0432\u044b\u043a\u043e\u0432"
-    ,"expected": "\u043e\u0436\u0438\u0434\u0430\u0435\u043c\u043e\u0435"
-    ,"View task details": "\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u044c \u0434\u0435\u0442\u0430\u043b\u0438 \u0437\u0430\u0434\u0430\u043d\u0438\u044f"
-    ,"INPUTS": "\u0412\u0445\u043e\u0434\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435"
-    ,"DELIVERABLE": "\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0430\u0433\u0435\u043d\u0442\u0430"
-    ,"JUDGE CHECKS": "\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0438 \u0441\u0443\u0434\u044c\u0438"
-    ,"acceptance checks": "\u043f\u0440\u043e\u0432\u0435\u0440\u043e\u043a \u043f\u0440\u0438\u0451\u043c\u043a\u0438"
-    ,"Requires": "\u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f"
-    ,"Open capability profile": "\u041e\u0442\u043a\u0440\u044b\u0442\u044b\u0439 \u043f\u0440\u043e\u0444\u0438\u043b\u044c \u043d\u0430\u0432\u044b\u043a\u043e\u0432"
-    ,"Open source": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0438\u0441\u0442\u043e\u0447\u043d\u0438\u043a"
-    ,"Expected delivery window": "\u041e\u0436\u0438\u0434\u0430\u0435\u043c\u043e\u0435 \u043e\u043a\u043d\u043e \u0434\u043e\u0441\u0442\u0430\u0432\u043a\u0438"
-    ,"SETTLEMENT": "\u0420\u0410\u0421\u0427\u0401\u0422"
-    ,"Describe the outcome, budget and optional delivery window. Then choose the right agent.": "\u041e\u043f\u0438\u0448\u0438\u0442\u0435 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442, \u0431\u044e\u0434\u0436\u0435\u0442 \u0438 \u043d\u0435\u043e\u0431\u044f\u0437\u0430\u0442\u0435\u043b\u044c\u043d\u043e\u0435 \u043e\u043a\u043d\u043e \u0434\u043e\u0441\u0442\u0430\u0432\u043a\u0438. \u0417\u0430\u0442\u0435\u043c \u0432\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043f\u043e\u0434\u0445\u043e\u0434\u044f\u0449\u0435\u0433\u043e \u0430\u0433\u0435\u043d\u0442\u0430."
-    ,"Write the outcome, budget, optional delivery window, and the checklist that defines a good result.": "\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442, \u0431\u044e\u0434\u0436\u0435\u0442, \u043d\u0435\u043e\u0431\u044f\u0437\u0430\u0442\u0435\u043b\u044c\u043d\u043e\u0435 \u043e\u043a\u043d\u043e \u0434\u043e\u0441\u0442\u0430\u0432\u043a\u0438 \u0438 \u0447\u0435\u043a\u043b\u0438\u0441\u0442 \u0441 \u0443\u0441\u043b\u043e\u0432\u0438\u044f\u043c\u0438 \u043f\u0440\u0438\u0451\u043c\u043a\u0438."
-    ,"Set the USDC budget; a delivery window is optional before an agent accepts the work.": "\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u0431\u044e\u0434\u0436\u0435\u0442 USDC; \u043e\u043a\u043d\u043e \u0434\u043e\u0441\u0442\u0430\u0432\u043a\u0438 \u0434\u043e \u043d\u0430\u0447\u0430\u043b\u0430 \u0440\u0430\u0431\u043e\u0442\u044b \u0430\u0433\u0435\u043d\u0442\u0430 \u043d\u0435\u043e\u0431\u044f\u0437\u0430\u0442\u0435\u043b\u044c\u043d\u043e."
-    ,"Claiming as": "\u0412\u042b\u041f\u041e\u041b\u041d\u042f\u0415\u0422"
-    ,"FUNDED WORK ORDERS / VERIFIABLE DELIVERY": "\u041e\u041f\u041b\u0410\u0427\u0415\u041d\u041d\u042b\u0415 \u0417\u0410\u0414\u0410\u041d\u0418\u042f / \u041f\u0420\u041e\u0412\u0415\u0420\u042f\u0415\u041c\u042b\u0419 \u0420\u0415\u0417\u0423\u041b\u042c\u0422\u0410\u0422"
-    ,"Agents study a server-selected extract from a real economic or legal source, then submit one scored answer set per UTC day.": "\u0410\u0433\u0435\u043d\u0442 \u0438\u0437\u0443\u0447\u0430\u0435\u0442 \u0432\u044b\u0431\u0440\u0430\u043d\u043d\u044b\u0439 \u0441\u0435\u0440\u0432\u0435\u0440\u043e\u043c \u0444\u0440\u0430\u0433\u043c\u0435\u043d\u0442 \u044d\u043a\u043e\u043d\u043e\u043c\u0438\u0447\u0435\u0441\u043a\u043e\u0433\u043e \u0438\u043b\u0438 \u043f\u0440\u0430\u0432\u043e\u0432\u043e\u0433\u043e \u0438\u0441\u0442\u043e\u0447\u043d\u0438\u043a\u0430 \u0438 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u044f\u0435\u0442 \u043e\u0434\u0438\u043d \u043d\u0430\u0431\u043e\u0440 \u043e\u0442\u0432\u0435\u0442\u043e\u0432 \u0432 \u0441\u0443\u0442\u043a\u0438 UTC."
-    ,"Why a deposit exists": "\u0417\u0430\u0447\u0435\u043c \u043d\u0443\u0436\u0435\u043d \u0437\u0430\u043b\u043e\u0433"
-    ,"Collateral is not a fee. It locks only when an agent claims a paid work order; Training Ground uses Platform Points and carries no USDC risk.": "\u0417\u0430\u043b\u043e\u0433 \u2014 \u044d\u0442\u043e \u043d\u0435 \u043a\u043e\u043c\u0438\u0441\u0441\u0438\u044f. \u041e\u043d \u0431\u043b\u043e\u043a\u0438\u0440\u0443\u0435\u0442\u0441\u044f \u0442\u043e\u043b\u044c\u043a\u043e \u043f\u0440\u0438 \u0432\u0437\u044f\u0442\u0438\u0438 \u043e\u043f\u043b\u0430\u0447\u0438\u0432\u0430\u0435\u043c\u043e\u0433\u043e \u0437\u0430\u0434\u0430\u043d\u0438\u044f; \u0432 \u0422\u0440\u0435\u043d\u0438\u0440\u043e\u0432\u043e\u0447\u043d\u043e\u043c \u043f\u043e\u043b\u0438\u0433\u043e\u043d\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u044e\u0442\u0441\u044f \u0431\u0430\u043b\u043b\u044b \u043f\u043b\u0430\u0442\u0444\u043e\u0440\u043c\u044b \u0431\u0435\u0437 \u0440\u0438\u0441\u043a\u0430 USDC."
-    ,"Scores reset only by operator action": "\u0411\u0430\u043b\u043b\u044b \u0441\u0431\u0440\u0430\u0441\u044b\u0432\u0430\u0435\u0442 \u0442\u043e\u043b\u044c\u043a\u043e \u043e\u043f\u0435\u0440\u0430\u0442\u043e\u0440"
-    ,"No scored attempts yet. Be the first agent on the board.": "\u041f\u043e\u043a\u0430 \u043d\u0435\u0442 \u043e\u0446\u0435\u043d\u0451\u043d\u043d\u044b\u0445 \u043f\u043e\u043f\u044b\u0442\u043e\u043a. \u0421\u0442\u0430\u043d\u044c\u0442\u0435 \u043f\u0435\u0440\u0432\u044b\u043c \u0430\u0433\u0435\u043d\u0442\u043e\u043c \u0432 \u0442\u0430\u0431\u043b\u0438\u0446\u0435."
-    ,"Wait for the platform to add training tasks.": "\u0414\u043e\u0436\u0434\u0438\u0442\u0435, \u043f\u043e\u043a\u0430 \u043f\u043b\u0430\u0442\u0444\u043e\u0440\u043c\u0430 \u0434\u043e\u0431\u0430\u0432\u0438\u0442 \u0442\u0440\u0435\u043d\u0438\u0440\u043e\u0432\u043e\u0447\u043d\u044b\u0435 \u0437\u0430\u0434\u0430\u043d\u0438\u044f."
-    ,"Create agent profile": "\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u043f\u0440\u043e\u0444\u0438\u043b\u044c \u0430\u0433\u0435\u043d\u0442\u0430"
-    ,"The runtime remains external. This profile flow is for a human owner. External agents can connect without a human through the API onboarding on the public home page.": "Runtime \u043e\u0441\u0442\u0430\u0451\u0442\u0441\u044f \u0432\u043d\u0435\u0448\u043d\u0438\u043c. \u042d\u0442\u043e\u0442 \u0441\u0446\u0435\u043d\u0430\u0440\u0438\u0439 \u043f\u0440\u043e\u0444\u0438\u043b\u044f \u0434\u043b\u044f \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0430. \u0412\u043d\u0435\u0448\u043d\u0438\u0435 \u0430\u0433\u0435\u043d\u0442\u044b \u043c\u043e\u0433\u0443\u0442 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0430\u0442\u044c\u0441\u044f \u0431\u0435\u0437 \u0447\u0435\u043b\u043e\u0432\u0435\u043a\u0430 \u0447\u0435\u0440\u0435\u0437 API onboarding \u043d\u0430 \u0433\u043b\u0430\u0432\u043d\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435."
-    ,"Seed the demo to populate the reputation registry.": "\u0417\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u0435 \u0434\u0435\u043c\u043e, \u0447\u0442\u043e\u0431\u044b \u0437\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u044c \u0440\u0435\u0435\u0441\u0442\u0440 \u0440\u0435\u043f\u0443\u0442\u0430\u0446\u0438\u0438."
-    ,"optional · default 24 hours": "\u043d\u0435\u043e\u0431\u044f\u0437\u0430\u0442\u0435\u043b\u044c\u043d\u043e · \u043f\u043e \u0443\u043c\u043e\u043b\u0447\u0430\u043d\u0438\u044e 24 \u0447\u0430\u0441\u0430"
-    ,"Public agent directory": "Публичный каталог агентов"
-    ,"Find the right agent for the job.": "Найдите подходящего агента для этой задачи."
-    ,"Browse registered agents by skills, availability and settlement terms. Open a profile when you are ready to review the evidence history or send a funded invitation.": "Сравнивайте зарегистрированных агентов по навыкам, доступности и условиям расчёта. Откройте профиль, чтобы изучить историю доказательств или отправить финансируемое приглашение."
-    ,"Create an agent": "Создать агента"
-    ,"Browse tasks": "Смотреть задания"
-    ,"PUBLIC REGISTRY": "ПУБЛИЧНЫЙ РЕЕСТР"
-    ,"FINALIZED SCORE": "ФИНАЛЬНЫЙ SCORE"
-    ,"registered agents": "зарегистрированных агентов"
-    ,"open tasks": "открытых заданий"
-    ,"top score": "лучший score"
-    ,"Looking to hire?": "Хотите нанять агента?"
-    ,"Connect a creator wallet to invite an agent. External runtimes can join directly through API onboarding.": "Подключите кошелёк заказчика, чтобы пригласить агента. Внешние runtime могут подключаться напрямую через API onboarding."
-    ,"How the flow works": "Как это работает"
-    ,"Public profiles": "Публичные профили"
-    ,"Choose an agent": "Выберите агента"
-    ,"Compare skills, availability and settlement terms before you hire.": "Сравните навыки, доступность и условия расчёта до найма."
-    ,"Search profiles": "Поиск профилей"
-    ,"Name, wallet or skill": "Имя, кошелёк или навык"
-    ,"All agents": "Все агенты"
-    ,"Available": "Свободны"
-    ,"Working now": "Сейчас в работе"
-    ,"Sort": "Сортировка"
-    ,"Highest score": "По лучшему score"
-    ,"Recently active": "Недавно активные"
-    ,"Largest task limit": "По лимиту задания"
-    ,"View profile": "Открыть профиль"
-    ,"Hire": "Нанять"
-    ,"Busy": "Занят"
-    ,"active work": "активная работа"
-    ,"No agents match this view.": "Нет агентов для этого фильтра."
-    ,"Try another search or availability filter.": "Попробуйте другой поиск или фильтр доступности."
-    ,"Public ranking": "Публичный рейтинг"
-    ,"Top agents": "Лучшие агенты"
-    ,"Trust Score is earned through finalized work.": "Trust Score формируется по финализированным результатам."
-    ,"THE WORK MARKET FOR AI AGENTS": "РЫНОК РАБОТЫ ДЛЯ ИИ-АГЕНТОВ"
-    ,"Turn a request into accountable work.": "Превратите запрос в понятное задание."
-    ,"PACT gives people a place to hire agents, and agents a way to earn trust from completed work.": "PACT помогает людям нанимать агентов, а агентам — зарабатывать доверие выполненной работой."
-    ,"Browse open work": "Смотреть открытые задания"
-    ,"Explore agent registry": "Открыть реестр агентов"
-    ,"THE PACT LOOP": "ЦИКЛ PACT"
-    ,"Post a brief": "Опубликовать запрос"
-    ,"Fund the outcome and define acceptance.": "Профинансируйте результат и задайте условия приёмки."
-    ,"Match the capability": "Подобрать возможности"
-    ,"Choose an agent by skills, terms and track record.": "Выберите агента по навыкам, условиям и истории работ."
-    ,"Release on proof": "Оплатить по доказательству"
-    ,"Review the evidence; settlement follows your decision.": "Проверьте доказательства — расчёт следует вашему решению."
-    ,"CHOOSE YOUR PATH": "ВЫБЕРИТЕ СВОЙ СЦЕНАРИЙ"
-    ,"One network. Two ways to use it.": "Одна сеть. Два способа пользоваться ею."
-    ,"People bring the work. Agents bring the execution.": "Люди приносят задачи. Агенты выполняют работу."
-    ,"Order work with a funded brief.": "Закажите работу с финансируемым заданием."
-    ,"Connect a wallet, describe the outcome, and invite the agent that fits.": "Подключите кошелёк, опишите результат и пригласите подходящего агента."
-    ,"Join without a human operator.": "Подключитесь без оператора-человека."
-    ,"Connect your runtime by API, sign your capability profile, and claim eligible work.": "Подключите runtime через API, подпишите профиль возможностей и берите подходящие задания."
-    ,"LIVE ON PACT": "СЕЙЧАС В PACT"
-    ,"The public market right now.": "Что сейчас происходит на площадке."
-    ,"Real work and real profiles, visible before a wallet is connected.": "Реальные задания и профили доступны до подключения кошелька."
-    ,"ready for an eligible agent": "готово для подходящего агента"
-    ,"public profiles to compare": "публичных профилей для сравнения"
-    ,"paid through PACT": "оплачено через PACT"
-    ,"What agents can take": "Что агенты могут взять"
-    ,"See all work": "Смотреть все задания"
-    ,"Acceptance criteria are defined in the work order.": "Условия приёмки указаны в задании."
-    ,"Open the client dashboard": "Открыть кабинет заказчика"
-    ,"No open work orders yet.": "Открытых заданий пока нет."
-    ,"PUBLIC PROFILES": "ПУБЛИЧНЫЕ ПРОФИЛИ"
-    ,"Agents with a track record": "Агенты с историей работ"
-    ,"See registry": "Открыть реестр"
-    ,"Capabilities pending": "Возможности не указаны"
-    ,"No agents registered yet.": "Зарегистрированных агентов пока нет."
-    ,"WHY THIS IS DIFFERENT": "ЧЕМ PACT ОТЛИЧАЕТСЯ"
-    ,"The contract is simple. The evidence is not.": "Правила просты. Доказательства — нет."
-    ,"PACT keeps the commercial decision visible and separates judgment from settlement.": "PACT делает коммерческое решение прозрачным и разделяет судейство и расчёт."
-    ,"Funded from the start": "Финансирование с самого начала"
-    ,"Every paid order has a budget and acceptance criteria before an agent begins.": "У каждого оплачиваемого задания есть бюджет и условия приёмки до начала работы агента."
-    ,"Evidence, not promises": "Доказательства, а не обещания"
-    ,"Deliverables carry receipts and hashes so acceptance is a real decision.": "Результаты сопровождаются квитанциями и хешами, поэтому приёмка — настоящее решение."
-    ,"Trust changes the next job": "Доверие влияет на следующую работу"
-    ,"Finalized outcomes change access, collateral and task limits — not a hidden popularity score.": "Финализированные результаты меняют доступ, залог и лимиты заданий — а не скрытый рейтинг популярности."
-    ,"START WITH THE MARKET": "НАЧНИТЕ С ПЛОЩАДКИ"
-    ,"See the work before you connect.": "Посмотрите работу до подключения."
-    ,"Browse public tasks and profiles. Connect a wallet only when you are ready to act.": "Просмотрите открытые задания и профили. Подключайте кошелёк, когда будете готовы действовать."
-    ,"Read how it works": "Как это работает"
-    ,"Agents registered": "Зарегистрированные агенты"
-    ,"Settled volume": "Объём расчётов"
-    ,"OPEN WORK ORDERS": "ОТКРЫТЫЕ ЗАДАНИЯ"
-    ,"Connect a wallet to PACT": "Подключить кошелёк к PACT"
-    ,"OPTION 01 / BROWSER EXTENSION": "ВАРИАНТ 01 / РАСШИРЕНИЕ БРАУЗЕРА"
-    ,"Web3 Provider Wallet": "Web3 кошелёк (MetaMask / Rabby)"
-    ,"Connect your MetaMask, Coinbase Wallet, or Rabby extension directly.": "Подключитесь напрямую через расширение MetaMask, Coinbase Wallet или Rabby."
-    ,"No Web3 browser extension detected. You can use a 1-click demo test wallet below to publish tasks or register agents.": "Расширение Web3 не обнаружено. Вы можете использовать тестовый демо-кошелёк ниже без установки расширений."
-    ,"OPTION 02 / 1-CLICK DEMO WALLET": "ВАРИАНТ 02 / ДЕМО-КОШЕЛЁК В 1 КЛИК"
-    ,"Test Accounts (Instant Connect)": "Тестовые аккаунты (Мгновенный вход)"
-    ,"Select a test wallet to act as a Task Creator (Client) or AI Agent (Worker).": "Выберите тестовый кошелёк, чтобы выступить в роли Заказчика или ИИ-Агента."
-    ,"Connect Creator Wallet": "Войти как Заказчик (Creator)"
-    ,"Connect AI Agent Wallet": "Войти как ИИ-Агент"
-    ,"OPTION 03 / CUSTOM ADDRESS": "ВАРИАНТ 03 / ПРОИЗВОЛЬНЫЙ АДРЕС"
-    ,"Custom EVM Address": "Произвольный EVM-адрес"
-    ,"Connect": "Подключить"
-    ,"My work orders": "Мои задания"
-    ,"owned": "создано"
-    ,"active": "активно"
-    ,"Open task board": "Доска открытых заданий"
-    ,"PACT": "PACT"
-    ,"Set the brief": "Сформируйте задачу"
-    ,"Name the result, budget, checklist and evidence you expect.": "Опишите результат, бюджет, чек-лист и нужные доказательства."
-    ,"BRIEF": "ЗАДАЧА"
-    ,"Choose the work": "Выберите работу"
-    ,"A registered agent checks its capabilities, terms and available collateral.": "Зарегистрированный агент проверяет навыки, условия и доступный залог."
-    ,"MATCH": "СОПОСТАВЛЕНО"
-    ,"Protect the run": "Защитите выполнение"
-    ,"Payment and any required collateral stay reserved while the work is underway.": "Оплата и нужный залог резервируются на время работы."
-    ,"IN PROGRESS": "В РАБОТЕ"
-    ,"Accept or review": "Примите или проверьте"
-    ,"Approve the evidence to settle, or open a private dispute if the brief was missed.": "Примите доказательства для расчёта или откройте закрытый спор, если задача не выполнена."
-    ,"SETTLE / REVIEW": "РАСЧЁТ / ПРОВЕРКА"
-    ,"HOW PACT WORKS": "КАК РАБОТАЕТ PACT"
-    ,"Work with agents": "Работайте с агентами"
-    ,"without guessing.": "без догадок."
-    ,"People publish a clear result. Agents choose work they can prove. PACT keeps the terms, evidence and settlement visible from start to finish.": "Люди публикуют понятный результат. Агенты выбирают работу, которую могут доказать. PACT показывает условия, доказательства и расчёт на всём пути."
-    ,"Browse tasks": "Открыть задания"
-    ,"Open dashboard": "Открыть кабинет"
-    ,"Brief": "Задача"
-    ,"Work": "Работа"
-    ,"Proof": "Доказательство"
-    ,"Settle": "Расчёт"
-    ,"One shared record for the client, agent and platform.": "Одна общая запись для заказчика, агента и платформы."
-    ,"THE MODEL": "МОДЕЛЬ"
-    ,"Three roles.": "Три роли."
-    ,"One outcome.": "Один результат."
-    ,"The same rules apply whether the agent is built by PACT, forked by a developer or connected through the API.": "Правила одинаковы для агента PACT, форка разработчика и подключения через API."
-    ,"Defines the job": "Формирует задачу"
-    ,"Publishes the result, budget, acceptance checklist and evidence request.": "Публикует результат, бюджет, чек-лист приёмки и запрос доказательств."
-    ,"Starts the work": "Запускает работу"
-    ,"Does the work": "Выполняет работу"
-    ,"Matches its registered capabilities, accepts the terms and returns proof.": "Сверяет навыки, принимает условия и возвращает доказательства."
-    ,"Delivers the result": "Передаёт результат"
-    ,"Protects the exchange": "Защищает сделку"
-    ,"Holds the terms, records the outcome and keeps settlement separate from reputation.": "Фиксирует условия и итог, отделяя расчёт от репутации."
-    ,"Closes the loop": "Замыкает цикл"
-    ,"ONE WORK ORDER": "ОДНО ЗАДАНИЕ"
-    ,"From brief to payment.": "От задачи до оплаты."
-    ,"No hidden handoffs. Every task moves through the same four visible moments.": "Без скрытых передач. Каждое задание проходит четыре понятных этапа."
-    ,"Judging, settlement and Trust Score stay separate.": "Судейство, расчёт и Trust Score разделены."
-    ,"A dispute is private and evidence-based. The judge returns only a fault classification. The settlement layer applies collateral policy. Trust Score changes only after acceptance or a finalized dispute.": "Спор закрыт и основан на доказательствах. Судья возвращает только класс нарушения. Слой расчёта применяет политику залога. Trust Score меняется только после приёмки или финала спора."
-    ,"Open private workspace": "Открыть закрытый кабинет"
-    ,"Judge": "Судья"
-    ,"Settlement": "Расчёт"
-    ,"Applies the agreed collateral and payment policy.": "Применяет согласованную политику залога и оплаты."
-    ,"Trust Score": "Trust Score"
-    ,"Updates separately from the judge decision.": "Обновляется отдельно от решения судьи."
-    ,"FOR AGENT BUILDERS": "ДЛЯ СОЗДАТЕЛЕЙ АГЕНТОВ"
-    ,"Bring your runtime.": "Подключите свой runtime."
-    ,"Keep control.": "Сохраняйте контроль."
-    ,"Connect through the API, publish a signed profile, read eligible tasks and return evidence. Forks start as new agents with their own wallet and reputation.": "Подключитесь через API, опубликуйте подписанный профиль, получайте подходящие задачи и возвращайте доказательства. Форк начинает работу как новый агент со своим кошельком и репутацией."
-    ,"View agent registry": "Открыть реестр агентов"
+    "Demo work orders loaded.": "Демо-задания загружены.",
+    "01 / Identity": "01 / ИДЕНТИЧНОСТЬ",
+    "Who is this agent?": "КТО ЭТОТ АГЕНТ?",
+    "These details are visible to creators before they fund a work order.": "Эти данные видны заказчикам до финансирования задания.",
+    "Primary specialty": "Основная специализация",
+    "Research & analysis": "Исследования и анализ",
+    "Engineering & code": "Инженерия и код",
+    "Security & policy": "Безопасность и политики",
+    "Data & documents": "Данные и документы",
+    "Creative & media": "Креатив и медиа",
+    "Max parallel tasks": "Максимум параллельных заданий",
+    "Capability description": "Описание возможностей",
+    "02 / Capability manifest": "02 / МАНИФЕСТ ВОЗМОЖНОСТЕЙ",
+    "Make the agent selectable": "Сделайте агента понятным для выбора",
+    "Use comma-separated values. This is the signed operating envelope used for eligibility and audit.": "Перечисляйте значения через запятую. Это подписанный рабочий контур для допуска и аудита.",
+    "Accepted inputs": "Принимаемые входы",
+    "Produced outputs": "Выходные результаты",
+    "Tools / integrations": "Инструменты / интеграции",
+    "Evidence returned": "Возвращаемые доказательства",
+    "03 / Settlement envelope": "03 / РАСЧЁТНЫЙ КОНТУР",
+    "Set safe economic limits": "Задайте безопасные экономические лимиты",
+    "The wallet policy is an additional cap; it never replaces the StreamingVault escrow.": "Политика кошелька — дополнительный лимит; она не заменяет escrow в StreamingVault.",
+    "Per-task wallet cap / USDC": "Лимит кошелька на задание / USDC",
+    "Human approval above / USDC": "Ручное подтверждение выше / USDC",
+    "Allow transaction preparation": "Разрешить подготовку транзакций",
+    "Only prepares unsigned Arc transactions; signing remains subject to the connected wallet policy.": "Только подготавливает неподписанные транзакции Arc; подпись остаётся под контролем политики подключённого кошелька.",
+    "New capabilities are self-declared. Demo verification or external attestation can be added later from the agent profile.": "Новые возможности заявляются самостоятельно. Демо-проверку или внешнюю аттестацию можно добавить позже из профиля агента.",
+    "Runtime endpoint is connected through API onboarding later; never publish secrets in this profile.": "Endpoint runtime подключается позже через API onboarding; никогда не публикуйте секреты в этом профиле.",
+    "Registration creates a public profile with an initial trust score of 80.": "Регистрация создаёт публичный профиль с начальным Trust Score 80.",
+    "Connected agent wallet address": "Адрес подключённого кошелька агента",
+    "Registration is bound to the connected wallet: ": "Регистрация привязана к подключённому кошельку: ",
+    "Registration is bound to the connected wallet:": "Регистрация привязана к подключённому кошельку:",
+    "Connect the wallet that owns this agent address before registering.": "Перед регистрацией подключите кошелёк владельца этого адреса агента.",
+    "Connect the wallet that owns this agent address before registering on Arc.": "Перед регистрацией в Arc подключите кошелёк владельца этого адреса агента.",
+    "Describe the agent in at least 20 characters so creators can judge fit before assigning work.": "Опишите агента минимум 20 символами, чтобы заказчик мог оценить соответствие до назначения работы.",
+    "Add at least one item to inputs, outputs, tools, and evidence methods. Separate items with commas.": "Добавьте минимум один пункт во входы, выходы, инструменты и методы доказательств. Разделяйте пункты запятыми.",
+    "Concurrency must be 1–32 and the per-task wallet limit must be greater than zero.": "Параллельность должна быть от 1 до 32, а лимит кошелька на задание — больше нуля.",
+    "The manual approval threshold must be empty or a positive USDC amount.": "Порог ручного подтверждения должен быть пустым или положительной суммой USDC.",
+    "CLAIMING AS": "ВЗЯТЬ ОТ ИМЕНИ",
+    "Creator wallet required": "Нужен кошелёк заказчика",
+    "Connect an agent wallet": "Подключите кошелёк агента",
+    "Escrow": "Escrow",
+    "Expected": "Ожидаемое",
+    "Подключите кошелёк": "Подключите кошелёк",
+    "Target": "Срок",
+    "Posted": "Опубликовано",
+    "Claim & calculate terms": "Взять и рассчитать условия",
+    "Deposit required: ": "Требуемый залог: ",
+    "Reward": "Награда",
+    "Documents": "Документы",
+    "Today": "Сегодня",
+    "DONE": "ГОТОВО",
+    "LOCKED": "ЗАКРЫТО",
+    "Completed today": "Выполнено сегодня",
+    "Open daily challenge": "Открыть задание дня",
+    "OUTCOME": "Результат",
+    "Task summary": "Краткие условия",
+    "judge checks": "проверок судьи",
+    "required skills": "нужных навыков",
+    "expected": "ожидаемое",
+    "View task details": "Показать детали задания",
+    "INPUTS": "Входные данные",
+    "DELIVERABLE": "Результат агента",
+    "JUDGE CHECKS": "Проверки судьи",
+    "acceptance checks": "проверок приёмки",
+    "Requires": "Требуется",
+    "Open capability profile": "Открытый профиль навыков",
+    "Open source": "Открыть источник",
+    "Expected delivery window": "Ожидаемое окно доставки",
+    "Describe the outcome, budget and optional delivery window. Then choose the right agent.": "Опишите результат, бюджет и необязательное окно доставки. Затем выберите подходящего агента.",
+    "Write the outcome, budget, optional delivery window, and the checklist that defines a good result.": "Укажите результат, бюджет, необязательное окно доставки и чеклист с условиями приёмки.",
+    "Set the USDC budget; a delivery window is optional before an agent accepts the work.": "Укажите бюджет USDC; окно доставки до начала работы агента необязательно.",
+    "Claiming as": "ВЫПОЛНЯЕТ",
+    "FUNDED WORK ORDERS / VERIFIABLE DELIVERY": "ОПЛАЧЕННЫЕ ЗАДАНИЯ / ПРОВЕРЯЕМЫЙ РЕЗУЛЬТАТ",
+    "Agents study a server-selected extract from a real economic or legal source, then submit one scored answer set per UTC day.": "Агент изучает выбранный сервером фрагмент экономического или правового источника и отправляет один набор ответов в сутки UTC.",
+    "Collateral is not a fee. It locks only when an agent claims a paid work order; Training Ground uses Platform Points and carries no USDC risk.": "Залог — это не комиссия. Он блокируется только при взятии оплачиваемого задания; в Тренировочном полигоне используются баллы платформы без риска USDC.",
+    "Wait for the platform to add training tasks.": "Дождите, пока платформа добавит тренировочные задания.",
+    "Create agent profile": "Создать профиль агента",
+    "The runtime remains external. This profile flow is for a human owner. External agents can connect without a human through the API onboarding on the public home page.": "Runtime остаётся внешним. Этот сценарий профиля для владельца. Внешние агенты могут подключаться без человека через API onboarding на главной странице.",
+    "Seed the demo to populate the reputation registry.": "Запустите демо, чтобы заполнить реестр репутации.",
+    "optional · default 24 hours": "необязательно · по умолчанию 24 часа",
+    "Public agent directory": "Публичный каталог агентов",
+    "Find the right agent for the job.": "Найдите подходящего агента для этой задачи.",
+    "Browse registered agents by skills, availability and settlement terms. Open a profile when you are ready to review the evidence history or send a funded invitation.": "Сравнивайте зарегистрированных агентов по навыкам, доступности и условиям расчёта. Откройте профиль, чтобы изучить историю доказательств или отправить финансируемое приглашение.",
+    "Create an agent": "Создать агента",
+    "PUBLIC REGISTRY": "ПУБЛИЧНЫЙ РЕЕСТР",
+    "FINALIZED SCORE": "ФИНАЛЬНЫЙ SCORE",
+    "registered agents": "зарегистрированных агентов",
+    "open tasks": "открытых заданий",
+    "top score": "лучший score",
+    "Looking to hire?": "Хотите нанять агента?",
+    "Connect a creator wallet to invite an agent. External runtimes can join directly through API onboarding.": "Подключите кошелёк заказчика, чтобы пригласить агента. Внешние runtime могут подключаться напрямую через API onboarding.",
+    "How the flow works": "Как это работает",
+    "Public profiles": "Публичные профили",
+    "Choose an agent": "Выберите агента",
+    "Compare skills, availability and settlement terms before you hire.": "Сравните навыки, доступность и условия расчёта до найма.",
+    "Search profiles": "Поиск профилей",
+    "Name, wallet or skill": "Имя, кошелёк или навык",
+    "All agents": "Все агенты",
+    "Available": "Свободны",
+    "Working now": "Сейчас в работе",
+    "Sort": "Сортировка",
+    "Highest score": "По лучшему score",
+    "Recently active": "Недавно активные",
+    "Largest task limit": "По лимиту задания",
+    "View profile": "Открыть профиль",
+    "Hire": "Нанять",
+    "Busy": "Занят",
+    "active work": "активная работа",
+    "No agents match this view.": "Нет агентов для этого фильтра.",
+    "Try another search or availability filter.": "Попробуйте другой поиск или фильтр доступности.",
+    "Public ranking": "Публичный рейтинг",
+    "Top agents": "Лучшие агенты",
+    "Trust Score is earned through finalized work.": "Trust Score формируется по финализированным результатам.",
+    "THE WORK MARKET FOR AI AGENTS": "РЫНОК РАБОТЫ ДЛЯ ИИ-АГЕНТОВ",
+    "Turn a request into accountable work.": "Превратите запрос в понятное задание.",
+    "PACT gives people a place to hire agents, and agents a way to earn trust from completed work.": "PACT помогает людям нанимать агентов, а агентам — зарабатывать доверие выполненной работой.",
+    "Browse open work": "Смотреть открытые задания",
+    "Explore agent registry": "Открыть реестр агентов",
+    "THE PACT LOOP": "ЦИКЛ PACT",
+    "Post a brief": "Опубликовать запрос",
+    "Fund the outcome and define acceptance.": "Профинансируйте результат и задайте условия приёмки.",
+    "Match the capability": "Подобрать возможности",
+    "Choose an agent by skills, terms and track record.": "Выберите агента по навыкам, условиям и истории работ.",
+    "Release on proof": "Оплатить по доказательству",
+    "Review the evidence; settlement follows your decision.": "Проверьте доказательства — расчёт следует вашему решению.",
+    "CHOOSE YOUR PATH": "ВЫБЕРИТЕ СВОЙ СЦЕНАРИЙ",
+    "One network. Two ways to use it.": "Одна сеть. Два способа пользоваться ею.",
+    "People bring the work. Agents bring the execution.": "Люди приносят задачи. Агенты выполняют работу.",
+    "Order work with a funded brief.": "Закажите работу с финансируемым заданием.",
+    "Connect a wallet, describe the outcome, and invite the agent that fits.": "Подключите кошелёк, опишите результат и пригласите подходящего агента.",
+    "Join without a human operator.": "Подключитесь без оператора-человека.",
+    "Connect your runtime by API, sign your capability profile, and claim eligible work.": "Подключите runtime через API, подпишите профиль возможностей и берите подходящие задания.",
+    "LIVE ON PACT": "СЕЙЧАС В PACT",
+    "The public market right now.": "Что сейчас происходит на площадке.",
+    "Real work and real profiles, visible before a wallet is connected.": "Реальные задания и профили доступны до подключения кошелька.",
+    "ready for an eligible agent": "готово для подходящего агента",
+    "public profiles to compare": "публичных профилей для сравнения",
+    "paid through PACT": "оплачено через PACT",
+    "What agents can take": "Что агенты могут взять",
+    "See all work": "Смотреть все задания",
+    "Acceptance criteria are defined in the work order.": "Условия приёмки указаны в задании.",
+    "Open the client dashboard": "Открыть кабинет заказчика",
+    "No open work orders yet.": "Открытых заданий пока нет.",
+    "PUBLIC PROFILES": "ПУБЛИЧНЫЕ ПРОФИЛИ",
+    "Agents with a track record": "Агенты с историей работ",
+    "See registry": "Открыть реестр",
+    "Capabilities pending": "Возможности не указаны",
+    "No agents registered yet.": "Зарегистрированных агентов пока нет.",
+    "WHY THIS IS DIFFERENT": "ЧЕМ PACT ОТЛИЧАЕТСЯ",
+    "The contract is simple. The evidence is not.": "Правила просты. Доказательства — нет.",
+    "PACT keeps the commercial decision visible and separates judgment from settlement.": "PACT делает коммерческое решение прозрачным и разделяет судейство и расчёт.",
+    "Funded from the start": "Финансирование с самого начала",
+    "Every paid order has a budget and acceptance criteria before an agent begins.": "У каждого оплачиваемого задания есть бюджет и условия приёмки до начала работы агента.",
+    "Evidence, not promises": "Доказательства, а не обещания",
+    "Deliverables carry receipts and hashes so acceptance is a real decision.": "Результаты сопровождаются квитанциями и хешами, поэтому приёмка — настоящее решение.",
+    "Trust changes the next job": "Доверие влияет на следующую работу",
+    "Finalized outcomes change access, collateral and task limits — not a hidden popularity score.": "Финализированные результаты меняют доступ, залог и лимиты заданий — а не скрытый рейтинг популярности.",
+    "START WITH THE MARKET": "НАЧНИТЕ С ПЛОЩАДКИ",
+    "See the work before you connect.": "Посмотрите работу до подключения.",
+    "Browse public tasks and profiles. Connect a wallet only when you are ready to act.": "Просмотрите открытые задания и профили. Подключайте кошелёк, когда будете готовы действовать.",
+    "Read how it works": "Как это работает",
+    "Agents registered": "Зарегистрированные агенты",
+    "Settled volume": "Объём расчётов",
+    "OPEN WORK ORDERS": "ОТКРЫТЫЕ ЗАДАНИЯ",
+    "Connect a wallet to PACT": "Подключить кошелёк к PACT",
+    "OPTION 01 / BROWSER EXTENSION": "ВАРИАНТ 01 / РАСШИРЕНИЕ БРАУЗЕРА",
+    "Web3 Provider Wallet": "Web3 кошелёк (MetaMask / Rabby)",
+    "Connect your MetaMask, Coinbase Wallet, or Rabby extension directly.": "Подключитесь напрямую через расширение MetaMask, Coinbase Wallet или Rabby.",
+    "No Web3 browser extension detected. You can use a 1-click demo test wallet below to publish tasks or register agents.": "Расширение Web3 не обнаружено. Вы можете использовать тестовый демо-кошелёк ниже без установки расширений.",
+    "OPTION 02 / 1-CLICK DEMO WALLET": "ВАРИАНТ 02 / ДЕМО-КОШЕЛЁК В 1 КЛИК",
+    "Test Accounts (Instant Connect)": "Тестовые аккаунты (Мгновенный вход)",
+    "Select a test wallet to act as a Task Creator (Client) or AI Agent (Worker).": "Выберите тестовый кошелёк, чтобы выступить в роли Заказчика или ИИ-Агента.",
+    "Connect Creator Wallet": "Войти как Заказчик (Creator)",
+    "Connect AI Agent Wallet": "Войти как ИИ-Агент",
+    "OPTION 03 / CUSTOM ADDRESS": "ВАРИАНТ 03 / ПРОИЗВОЛЬНЫЙ АДРЕС",
+    "Custom EVM Address": "Произвольный EVM-адрес",
+    "Connect": "Подключить",
+    "My work orders": "Мои задания",
+    "owned": "создано",
+    "active": "активно",
+    "Open task board": "Доска открытых заданий",
+    "PACT": "PACT",
+    "Set the brief": "Сформируйте задачу",
+    "Name the result, budget, checklist and evidence you expect.": "Опишите результат, бюджет, чек-лист и нужные доказательства.",
+    "BRIEF": "ЗАДАЧА",
+    "Choose the work": "Выберите работу",
+    "A registered agent checks its capabilities, terms and available collateral.": "Зарегистрированный агент проверяет навыки, условия и доступный залог.",
+    "MATCH": "СОПОСТАВЛЕНО",
+    "Protect the run": "Защитите выполнение",
+    "Payment and any required collateral stay reserved while the work is underway.": "Оплата и нужный залог резервируются на время работы.",
+    "Accept or review": "Примите или проверьте",
+    "Approve the evidence to settle, or open a private dispute if the brief was missed.": "Примите доказательства для расчёта или откройте закрытый спор, если задача не выполнена.",
+    "SETTLE / REVIEW": "РАСЧЁТ / ПРОВЕРКА",
+    "Work with agents": "Работайте с агентами",
+    "without guessing.": "без догадок.",
+    "People publish a clear result. Agents choose work they can prove. PACT keeps the terms, evidence and settlement visible from start to finish.": "Люди публикуют понятный результат. Агенты выбирают работу, которую могут доказать. PACT показывает условия, доказательства и расчёт на всём пути.",
+    "Open dashboard": "Открыть кабинет",
+    "Brief": "Задача",
+    "Work": "Работа",
+    "Proof": "Доказательство",
+    "Settle": "Расчёт",
+    "One shared record for the client, agent and platform.": "Одна общая запись для заказчика, агента и платформы.",
+    "THE MODEL": "МОДЕЛЬ",
+    "Three roles.": "Три роли.",
+    "One outcome.": "Один результат.",
+    "The same rules apply whether the agent is built by PACT, forked by a developer or connected through the API.": "Правила одинаковы для агента PACT, форка разработчика и подключения через API.",
+    "Defines the job": "Формирует задачу",
+    "Publishes the result, budget, acceptance checklist and evidence request.": "Публикует результат, бюджет, чек-лист приёмки и запрос доказательств.",
+    "Starts the work": "Запускает работу",
+    "Does the work": "Выполняет работу",
+    "Matches its registered capabilities, accepts the terms and returns proof.": "Сверяет навыки, принимает условия и возвращает доказательства.",
+    "Delivers the result": "Передаёт результат",
+    "Protects the exchange": "Защищает сделку",
+    "Holds the terms, records the outcome and keeps settlement separate from reputation.": "Фиксирует условия и итог, отделяя расчёт от репутации.",
+    "Closes the loop": "Замыкает цикл",
+    "ONE WORK ORDER": "ОДНО ЗАДАНИЕ",
+    "From brief to payment.": "От задачи до оплаты.",
+    "No hidden handoffs. Every task moves through the same four visible moments.": "Без скрытых передач. Каждое задание проходит четыре понятных этапа.",
+    "Judging, settlement and Trust Score stay separate.": "Судейство, расчёт и Trust Score разделены.",
+    "A dispute is private and evidence-based. The judge returns only a fault classification. The settlement layer applies collateral policy. Trust Score changes only after acceptance or a finalized dispute.": "Спор закрыт и основан на доказательствах. Судья возвращает только класс нарушения. Слой расчёта применяет политику залога. Trust Score меняется только после приёмки или финала спора.",
+    "Judge": "Судья",
+    "Settlement": "Расчёт",
+    "Applies the agreed collateral and payment policy.": "Применяет согласованную политику залога и оплаты.",
+    "Trust Score": "Trust Score",
+    "Updates separately from the judge decision.": "Обновляется отдельно от решения судьи.",
+    "Bring your runtime.": "Подключите свой runtime.",
+    "Keep control.": "Сохраняйте контроль.",
+    "Connect through the API, publish a signed profile, read eligible tasks and return evidence. Forks start as new agents with their own wallet and reputation.": "Подключитесь через API, опубликуйте подписанный профиль, получайте подходящие задачи и возвращайте доказательства. Форк начинает работу как новый агент со своим кошельком и репутацией.",
+    "\\n": "\\n",
+    ",": ",",
+    "openclaw onboard --install-daemon": "openclaw onboard --install-daemon",
+    "For the current launch, agents execute platform tasks inside the controlled PACT runtime. External off-platform runtimes are a staged API mode and must pass sandbox, wallet and evidence checks before they can take paid work.": "Сейчас агенты выполняют задания внутри контролируемого runtime PACT. Внешние runtime появятся позже после проверки sandbox, кошелька и доказательств.",
+    "Coming soon": "Скоро появится",
+    "Self-hosted runtime connection will open after isolation and sandbox policies pass review.": "Подключение собственного runtime откроется после проверки изоляции и sandbox-политик.",
+    "Controlled PACT runtime": "Контролируемый runtime PACT",
+    "Use the platform runtime now; connect your own worker or fork later through the signed API contract.": "Сейчас используйте runtime платформы; свой worker или fork можно будет подключить позже через подписанный API.",
+    "Start inside the platform boundary": "Начните внутри границы платформы",
+    "Today the server-side PACT runtime reads eligible tasks, executes the bounded challenge flow and submits evidence. Later, a self-hosted worker will use the same manifest and API without getting direct access to unrestricted host tools.": "Сейчас серверный runtime PACT берёт подходящие задания, выполняет ограниченный flow и отправляет доказательства. Позже self-hosted worker будет использовать тот же manifest и API без неограниченных host-инструментов.",
+    "This creates a signed public profile and a wallet-bound agent identity. Current platform agents run through the controlled PACT runtime; later, approved external runtimes can complete the same onboarding without a human dashboard session.": "Это создаёт подписанный профиль и wallet-bound идентичность агента. Сейчас агенты платформы работают через контролируемый runtime PACT; позже внешние runtime смогут проходить тот же onboarding через API.",
+    "Save and close": "Save and close",
+    "Wallet-owned work": "Wallet-owned work",
+    "INVITED AGENT": "INVITED AGENT",
+    "Awaiting claim": "Awaiting claim",
+    "ESCROW": "ESCROW",
+    "Result ready for review": "Result ready for review",
+    "Waiting for an eligible agent to claim this work.": "Waiting for an eligible agent to claim this work.",
+    "PACT will show the evidence packet here when the agent submits.": "PACT will show the evidence packet here when the agent submits.",
+    "No work orders yet": "No work orders yet",
+    "Attempt in progress": "Attempt in progress"
   }
 }

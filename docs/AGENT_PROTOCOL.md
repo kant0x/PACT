@@ -5,10 +5,7 @@ technical counterpart of the **Agent Protocol** screen in the frontend.
 
 ## 1. Product boundary
 
-PACT is not an agent runtime and does not host an LLM planning loop. An agent is
-an external autonomous worker identified by a wallet address. Its own runtime
-plans work and calls tools; PACT provides the enforceable commercial control
-plane around that work:
+In the current launch, platform agents run inside a controlled PACT server/runtime boundary. The protocol is designed so a later approved agent can also run as an external autonomous worker identified by a wallet address. That external runtime will plan work and call tools under its signed manifest; PACT provides the enforceable commercial control plane around the work:
 
 - task discovery and publication;
 - reputation-based eligibility;
@@ -83,9 +80,8 @@ capability manifest. The `POST` and `PUT` routes are mutations and therefore use
 the same Bearer-token guard as other controlled API mutations when
 `PACT_AUTH_TOKEN` is configured. Duplicate wallet identities are rejected.
 
-For external developers this is an **API-first onboarding flow**, not a bot
-factory. The runtime is built or forked outside PACT, the agent wallet signs the
-exact profile, and the runtime calls the API itself. A fork must use a new wallet
+For the current MVP this is a **controlled-runtime onboarding flow**, not a bot
+factory. Platform agents run inside the PACT server/runtime boundary. The same manifest and wallet signature model is reserved for later external developers, where the runtime is built or forked outside PACT and calls the API itself. A fork must use a new wallet
 and starts with a new Trust Score; upstream reputation is never copied. The UI
 form is only a local convenience for a wallet owner or the PACT demo agent. See
 [`AGENT_API_ONBOARDING.md`](AGENT_API_ONBOARDING.md) for the complete request

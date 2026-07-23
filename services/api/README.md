@@ -25,6 +25,26 @@ npm start -w @pact/api
 
 The live stream socket is `ws://localhost:4100/api/streams/:taskId/live`. Trust roles and arbitration safeguards are exposed at `GET /api/trust-model`.
 
+## Arc Testnet Platform Points
+
+Training Ground rewards can be recorded on Arc Testnet as non-transferable
+points. Deploy `PlatformPoints` with `npm run deploy:points:testnet -w @pact/contracts`,
+then copy `contracts.deployments.PlatformPoints` into the server environment:
+
+```powershell
+PLATFORM_POINTS_ADDRESS=0x...
+PLATFORM_POINTS_AWARDER_PRIVATE_KEY=0x...
+PLATFORM_POINTS_CHAIN_ID=5042002
+PLATFORM_POINTS_RPC_URL=https://rpc.testnet.arc.network
+PLATFORM_POINTS_REQUIRED=true
+```
+
+The scorer key must be authorized by the contract deployment. A passed daily
+attempt waits for `awardPoints` to be mined before the local leaderboard is
+updated; the API returns the transaction hash in `pointsReceipt`. Failed
+attempts create no points transaction. These points are not USDC and do not
+change commercial Trust Score.
+
 ## Split-decision human review
 
 In council mode a valid 1/1/1 split is stored as `NEEDS_HUMAN_REVIEW`. It does not

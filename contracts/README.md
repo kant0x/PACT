@@ -34,6 +34,8 @@ DISPUTE_MODULE_ADDRESS=
 COLLATERAL_TIMEOUT_SECONDS=86400
 # Optional: an operator wallet allowed to call vault operator-only paths.
 AUTHORIZED_OPERATOR_ADDRESS=0x...
+# Optional: separate awarder for the non-transferable Training Ground points.
+PLATFORM_POINTS_AWARDER_ADDRESS=0x...
 ```
 
 Then run:
@@ -57,6 +59,21 @@ transaction receipts before enabling real-money routes.
 `StreamingVault` must be added to `ReputationRegistry` as an authorized writer
 after deployment. Its constructor also receives the trusted dispute-module
 address and the collateral-posting timeout in seconds.
+
+The deployment also creates `PlatformPoints`, a non-transferable Arc Testnet
+ledger for Training Ground rewards. It has no USDC value and is separate from
+commercial Trust Score. The deployment wallet (or
+`PLATFORM_POINTS_AWARDER_ADDRESS`) is allowlisted as the scorer. Copy the
+recorded `contracts.PlatformPoints` address into the API environment as
+`PLATFORM_POINTS_ADDRESS`, and use the scorer key as
+`PLATFORM_POINTS_AWARDER_PRIVATE_KEY`.
+
+If the Vault, Registry and DisputeModule are already deployed, deploy only the
+points ledger without replacing those contracts:
+
+```powershell
+npm run deploy:points:testnet -w @pact/contracts
+```
 
 The Registry also supports third-party protocol writers, public paginated outcome
 history, and EIP-712 external attestations from owner-approved attestors. Task IDs

@@ -2,6 +2,12 @@
   "code": "es",
   "name": "Español",
   "strings": {
+    "Coming soon": "Próximamente",
+    "Self-hosted runtime connection will open after isolation and sandbox policies pass review.": "La conexión del runtime propio estará disponible tras revisar el aislamiento y las políticas de sandbox.",
+    "Attempt in progress": "Reto en curso",
+    "Save and close": "Guardar y cerrar",
+    "Orders in your cabinet": "órdenes en tu panel",
+    "work order in your cabinet": "orden en tu panel",
     "Кабинет": "Panel",
     "Cabinet": "Panel",
     "Ваш кабинет": "Tu panel",
@@ -112,12 +118,12 @@
     "How it works": "Cómo funciona",
     "FOR CLIENTS": "PARA CLIENTES",
     "Need a job done?": "¿Necesitas hacer un trabajo?",
-    "Describe the outcome, set a budget, and choose an agent to deliver it.": "Describe el resultado, define un presupuesto y elige un agente.",
+    "Describe the outcome, set a budget, and choose an agent to deliver it.": "Describe el resultado, fija un presupuesto y elige un agente.",
     "Post a task": "Publicar una tarea",
     "FOR AGENT BUILDERS": "PARA CREADORES DE AGENTES",
     "Have an agent?": "¿Tienes un agente?",
     "Connect your existing runtime through the API and start taking eligible work.": "Conecta tu runtime mediante la API y empieza a aceptar trabajos elegibles.",
-    "Connect an agent": "Conectar un agente",
+    "Connect an agent": "Conectar agente",
     "NEW HERE?": "¿ES TU PRIMERA VEZ?",
     "Browse public tasks and agent profiles before you connect a wallet.": "Explora tareas públicas y perfiles de agentes antes de conectar una cartera.",
     "HOW PACT WORKS": "CÓMO FUNCIONA PACT",
@@ -154,7 +160,7 @@
     "The agent works in its own runtime and returns the agreed files, answer or proof.": "El agente trabaja en su propio runtime y devuelve los archivos, respuesta o pruebas acordadas.",
     "Approve or challenge": "Aceptar o impugnar",
     "Accept a good result to release payment, or open a private evidence-based dispute.": "Acepta un buen resultado para liberar el pago o abre una disputa privada basada en pruebas.",
-    "OPEN": "ABIERTA",
+    "OPEN": "ABIERTO",
     "CLAIMED": "ACEPTADA",
     "FUNDED": "FINANCIADA",
     "IN REVIEW": "EN REVISIÓN",
@@ -268,11 +274,8 @@
     "Choose how you want to use PACT.": "Elige cómo usar PACT.",
     "Order work for your team, or connect an agent you own.": "Encarga trabajo para tu equipo o conecta tu propio agente.",
     "Get a job done": "Resolver un trabajo",
-    "Describe the outcome, set a budget, and choose an agent to deliver it.": "Describe el resultado, fija un presupuesto y elige un agente.",
-    "Browse tasks": "Ver tareas",
     "Bring your agent": "Trae tu agente",
     "Connect an existing runtime, declare its skills, and let it take eligible work through PACT.": "Conecta un runtime, declara sus capacidades y deja que acepte trabajo elegible en PACT.",
-    "Connect an agent": "Conectar agente",
     "Guest mode is read-only": "El modo invitado solo permite ver",
     "You can inspect public task briefs and agent profiles. Claiming, publishing, registration, and disputes require a wallet.": "Puedes consultar tareas públicas y perfiles de agentes. Para aceptar, publicar, registrarte o abrir disputas necesitas una cartera.",
     "PACT / PRIVATE WORKSPACE": "PACT / ESPACIO PRIVADO",
@@ -285,7 +288,6 @@
     "PRIVATE DAPP WORKSPACE": "ESPACIO PRIVADO DE DAPP",
     "My workbench is locked.": "El panel de trabajo está bloqueado.",
     "Connect the wallet that claimed or published work to see execution, evidence, deliverables, and settlement actions.": "Conecta la cartera que tomó o publicó el trabajo para ver la ejecución, las pruebas, la entrega y la liquidación.",
-    "Connect wallet": "Conectar cartera",
     "Connect to publish": "Conectar para publicar",
     "Connect to register": "Conectar para registrarse",
     "Connect wallet to claim": "Conectar cartera para aceptar",
@@ -294,8 +296,8 @@
     "Publish or claim a marketplace task, then return here to manage execution, evidence, and settlement.": "Publica o acepta una tarea del mercado y vuelve aquí para gestionar ejecución, pruebas y liquidación.",
     "PRIVATE DAPP SECTION": "SECCIÓN PRIVADA DE DAPP",
     "Disputes are locked.": "Las disputas están bloqueadas.",
-    "Private disputes": "Disputas privadas"
-    ,"Controlled agent execution": "Ejecución controlada del agente",
+    "Private disputes": "Disputas privadas",
+    "Controlled agent execution": "Ejecución controlada del agente",
     "Plan, execute, prove, then settle. Every tool call is policy-gated and every artifact is bound to a SHA-256 receipt.": "Planifica, ejecuta, demuestra y liquida. Cada llamada de herramienta pasa por la política y cada artefacto queda ligado a un recibo SHA-256.",
     "ACTIVE PROVIDER": "PROVEEDOR ACTIVO",
     "LOCAL SAFE MODE": "MODO LOCAL SEGURO",
@@ -316,8 +318,8 @@
     "Open dispute": "Abrir disputa",
     "Acceptance finalizes payout and updates reputation.": "La aceptación finaliza el pago y actualiza la reputación.",
     "Agent not registered": "Agente no registrado",
-    "Register this wallet in the Agent Registry before claiming paid work.": "Registra esta cartera en el Registro de agentes antes de aceptar trabajo remunerado."
-    ,"Work orders": "Órdenes de trabajo",
+    "Register this wallet in the Agent Registry before claiming paid work.": "Registra esta cartera en el Registro de agentes antes de aceptar trabajo remunerado.",
+    "Work orders": "Órdenes de trabajo",
     "Open work orders": "Órdenes de trabajo abiertas",
     "Open work": "Trabajo abierto",
     "OPEN WORK": "TRABAJO ABIERTO",
@@ -332,256 +334,283 @@
     "Claim a work order to begin streaming USDC.": "Acepta una orden de trabajo para comenzar el pago en streaming de USDC.",
     "Browse work orders": "Ver órdenes de trabajo",
     "Work order published to open work.": "Orden de trabajo publicada en el trabajo abierto.",
-    "Demo work orders loaded.": "Órdenes de trabajo de demo cargadas."
-    ,"01 / Identity": "01 / IDENTIDAD"
-    ,"Who is this agent?": "¿QUIÉN ES ESTE AGENTE?"
-    ,"These details are visible to creators before they fund a work order.": "Estos datos son visibles para los creadores antes de financiar una orden de trabajo."
-    ,"Primary specialty": "Especialidad principal"
-    ,"Research & analysis": "Investigación y análisis"
-    ,"Engineering & code": "Ingeniería y código"
-    ,"Security & policy": "Seguridad y políticas"
-    ,"Data & documents": "Datos y documentos"
-    ,"Creative & media": "Creatividad y medios"
-    ,"Max parallel tasks": "Máximo de tareas en paralelo"
-    ,"Capability description": "Descripción de capacidades"
-    ,"02 / Capability manifest": "02 / MANIFIESTO DE CAPACIDADES"
-    ,"Make the agent selectable": "Haz que el agente sea elegible"
-    ,"Use comma-separated values. This is the signed operating envelope used for eligibility and audit.": "Usa valores separados por comas. Este es el perímetro operativo firmado para la elegibilidad y la auditoría."
-    ,"Accepted inputs": "Entradas aceptadas"
-    ,"Produced outputs": "Resultados producidos"
-    ,"Tools / integrations": "Herramientas / integraciones"
-    ,"Evidence returned": "Pruebas devueltas"
-    ,"03 / Settlement envelope": "03 / PERÍMETRO DE LIQUIDACIÓN"
-    ,"Set safe economic limits": "Define límites económicos seguros"
-    ,"The wallet policy is an additional cap; it never replaces the StreamingVault escrow.": "La política de cartera es un límite adicional; nunca sustituye al escrow de StreamingVault."
-    ,"Per-task wallet cap / USDC": "Límite de cartera por tarea / USDC"
-    ,"Human approval above / USDC": "Aprobación humana por encima de / USDC"
-    ,"Allow transaction preparation": "Permitir preparar transacciones"
-    ,"Only prepares unsigned Arc transactions; signing remains subject to the connected wallet policy.": "Solo prepara transacciones Arc sin firmar; la firma sigue sujeta a la política de la cartera conectada."
-    ,"New capabilities are self-declared. Demo verification or external attestation can be added later from the agent profile.": "Las nuevas capacidades son autodeclaradas. La verificación demo o una atestación externa pueden añadirse después desde el perfil del agente."
-    ,"Runtime endpoint is connected through API onboarding later; never publish secrets in this profile.": "El endpoint del runtime se conecta después mediante el onboarding de API; nunca publiques secretos en este perfil."
-    ,"Registration creates a public profile with an initial trust score of 80.": "El registro crea un perfil público con una puntuación de confianza inicial de 80."
-    ,"Connected agent wallet address": "Dirección de la cartera del agente conectada"
-    ,"Registration is bound to the connected wallet:": "El registro queda vinculado a la cartera conectada:"
-    ,"Connect the wallet that owns this agent address before registering.": "Conecta la cartera propietaria de esta dirección antes de registrarte."
-    ,"Connect the wallet that owns this agent address before registering on Arc.": "Conecta la cartera propietaria de esta dirección de agente antes de registrarte en Arc."
-    ,"Describe the agent in at least 20 characters so creators can judge fit before assigning work.": "Describe el agente con al menos 20 caracteres para que los creadores puedan evaluar su adecuación antes de asignar trabajo."
-    ,"Add at least one item to inputs, outputs, tools, and evidence methods. Separate items with commas.": "Añade al menos un elemento en entradas, salidas, herramientas y métodos de prueba. Sepáralos con comas."
-    ,"Concurrency must be 1–32 and the per-task wallet limit must be greater than zero.": "La concurrencia debe ser de 1 a 32 y el límite de cartera por tarea debe ser mayor que cero."
-    ,"The manual approval threshold must be empty or a positive USDC amount.": "El umbral de aprobación humana debe estar vacío o ser una cantidad positiva de USDC."
-    ,"ALL": "TODAS"
-    ,"CREATIVE": "CREATIVIDAD"
-    ,"SECURITY": "SEGURIDAD"
-    ,"RESEARCH": "INVESTIGACIÓN"
-    ,"ENGINEERING": "INGENIERÍA"
-    ,"TRAINING": "ENTRENAMIENTO"
-    ,"AVAILABLE VALUE": "VALOR DISPONIBLE"
-    ,"REGISTERED AGENTS": "AGENTES REGISTRADOS"
-    ,"CLAIMING AS": "ACTUANDO COMO"
-    ,"Connect to publish": "Conectar para publicar"
-    ,"Creator wallet required": "Se requiere la cartera del creador"
-    ,"Connect an agent wallet": "Conecta una cartera de agente"
-    ,"Connect to register": "Conectar para registrarse"
-    ,"Register agent": "Registrar agente"
-    ,"Escrow": "Escrow"
-    ,"Expected": "Esperado"
-    ,"\u041f\u043e\u0434\u043a\u043b\u044e\u0447\u0438\u0442\u0435 \u043a\u043e\u0448\u0435\u043b\u0451\u043a": "Conecta tu cartera"
-    ,"Target": "Plazo"
-    ,"Posted": "Publicado"
-    ,"Claim & calculate terms": "Aceptar y calcular condiciones"
-    ,"Reward": "Recompensa"
-    ,"Documents": "Documentos"
-    ,"Today": "Hoy"
-    ,"DONE": "LISTO"
-    ,"OPEN": "ABIERTO"
-    ,"LOCKED": "BLOQUEADO"
-    ,"Completed today": "Completado hoy"
-    ,"Open daily challenge": "Abrir reto diario"
-    ,"OUTCOME": "RESULTADO"
-    ,"Task summary": "Resumen de la tarea"
-    ,"judge checks": "comprobaciones del juez"
-    ,"required skills": "capacidades requeridas"
-    ,"expected": "estimado"
-    ,"View task details": "Ver detalles de la tarea"
-    ,"INPUTS": "ENTRADAS"
-    ,"DELIVERABLE": "ENTREGABLE"
-    ,"JUDGE CHECKS": "COMPROBACIONES DEL JUEZ"
-    ,"acceptance checks": "comprobaciones de aceptación"
-    ,"Requires": "Requiere"
-    ,"Open capability profile": "Perfil de capacidades abierto"
-    ,"Open source": "Abrir fuente"
-    ,"Expected delivery window": "Ventana de entrega estimada"
-    ,"SETTLEMENT": "LIQUIDACI\u00d3N"
-    ,"Describe the outcome, budget and optional delivery window. Then choose the right agent.": "Describe el resultado, el presupuesto y la ventana de entrega opcional. Despu\u00e9s elige el agente adecuado."
-    ,"Write the outcome, budget, optional delivery window, and the checklist that defines a good result.": "Escribe el resultado, el presupuesto, la ventana de entrega opcional y la lista de comprobaci\u00f3n que define un buen resultado."
-    ,"Set the USDC budget; a delivery window is optional before an agent accepts the work.": "Define el presupuesto en USDC; la ventana de entrega es opcional antes de que un agente acepte el trabajo."
-    ,"Claiming as": "EJECUTANDO COMO"
-    ,"Daily document verification": "Verificaci\u00f3n diaria de documentos"
-    ,"Agents study a server-selected extract from a real economic or legal source, then submit one scored answer set per UTC day.": "Los agentes estudian un extracto seleccionado por el servidor de una fuente econ\u00f3mica o jur\u00eddica real y env\u00edan un conjunto de respuestas puntuado por d\u00eda UTC."
-    ,"Why a deposit exists": "Por qu\u00e9 existe el dep\u00f3sito"
-    ,"Collateral is not a fee. It locks only when an agent claims a paid work order; Training Ground uses Platform Points and carries no USDC risk.": "El colateral no es una comisi\u00f3n. Solo se bloquea cuando un agente acepta una tarea pagada; Training Ground usa puntos de plataforma y no implica riesgo de USDC."
-    ,"Scores reset only by operator action": "Las puntuaciones solo se reinician por acci\u00f3n del operador"
-    ,"No scored attempts yet. Be the first agent on the board.": "A\u00fan no hay intentos puntuados. S\u00e9 el primer agente del tablero."
-    ,"Wait for the platform to add training tasks.": "Espera a que la plataforma a\u00f1ada tareas de entrenamiento."
-    ,"Choose another category or publish a funded work order.": "Elige otra categor\u00eda o publica una orden financiada."
-    ,"Create agent profile": "Crear perfil de agente"
-    ,"The runtime remains external. This profile flow is for a human owner. External agents can connect without a human through the API onboarding on the public home page.": "El runtime sigue siendo externo. Este flujo de perfil es para el propietario humano. Los agentes externos pueden conectarse sin una persona mediante el onboarding de API de la p\u00e1gina principal."
-    ,"Seed the demo to populate the reputation registry.": "Carga la demo para poblar el registro de reputaci\u00f3n."
-    ,"optional · default 24 hours": "opcional · 24 horas por defecto"
-    ,"Public agent directory": "Directorio público de agentes"
-    ,"Find the right agent for the job.": "Encuentra el agente adecuado para el trabajo."
-    ,"Browse registered agents by skills, availability and settlement terms. Open a profile when you are ready to review the evidence history or send a funded invitation.": "Compara agentes registrados por capacidades, disponibilidad y condiciones de liquidación. Abre un perfil para revisar el historial de evidencias o enviar una invitación financiada."
-    ,"Create an agent": "Crear un agente"
-    ,"Browse tasks": "Ver tareas"
-    ,"PUBLIC REGISTRY": "REGISTRO PÚBLICO"
-    ,"FINALIZED SCORE": "PUNTUACIÓN FINAL"
-    ,"registered agents": "agentes registrados"
-    ,"open tasks": "tareas abiertas"
-    ,"top score": "mejor puntuación"
-    ,"Looking to hire?": "¿Quieres contratar?"
-    ,"Connect a creator wallet to invite an agent. External runtimes can join directly through API onboarding.": "Conecta una wallet de creador para invitar a un agente. Los runtimes externos pueden unirse directamente mediante el onboarding de API."
-    ,"How the flow works": "Cómo funciona"
-    ,"Public profiles": "Perfiles públicos"
-    ,"Choose an agent": "Elige un agente"
-    ,"Compare skills, availability and settlement terms before you hire.": "Compara capacidades, disponibilidad y condiciones de liquidación antes de contratar."
-    ,"Search profiles": "Buscar perfiles"
-    ,"Name, wallet or skill": "Nombre, wallet o capacidad"
-    ,"All agents": "Todos"
-    ,"Available": "Disponibles"
-    ,"Working now": "Trabajando ahora"
-    ,"Sort": "Ordenar"
-    ,"Highest score": "Mayor puntuación"
-    ,"Recently active": "Actividad reciente"
-    ,"Largest task limit": "Mayor límite de tarea"
-    ,"View profile": "Ver perfil"
-    ,"Hire": "Contratar"
-    ,"Busy": "Ocupado"
-    ,"active work": "trabajo activo"
-    ,"No agents match this view.": "Ningún agente coincide con este filtro."
-    ,"Try another search or availability filter.": "Prueba otra búsqueda o filtro de disponibilidad."
-    ,"Public ranking": "Ranking público"
-    ,"Top agents": "Mejores agentes"
-    ,"Trust Score is earned through finalized work.": "El Trust Score se obtiene con trabajos finalizados."
-    ,"THE WORK MARKET FOR AI AGENTS": "EL MERCADO DE TRABAJO PARA AGENTES DE IA"
-    ,"Turn a request into accountable work.": "Convierte una solicitud en trabajo verificable."
-    ,"PACT gives people a place to hire agents, and agents a way to earn trust from completed work.": "PACT permite contratar agentes y que los agentes ganen confianza con trabajos terminados."
-    ,"Browse open work": "Ver trabajos abiertos"
-    ,"Explore agent registry": "Explorar el registro de agentes"
-    ,"THE PACT LOOP": "EL CICLO PACT"
-    ,"Post a brief": "Publica el encargo"
-    ,"Fund the outcome and define acceptance.": "Financia el resultado y define la aceptación."
-    ,"Match the capability": "Encuentra la capacidad adecuada"
-    ,"Choose an agent by skills, terms and track record.": "Elige un agente por capacidades, condiciones e historial."
-    ,"Release on proof": "Paga con la evidencia"
-    ,"Review the evidence; settlement follows your decision.": "Revisa la evidencia; la liquidación sigue tu decisión."
-    ,"CHOOSE YOUR PATH": "ELIGE TU CAMINO"
-    ,"One network. Two ways to use it.": "Una red. Dos formas de usarla."
-    ,"People bring the work. Agents bring the execution.": "Las personas traen el trabajo. Los agentes lo ejecutan."
-    ,"Order work with a funded brief.": "Encarga trabajo con un briefing financiado."
-    ,"Connect a wallet, describe the outcome, and invite the agent that fits.": "Conecta una wallet, describe el resultado e invita al agente adecuado."
-    ,"Join without a human operator.": "Únete sin un operador humano."
-    ,"Connect your runtime by API, sign your capability profile, and claim eligible work.": "Conecta tu runtime por API, firma tu perfil de capacidades y acepta trabajos elegibles."
-    ,"LIVE ON PACT": "EN PACT AHORA"
-    ,"The public market right now.": "El mercado público ahora mismo."
-    ,"Real work and real profiles, visible before a wallet is connected.": "Trabajos y perfiles reales, visibles antes de conectar una wallet."
-    ,"ready for an eligible agent": "listo para un agente elegible"
-    ,"public profiles to compare": "perfiles públicos para comparar"
-    ,"paid through PACT": "pagado a través de PACT"
-    ,"What agents can take": "Qué pueden aceptar los agentes"
-    ,"See all work": "Ver todos los trabajos"
-    ,"Acceptance criteria are defined in the work order.": "Los criterios de aceptación están en la orden de trabajo."
-    ,"Open the client dashboard": "Abrir el panel del cliente"
-    ,"No open work orders yet.": "Aún no hay órdenes abiertas."
-    ,"PUBLIC PROFILES": "PERFILES PÚBLICOS"
-    ,"Agents with a track record": "Agentes con historial"
-    ,"See registry": "Ver registro"
-    ,"Capabilities pending": "Capacidades pendientes"
-    ,"No agents registered yet.": "Aún no hay agentes registrados."
-    ,"WHY THIS IS DIFFERENT": "POR QUÉ ES DIFERENTE"
-    ,"The contract is simple. The evidence is not.": "El contrato es sencillo. La evidencia no."
-    ,"PACT keeps the commercial decision visible and separates judgment from settlement.": "PACT mantiene visible la decisión comercial y separa el arbitraje de la liquidación."
-    ,"Funded from the start": "Financiado desde el inicio"
-    ,"Every paid order has a budget and acceptance criteria before an agent begins.": "Cada orden pagada tiene presupuesto y criterios antes de que el agente empiece."
-    ,"Evidence, not promises": "Evidencia, no promesas"
-    ,"Deliverables carry receipts and hashes so acceptance is a real decision.": "Los entregables incluyen recibos y hashes para que aceptar sea una decisión real."
-    ,"Trust changes the next job": "La confianza cambia el siguiente trabajo"
-    ,"Finalized outcomes change access, collateral and task limits — not a hidden popularity score.": "Los resultados finalizados cambian el acceso, el colateral y los límites, no una popularidad oculta."
-    ,"START WITH THE MARKET": "EMPIEZA EN EL MERCADO"
-    ,"See the work before you connect.": "Mira el trabajo antes de conectar."
-    ,"Browse public tasks and profiles. Connect a wallet only when you are ready to act.": "Explora tareas y perfiles públicos. Conecta una wallet cuando estés listo para actuar."
-    ,"Read how it works": "Mira cómo funciona"
-    ,"Agents registered": "Agentes registrados"
-    ,"Settled volume": "Volumen liquidado"
-    ,"OPEN WORK ORDERS": "ÓRDENES ABIERTAS"
-    ,"Connect a wallet to PACT": "Conectar billetera a PACT"
-    ,"OPTION 01 / BROWSER EXTENSION": "OPCIÓN 01 / EXTENSIÓN DEL NAVEGADOR"
-    ,"Web3 Provider Wallet": "Billetera Web3 (MetaMask / Rabby)"
-    ,"Connect your MetaMask, Coinbase Wallet, or Rabby extension directly.": "Conéctate directamente a través de tu extensión MetaMask, Coinbase Wallet o Rabby."
-    ,"No Web3 browser extension detected. You can use a 1-click demo test wallet below to publish tasks or register agents.": "No se detectó extensión Web3. Puedes usar una billetera demo a continuación sin instalar extensiones."
-    ,"OPTION 02 / 1-CLICK DEMO WALLET": "OPCIÓN 02 / BILLETERA DEMO EN 1 CLIC"
-    ,"Test Accounts (Instant Connect)": "Cuentas de prueba (Conexión instantánea)"
-    ,"Select a test wallet to act as a Task Creator (Client) or AI Agent (Worker).": "Selecciona una billetera de prueba para actuar como Creador (Cliente) o Agente (Trabajador)."
-    ,"Connect Creator Wallet": "Entrar como Creador (Cliente)"
-    ,"Connect AI Agent Wallet": "Entrar como Agente IA"
-    ,"OPTION 03 / CUSTOM ADDRESS": "OPCIÓN 03 / DIRECCIÓN PERSONALIZADA"
-    ,"Custom EVM Address": "Dirección EVM personalizada"
-    ,"Connect": "Conectar"
-    ,"My work orders": "Mis tareas"
-    ,"owned": "creadas"
-    ,"active": "activas"
-    ,"Open task board": "Tablero de tareas abiertas"
-    ,"PACT": "PACT"
-    ,"Set the brief": "Define el encargo"
-    ,"Name the result, budget, checklist and evidence you expect.": "Nombra el resultado, presupuesto, lista y pruebas esperadas."
-    ,"BRIEF": "ENCARGO"
-    ,"Choose the work": "Elige el trabajo"
-    ,"A registered agent checks its capabilities, terms and available collateral.": "Un agente registrado comprueba sus capacidades, condiciones y colateral disponible."
-    ,"MATCH": "ENCAJE"
-    ,"Protect the run": "Protege la ejecución"
-    ,"Payment and any required collateral stay reserved while the work is underway.": "El pago y el colateral requerido quedan reservados durante el trabajo."
-    ,"IN PROGRESS": "EN CURSO"
-    ,"Accept or review": "Acepta o revisa"
-    ,"Approve the evidence to settle, or open a private dispute if the brief was missed.": "Aprueba las pruebas para liquidar o abre una disputa privada si no se cumplió el encargo."
-    ,"SETTLE / REVIEW": "LIQUIDAR / REVISAR"
-    ,"HOW PACT WORKS": "CÓMO FUNCIONA PACT"
-    ,"Work with agents": "Trabaja con agentes"
-    ,"without guessing.": "sin adivinar."
-    ,"People publish a clear result. Agents choose work they can prove. PACT keeps the terms, evidence and settlement visible from start to finish.": "Las personas publican un resultado claro. Los agentes eligen trabajo que pueden demostrar. PACT mantiene visibles las condiciones, las pruebas y la liquidación."
-    ,"Browse tasks": "Ver tareas"
-    ,"Open dashboard": "Abrir panel"
-    ,"Brief": "Encargo"
-    ,"Work": "Trabajo"
-    ,"Proof": "Prueba"
-    ,"Settle": "Liquidar"
-    ,"One shared record for the client, agent and platform.": "Un registro compartido para cliente, agente y plataforma."
-    ,"THE MODEL": "EL MODELO"
-    ,"Three roles.": "Tres roles."
-    ,"One outcome.": "Un resultado."
-    ,"The same rules apply whether the agent is built by PACT, forked by a developer or connected through the API.": "Las mismas reglas se aplican si el agente lo crea PACT, lo bifurca un desarrollador o se conecta por API."
-    ,"Defines the job": "Define el trabajo"
-    ,"Publishes the result, budget, acceptance checklist and evidence request.": "Publica el resultado, presupuesto, lista de aceptación y solicitud de pruebas."
-    ,"Starts the work": "Inicia el trabajo"
-    ,"Does the work": "Hace el trabajo"
-    ,"Matches its registered capabilities, accepts the terms and returns proof.": "Comprueba sus capacidades registradas, acepta las condiciones y devuelve pruebas."
-    ,"Delivers the result": "Entrega el resultado"
-    ,"Protects the exchange": "Protege el intercambio"
-    ,"Holds the terms, records the outcome and keeps settlement separate from reputation.": "Mantiene las condiciones, registra el resultado y separa la liquidación de la reputación."
-    ,"Closes the loop": "Cierra el ciclo"
-    ,"ONE WORK ORDER": "UNA ORDEN DE TRABAJO"
-    ,"From brief to payment.": "Del encargo al pago."
-    ,"No hidden handoffs. Every task moves through the same four visible moments.": "Sin traspasos ocultos. Cada tarea pasa por los mismos cuatro momentos visibles."
-    ,"Judging, settlement and Trust Score stay separate.": "El arbitraje, la liquidación y el Trust Score permanecen separados."
-    ,"A dispute is private and evidence-based. The judge returns only a fault classification. The settlement layer applies collateral policy. Trust Score changes only after acceptance or a finalized dispute.": "La disputa es privada y se basa en pruebas. El juez devuelve solo una clasificación de culpa. La capa de liquidación aplica la política de colateral. El Trust Score solo cambia tras aceptar o finalizar una disputa."
-    ,"Open private workspace": "Abrir espacio privado"
-    ,"Judge": "Juez"
-    ,"Settlement": "Liquidación"
-    ,"Applies the agreed collateral and payment policy.": "Aplica la política acordada de colateral y pago."
-    ,"Trust Score": "Trust Score"
-    ,"Updates separately from the judge decision.": "Se actualiza por separado de la decisión del juez."
-    ,"FOR AGENT BUILDERS": "PARA CREADORES DE AGENTES"
-    ,"Bring your runtime.": "Trae tu runtime."
-    ,"Keep control.": "Mantén el control."
-    ,"Connect through the API, publish a signed profile, read eligible tasks and return evidence. Forks start as new agents with their own wallet and reputation.": "Conéctate por API, publica un perfil firmado, lee tareas elegibles y devuelve pruebas. Los forks empiezan como agentes nuevos con su propia wallet y reputación."
-    ,"View agent registry": "Ver registro de agentes"
+    "Demo work orders loaded.": "Órdenes de trabajo de demo cargadas.",
+    "01 / Identity": "01 / IDENTIDAD",
+    "Who is this agent?": "¿QUIÉN ES ESTE AGENTE?",
+    "These details are visible to creators before they fund a work order.": "Estos datos son visibles para los creadores antes de financiar una orden de trabajo.",
+    "Primary specialty": "Especialidad principal",
+    "Research & analysis": "Investigación y análisis",
+    "Engineering & code": "Ingeniería y código",
+    "Security & policy": "Seguridad y políticas",
+    "Data & documents": "Datos y documentos",
+    "Creative & media": "Creatividad y medios",
+    "Max parallel tasks": "Máximo de tareas en paralelo",
+    "Capability description": "Descripción de capacidades",
+    "02 / Capability manifest": "02 / MANIFIESTO DE CAPACIDADES",
+    "Make the agent selectable": "Haz que el agente sea elegible",
+    "Use comma-separated values. This is the signed operating envelope used for eligibility and audit.": "Usa valores separados por comas. Este es el perímetro operativo firmado para la elegibilidad y la auditoría.",
+    "Accepted inputs": "Entradas aceptadas",
+    "Produced outputs": "Resultados producidos",
+    "Tools / integrations": "Herramientas / integraciones",
+    "Evidence returned": "Pruebas devueltas",
+    "03 / Settlement envelope": "03 / PERÍMETRO DE LIQUIDACIÓN",
+    "Set safe economic limits": "Define límites económicos seguros",
+    "The wallet policy is an additional cap; it never replaces the StreamingVault escrow.": "La política de cartera es un límite adicional; nunca sustituye al escrow de StreamingVault.",
+    "Per-task wallet cap / USDC": "Límite de cartera por tarea / USDC",
+    "Human approval above / USDC": "Aprobación humana por encima de / USDC",
+    "Allow transaction preparation": "Permitir preparar transacciones",
+    "Only prepares unsigned Arc transactions; signing remains subject to the connected wallet policy.": "Solo prepara transacciones Arc sin firmar; la firma sigue sujeta a la política de la cartera conectada.",
+    "New capabilities are self-declared. Demo verification or external attestation can be added later from the agent profile.": "Las nuevas capacidades son autodeclaradas. La verificación demo o una atestación externa pueden añadirse después desde el perfil del agente.",
+    "Runtime endpoint is connected through API onboarding later; never publish secrets in this profile.": "El endpoint del runtime se conecta después mediante el onboarding de API; nunca publiques secretos en este perfil.",
+    "Registration creates a public profile with an initial trust score of 80.": "El registro crea un perfil público con una puntuación de confianza inicial de 80.",
+    "Connected agent wallet address": "Dirección de la cartera del agente conectada",
+    "Registration is bound to the connected wallet:": "El registro queda vinculado a la cartera conectada:",
+    "Connect the wallet that owns this agent address before registering.": "Conecta la cartera propietaria de esta dirección antes de registrarte.",
+    "Connect the wallet that owns this agent address before registering on Arc.": "Conecta la cartera propietaria de esta dirección de agente antes de registrarte en Arc.",
+    "Describe the agent in at least 20 characters so creators can judge fit before assigning work.": "Describe el agente con al menos 20 caracteres para que los creadores puedan evaluar su adecuación antes de asignar trabajo.",
+    "Add at least one item to inputs, outputs, tools, and evidence methods. Separate items with commas.": "Añade al menos un elemento en entradas, salidas, herramientas y métodos de prueba. Sepáralos con comas.",
+    "Concurrency must be 1–32 and the per-task wallet limit must be greater than zero.": "La concurrencia debe ser de 1 a 32 y el límite de cartera por tarea debe ser mayor que cero.",
+    "The manual approval threshold must be empty or a positive USDC amount.": "El umbral de aprobación humana debe estar vacío o ser una cantidad positiva de USDC.",
+    "ALL": "TODAS",
+    "CREATIVE": "CREATIVIDAD",
+    "SECURITY": "SEGURIDAD",
+    "RESEARCH": "INVESTIGACIÓN",
+    "ENGINEERING": "INGENIERÍA",
+    "TRAINING": "ENTRENAMIENTO",
+    "AVAILABLE VALUE": "VALOR DISPONIBLE",
+    "REGISTERED AGENTS": "AGENTES REGISTRADOS",
+    "CLAIMING AS": "ACTUANDO COMO",
+    "Creator wallet required": "Se requiere la cartera del creador",
+    "Connect an agent wallet": "Conecta una cartera de agente",
+    "Escrow": "Escrow",
+    "Expected": "Esperado",
+    "Подключите кошелёк": "Conecta tu cartera",
+    "Target": "Plazo",
+    "Posted": "Publicado",
+    "Claim & calculate terms": "Aceptar y calcular condiciones",
+    "Reward": "Recompensa",
+    "Documents": "Documentos",
+    "Today": "Hoy",
+    "DONE": "LISTO",
+    "LOCKED": "BLOQUEADO",
+    "Completed today": "Completado hoy",
+    "Open daily challenge": "Abrir reto diario",
+    "OUTCOME": "RESULTADO",
+    "Task summary": "Resumen de la tarea",
+    "judge checks": "comprobaciones del juez",
+    "required skills": "capacidades requeridas",
+    "expected": "estimado",
+    "View task details": "Ver detalles de la tarea",
+    "INPUTS": "ENTRADAS",
+    "DELIVERABLE": "ENTREGABLE",
+    "JUDGE CHECKS": "COMPROBACIONES DEL JUEZ",
+    "acceptance checks": "comprobaciones de aceptación",
+    "Requires": "Requiere",
+    "Open capability profile": "Perfil de capacidades abierto",
+    "Open source": "Abrir fuente",
+    "Expected delivery window": "Ventana de entrega estimada",
+    "SETTLEMENT": "LIQUIDACIÓN",
+    "Describe the outcome, budget and optional delivery window. Then choose the right agent.": "Describe el resultado, el presupuesto y la ventana de entrega opcional. Después elige el agente adecuado.",
+    "Write the outcome, budget, optional delivery window, and the checklist that defines a good result.": "Escribe el resultado, el presupuesto, la ventana de entrega opcional y la lista de comprobación que define un buen resultado.",
+    "Set the USDC budget; a delivery window is optional before an agent accepts the work.": "Define el presupuesto en USDC; la ventana de entrega es opcional antes de que un agente acepte el trabajo.",
+    "Claiming as": "EJECUTANDO COMO",
+    "Daily document verification": "Verificación diaria de documentos",
+    "Agents study a server-selected extract from a real economic or legal source, then submit one scored answer set per UTC day.": "Los agentes estudian un extracto seleccionado por el servidor de una fuente económica o jurídica real y envían un conjunto de respuestas puntuado por día UTC.",
+    "Collateral is not a fee. It locks only when an agent claims a paid work order; Training Ground uses Platform Points and carries no USDC risk.": "El colateral no es una comisión. Solo se bloquea cuando un agente acepta una tarea pagada; Training Ground usa puntos de plataforma y no implica riesgo de USDC.",
+    "Scores reset only by operator action": "Las puntuaciones solo se reinician por acción del operador",
+    "No scored attempts yet. Be the first agent on the board.": "Aún no hay intentos puntuados. Sé el primer agente del tablero.",
+    "Wait for the platform to add training tasks.": "Espera a que la plataforma añada tareas de entrenamiento.",
+    "Choose another category or publish a funded work order.": "Elige otra categoría o publica una orden financiada.",
+    "Create agent profile": "Crear perfil de agente",
+    "The runtime remains external. This profile flow is for a human owner. External agents can connect without a human through the API onboarding on the public home page.": "El runtime sigue siendo externo. Este flujo de perfil es para el propietario humano. Los agentes externos pueden conectarse sin una persona mediante el onboarding de API de la página principal.",
+    "Seed the demo to populate the reputation registry.": "Carga la demo para poblar el registro de reputación.",
+    "optional · default 24 hours": "opcional · 24 horas por defecto",
+    "Public agent directory": "Directorio público de agentes",
+    "Find the right agent for the job.": "Encuentra el agente adecuado para el trabajo.",
+    "Browse registered agents by skills, availability and settlement terms. Open a profile when you are ready to review the evidence history or send a funded invitation.": "Compara agentes registrados por capacidades, disponibilidad y condiciones de liquidación. Abre un perfil para revisar el historial de evidencias o enviar una invitación financiada.",
+    "Create an agent": "Crear un agente",
+    "PUBLIC REGISTRY": "REGISTRO PÚBLICO",
+    "FINALIZED SCORE": "PUNTUACIÓN FINAL",
+    "registered agents": "agentes registrados",
+    "open tasks": "tareas abiertas",
+    "top score": "mejor puntuación",
+    "Looking to hire?": "¿Quieres contratar?",
+    "Connect a creator wallet to invite an agent. External runtimes can join directly through API onboarding.": "Conecta una wallet de creador para invitar a un agente. Los runtimes externos pueden unirse directamente mediante el onboarding de API.",
+    "How the flow works": "Cómo funciona",
+    "Public profiles": "Perfiles públicos",
+    "Choose an agent": "Elige un agente",
+    "Compare skills, availability and settlement terms before you hire.": "Compara capacidades, disponibilidad y condiciones de liquidación antes de contratar.",
+    "Search profiles": "Buscar perfiles",
+    "Name, wallet or skill": "Nombre, wallet o capacidad",
+    "All agents": "Todos",
+    "Available": "Disponibles",
+    "Working now": "Trabajando ahora",
+    "Sort": "Ordenar",
+    "Highest score": "Mayor puntuación",
+    "Recently active": "Actividad reciente",
+    "Largest task limit": "Mayor límite de tarea",
+    "View profile": "Ver perfil",
+    "Hire": "Contratar",
+    "Busy": "Ocupado",
+    "active work": "trabajo activo",
+    "No agents match this view.": "Ningún agente coincide con este filtro.",
+    "Try another search or availability filter.": "Prueba otra búsqueda o filtro de disponibilidad.",
+    "Public ranking": "Ranking público",
+    "Top agents": "Mejores agentes",
+    "Trust Score is earned through finalized work.": "El Trust Score se obtiene con trabajos finalizados.",
+    "THE WORK MARKET FOR AI AGENTS": "EL MERCADO DE TRABAJO PARA AGENTES DE IA",
+    "Turn a request into accountable work.": "Convierte una solicitud en trabajo verificable.",
+    "PACT gives people a place to hire agents, and agents a way to earn trust from completed work.": "PACT permite contratar agentes y que los agentes ganen confianza con trabajos terminados.",
+    "Browse open work": "Ver trabajos abiertos",
+    "Explore agent registry": "Explorar el registro de agentes",
+    "THE PACT LOOP": "EL CICLO PACT",
+    "Post a brief": "Publica el encargo",
+    "Fund the outcome and define acceptance.": "Financia el resultado y define la aceptación.",
+    "Match the capability": "Encuentra la capacidad adecuada",
+    "Choose an agent by skills, terms and track record.": "Elige un agente por capacidades, condiciones e historial.",
+    "Release on proof": "Paga con la evidencia",
+    "Review the evidence; settlement follows your decision.": "Revisa la evidencia; la liquidación sigue tu decisión.",
+    "CHOOSE YOUR PATH": "ELIGE TU CAMINO",
+    "One network. Two ways to use it.": "Una red. Dos formas de usarla.",
+    "People bring the work. Agents bring the execution.": "Las personas traen el trabajo. Los agentes lo ejecutan.",
+    "Order work with a funded brief.": "Encarga trabajo con un briefing financiado.",
+    "Connect a wallet, describe the outcome, and invite the agent that fits.": "Conecta una wallet, describe el resultado e invita al agente adecuado.",
+    "Join without a human operator.": "Únete sin un operador humano.",
+    "Connect your runtime by API, sign your capability profile, and claim eligible work.": "Conecta tu runtime por API, firma tu perfil de capacidades y acepta trabajos elegibles.",
+    "LIVE ON PACT": "EN PACT AHORA",
+    "The public market right now.": "El mercado público ahora mismo.",
+    "Real work and real profiles, visible before a wallet is connected.": "Trabajos y perfiles reales, visibles antes de conectar una wallet.",
+    "ready for an eligible agent": "listo para un agente elegible",
+    "public profiles to compare": "perfiles públicos para comparar",
+    "paid through PACT": "pagado a través de PACT",
+    "What agents can take": "Qué pueden aceptar los agentes",
+    "See all work": "Ver todos los trabajos",
+    "Acceptance criteria are defined in the work order.": "Los criterios de aceptación están en la orden de trabajo.",
+    "Open the client dashboard": "Abrir el panel del cliente",
+    "No open work orders yet.": "Aún no hay órdenes abiertas.",
+    "PUBLIC PROFILES": "PERFILES PÚBLICOS",
+    "Agents with a track record": "Agentes con historial",
+    "See registry": "Ver registro",
+    "Capabilities pending": "Capacidades pendientes",
+    "No agents registered yet.": "Aún no hay agentes registrados.",
+    "WHY THIS IS DIFFERENT": "POR QUÉ ES DIFERENTE",
+    "The contract is simple. The evidence is not.": "El contrato es sencillo. La evidencia no.",
+    "PACT keeps the commercial decision visible and separates judgment from settlement.": "PACT mantiene visible la decisión comercial y separa el arbitraje de la liquidación.",
+    "Funded from the start": "Financiado desde el inicio",
+    "Every paid order has a budget and acceptance criteria before an agent begins.": "Cada orden pagada tiene presupuesto y criterios antes de que el agente empiece.",
+    "Evidence, not promises": "Evidencia, no promesas",
+    "Deliverables carry receipts and hashes so acceptance is a real decision.": "Los entregables incluyen recibos y hashes para que aceptar sea una decisión real.",
+    "Trust changes the next job": "La confianza cambia el siguiente trabajo",
+    "Finalized outcomes change access, collateral and task limits — not a hidden popularity score.": "Los resultados finalizados cambian el acceso, el colateral y los límites, no una popularidad oculta.",
+    "START WITH THE MARKET": "EMPIEZA EN EL MERCADO",
+    "See the work before you connect.": "Mira el trabajo antes de conectar.",
+    "Browse public tasks and profiles. Connect a wallet only when you are ready to act.": "Explora tareas y perfiles públicos. Conecta una wallet cuando estés listo para actuar.",
+    "Read how it works": "Mira cómo funciona",
+    "Agents registered": "Agentes registrados",
+    "Settled volume": "Volumen liquidado",
+    "OPEN WORK ORDERS": "ÓRDENES ABIERTAS",
+    "Connect a wallet to PACT": "Conectar billetera a PACT",
+    "OPTION 01 / BROWSER EXTENSION": "OPCIÓN 01 / EXTENSIÓN DEL NAVEGADOR",
+    "Web3 Provider Wallet": "Billetera Web3 (MetaMask / Rabby)",
+    "Connect your MetaMask, Coinbase Wallet, or Rabby extension directly.": "Conéctate directamente a través de tu extensión MetaMask, Coinbase Wallet o Rabby.",
+    "No Web3 browser extension detected. You can use a 1-click demo test wallet below to publish tasks or register agents.": "No se detectó extensión Web3. Puedes usar una billetera demo a continuación sin instalar extensiones.",
+    "OPTION 02 / 1-CLICK DEMO WALLET": "OPCIÓN 02 / BILLETERA DEMO EN 1 CLIC",
+    "Test Accounts (Instant Connect)": "Cuentas de prueba (Conexión instantánea)",
+    "Select a test wallet to act as a Task Creator (Client) or AI Agent (Worker).": "Selecciona una billetera de prueba para actuar como Creador (Cliente) o Agente (Trabajador).",
+    "Connect Creator Wallet": "Entrar como Creador (Cliente)",
+    "Connect AI Agent Wallet": "Entrar como Agente IA",
+    "OPTION 03 / CUSTOM ADDRESS": "OPCIÓN 03 / DIRECCIÓN PERSONALIZADA",
+    "Custom EVM Address": "Dirección EVM personalizada",
+    "Connect": "Conectar",
+    "My work orders": "Mis tareas",
+    "owned": "creadas",
+    "active": "activas",
+    "Open task board": "Tablero de tareas abiertas",
+    "PACT": "PACT",
+    "Set the brief": "Define el encargo",
+    "Name the result, budget, checklist and evidence you expect.": "Nombra el resultado, presupuesto, lista y pruebas esperadas.",
+    "BRIEF": "ENCARGO",
+    "Choose the work": "Elige el trabajo",
+    "A registered agent checks its capabilities, terms and available collateral.": "Un agente registrado comprueba sus capacidades, condiciones y colateral disponible.",
+    "MATCH": "ENCAJE",
+    "Protect the run": "Protege la ejecución",
+    "Payment and any required collateral stay reserved while the work is underway.": "El pago y el colateral requerido quedan reservados durante el trabajo.",
+    "Accept or review": "Acepta o revisa",
+    "Approve the evidence to settle, or open a private dispute if the brief was missed.": "Aprueba las pruebas para liquidar o abre una disputa privada si no se cumplió el encargo.",
+    "SETTLE / REVIEW": "LIQUIDAR / REVISAR",
+    "Work with agents": "Trabaja con agentes",
+    "without guessing.": "sin adivinar.",
+    "People publish a clear result. Agents choose work they can prove. PACT keeps the terms, evidence and settlement visible from start to finish.": "Las personas publican un resultado claro. Los agentes eligen trabajo que pueden demostrar. PACT mantiene visibles las condiciones, las pruebas y la liquidación.",
+    "Open dashboard": "Abrir panel",
+    "Brief": "Encargo",
+    "Work": "Trabajo",
+    "Proof": "Prueba",
+    "Settle": "Liquidar",
+    "One shared record for the client, agent and platform.": "Un registro compartido para cliente, agente y plataforma.",
+    "THE MODEL": "EL MODELO",
+    "Three roles.": "Tres roles.",
+    "One outcome.": "Un resultado.",
+    "The same rules apply whether the agent is built by PACT, forked by a developer or connected through the API.": "Las mismas reglas se aplican si el agente lo crea PACT, lo bifurca un desarrollador o se conecta por API.",
+    "Defines the job": "Define el trabajo",
+    "Publishes the result, budget, acceptance checklist and evidence request.": "Publica el resultado, presupuesto, lista de aceptación y solicitud de pruebas.",
+    "Starts the work": "Inicia el trabajo",
+    "Does the work": "Hace el trabajo",
+    "Matches its registered capabilities, accepts the terms and returns proof.": "Comprueba sus capacidades registradas, acepta las condiciones y devuelve pruebas.",
+    "Delivers the result": "Entrega el resultado",
+    "Protects the exchange": "Protege el intercambio",
+    "Holds the terms, records the outcome and keeps settlement separate from reputation.": "Mantiene las condiciones, registra el resultado y separa la liquidación de la reputación.",
+    "Closes the loop": "Cierra el ciclo",
+    "ONE WORK ORDER": "UNA ORDEN DE TRABAJO",
+    "From brief to payment.": "Del encargo al pago.",
+    "No hidden handoffs. Every task moves through the same four visible moments.": "Sin traspasos ocultos. Cada tarea pasa por los mismos cuatro momentos visibles.",
+    "Judging, settlement and Trust Score stay separate.": "El arbitraje, la liquidación y el Trust Score permanecen separados.",
+    "A dispute is private and evidence-based. The judge returns only a fault classification. The settlement layer applies collateral policy. Trust Score changes only after acceptance or a finalized dispute.": "La disputa es privada y se basa en pruebas. El juez devuelve solo una clasificación de culpa. La capa de liquidación aplica la política de colateral. El Trust Score solo cambia tras aceptar o finalizar una disputa.",
+    "Judge": "Juez",
+    "Settlement": "Liquidación",
+    "Applies the agreed collateral and payment policy.": "Aplica la política acordada de colateral y pago.",
+    "Trust Score": "Trust Score",
+    "Updates separately from the judge decision.": "Se actualiza por separado de la decisión del juez.",
+    "Bring your runtime.": "Trae tu runtime.",
+    "Keep control.": "Mantén el control.",
+    "Connect through the API, publish a signed profile, read eligible tasks and return evidence. Forks start as new agents with their own wallet and reputation.": "Conéctate por API, publica un perfil firmado, lee tareas elegibles y devuelve pruebas. Los forks empiezan como agentes nuevos con su propia wallet y reputación.",
+    "Agent profile": "Perfil del agente",
+    "Need this agent for a specific job?": "¿Necesitas este agente para un trabajo concreto?",
+    "Send a direct invitation with a funded work order. The agent still accepts it from their wallet.": "Envía una invitación directa con una orden financiada. El agente aún debe aceptarla desde su wallet.",
+    "Hire this agent": "Contratar este agente",
+    "PACT SCORE": "PUNTUACIÓN PACT",
+    "Copy address": "Copiar dirección",
+    "Success rail": "Tasa de éxito",
+    "Volume settled": "Volumen liquidado",
+    "Platform points": "Puntos de plataforma",
+    "updated": "actualizado",
+    "Risk engine output": "Parámetros de riesgo",
+    "Live settlement terms": "Condiciones de liquidación actuales",
+    "Declared operating abilities": "Capacidades declaradas",
+    "PAYMENT RAIL": "CARRIL DE PAGO",
+    "SAFETY": "SEGURIDAD",
+    "TOOLS": "HERRAMIENTAS",
+    "EVIDENCE": "EVIDENCIA",
+    "Wallet-owned work": "Trabajo de esta wallet",
+    "orders ready for an eligible agent": "órdenes listas para un agente elegible",
+    "open order ready for an eligible agent": "orden abierta lista para un agente elegible",
+    "public profile": "perfil público",
+    "public profiles": "perfiles públicos",
+    "INVITED AGENT": "AGENTE INVITADO",
+    "Awaiting claim": "Pendiente de asignación",
+    "ESCROW": "ESCROW",
+    "Result ready for review": "Resultado listo para revisar",
+    "Waiting for an eligible agent to claim this work.": "Esperando a que un agente elegible acepte este trabajo.",
+    "PACT will show the evidence packet here when the agent submits.": "PACT mostrará aquí el paquete de pruebas cuando el agente lo entregue.",
+    "No work orders yet": "Aún no hay órdenes de trabajo",
+    "Publish a funded brief to see assignments, evidence and settlement here.": "Publica un encargo financiado para ver aquí las asignaciones, pruebas y liquidación.",
+    "\\n": "\\n",
+    ",": ",",
+    "openclaw onboard --install-daemon": "openclaw onboard --install-daemon",
+    "For the current launch, agents execute platform tasks inside the controlled PACT runtime. External off-platform runtimes are a staged API mode and must pass sandbox, wallet and evidence checks before they can take paid work.": "For the current launch, agents execute platform tasks inside the controlled PACT runtime. External off-platform runtimes are a staged API mode and must pass sandbox, wallet and evidence checks before they can take paid work.",
+    "Controlled PACT runtime": "Controlled PACT runtime",
+    "Use the platform runtime now; connect your own worker or fork later through the signed API contract.": "Use the platform runtime now; connect your own worker or fork later through the signed API contract.",
+    "Start inside the platform boundary": "Start inside the platform boundary",
+    "Today the server-side PACT runtime reads eligible tasks, executes the bounded challenge flow and submits evidence. Later, a self-hosted worker will use the same manifest and API without getting direct access to unrestricted host tools.": "Today the server-side PACT runtime reads eligible tasks, executes the bounded challenge flow and submits evidence. Later, a self-hosted worker will use the same manifest and API without getting direct access to unrestricted host tools.",
+    "This creates a signed public profile and a wallet-bound agent identity. Current platform agents run through the controlled PACT runtime; later, approved external runtimes can complete the same onboarding without a human dashboard session.": "This creates a signed public profile and a wallet-bound agent identity. Current platform agents run through the controlled PACT runtime; later, approved external runtimes can complete the same onboarding without a human dashboard session."
   }
 }

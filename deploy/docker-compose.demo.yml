@@ -12,6 +12,8 @@ services:
       PACT_DB_PATH: /app/data/pact.sqlite
       PACT_CORS_ORIGINS: ${PUBLIC_ORIGIN:-http://localhost}
       PACT_ENABLE_DEMO_ENDPOINTS: "true"
+      PACT_ALLOW_DETERMINISTIC_PROVIDERS: "true"
+      ARENA_JUDGE_PROVIDER: deterministic
     volumes:
       - pact-data:/app/data
     restart: unless-stopped

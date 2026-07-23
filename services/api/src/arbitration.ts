@@ -164,7 +164,7 @@ export class OpenAIArbitrator implements Arbitrator {
 
   constructor(options: OpenAIArbitratorOptions) {
     this.client = new OpenAI({ apiKey: options.apiKey, timeout: options.timeoutMs ?? 15_000, maxRetries: 1 });
-    this.model = options.model ?? 'gpt-5-mini';
+    this.model = options.model ?? 'gpt-5.6-terra';
     this.fallback = options.fallback ?? null;
     this.judgeId = options.judgeId ?? 'openai-merits';
     this.roleInstructions = options.roleInstructions ?? 'Evaluate overall delivery against the success criteria.';

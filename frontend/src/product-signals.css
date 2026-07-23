@@ -1004,12 +1004,16 @@
 .runtime-choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .runtime-choice { display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 11px; min-height: 112px; padding: 15px; color: var(--market-ink); text-align: left; border: 1px solid rgba(23, 32, 25, .18); background: rgba(255,255,255,.44); cursor: pointer; }
 .runtime-choice:hover, .runtime-choice--active { border-color: #af573b; box-shadow: inset 0 3px #af573b; background: rgba(255,255,255,.8); }
+.runtime-choice--disabled { cursor: not-allowed; opacity: .58; background: rgba(23, 32, 25, .035); }
+.runtime-choice--disabled:hover { border-color: rgba(23, 32, 25, .18); box-shadow: none; background: rgba(23, 32, 25, .035); }
 .runtime-choice > svg:first-child { width: 20px; color: #af573b; }
 .runtime-choice > svg:last-child { width: 16px; color: transparent; }
 .runtime-choice--active > svg:last-child { color: #6d923d; }
 .runtime-choice span, .wallet-mode span { display: grid; gap: 6px; }
 .runtime-choice strong, .wallet-mode strong { color: var(--market-ink); font: 600 21px/.96 "Archivo Narrow", sans-serif; letter-spacing: -.02em; }
+.runtime-choice strong em { display: inline-block; margin-left: 6px; color: #af573b; font: 500 9px/1 "IBM Plex Mono", monospace; letter-spacing: .08em; text-transform: uppercase; vertical-align: middle; }
 .runtime-choice small, .wallet-mode small { color: var(--market-muted); font: 400 10px/1.45 "IBM Plex Mono", monospace; }
+.runtime-choice__status { align-self: start; padding: 5px 7px; color: #8b4a35; border: 1px solid rgba(175,87,59,.35); border-radius: 999px; font: 500 9px/1 "IBM Plex Mono", monospace; letter-spacing: .06em; text-transform: uppercase; }
 .runtime-setup-card, .runtime-rail-card { display: grid; gap: 13px; padding: 17px; color: var(--market-ink); border: 1px solid rgba(23,32,25,.14); background: rgba(255,255,255,.5); }
 .runtime-setup-card > header, .runtime-rail-card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
 .runtime-setup-card h3, .runtime-rail-card h3 { margin: 5px 0 0; font: 600 25px/.96 "Archivo Narrow", sans-serif; letter-spacing: -.025em; }
@@ -1748,5 +1752,35 @@
   }
   .marketplace-page .training-ground-panel__intro > :first-child {
     grid-column: auto;
+  }
+}
+
+.modal--wallet { width: min(640px, 100%); }
+.wallet-modal__grid { display: grid; gap: 16px; margin-top: 10px; }
+.wallet-modal__section { display: grid; gap: 8px; padding: 16px; border: 1px solid rgba(23,32,25,.14); background: rgba(255,255,255,.5); }
+.wallet-modal__section h3 { margin: 0; font: 600 22px/.98 "Archivo Narrow", sans-serif; letter-spacing: -.02em; color: var(--market-ink); }
+.wallet-modal__section p { margin: 0; color: var(--market-muted); font: 400 11px/1.4 "IBM Plex Mono", monospace; }
+.wallet-modal__connectors { display: grid; gap: 8px; margin-top: 6px; }
+.wallet-modal__demo-buttons { display: grid; gap: 8px; margin-top: 6px; }
+.wallet-modal__demo-buttons .button { justify-content: flex-start; text-align: left; }
+.wallet-modal__demo-buttons small { margin-left: 6px; opacity: 0.75; font-size: 10px; }
+.wallet-modal__custom-form { display: flex; gap: 8px; margin-top: 6px; }
+.wallet-modal__custom-form input { flex: 1; padding: 10px 12px; font: 400 12px/1.4 "IBM Plex Mono", monospace; border: 1px solid rgba(23,32,25,.2); background: #fff; }
+.wallet-modal__note { padding: 10px; color: var(--market-muted); font: 400 10px/1.4 "IBM Plex Mono", monospace; background: rgba(245, 220, 207, 0.4); border: 1px solid rgba(175, 87, 59, 0.3); }
+
+/* Keep the training reward card out of the title's reading line on tablets. */
+@media (max-width: 920px) {
+  .marketplace-page .marketplace-intro {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 20px;
+  }
+  .marketplace-page .marketplace-intro h1 {
+    max-width: none;
+    overflow-wrap: anywhere;
+  }
+  .marketplace-page .marketplace-intro__action {
+    width: 100%;
+    min-width: 0;
   }
 }

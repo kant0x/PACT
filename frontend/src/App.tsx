@@ -1,4 +1,4 @@
-﻿import {
+import {
  AlertTriangle,
   ArrowRight,
   BadgeCheck,
@@ -45,10 +45,10 @@ import {
   inferTaskCategory,
   manifestSupportsTaskCategory,
   manifestSupportsWorkOrder,
-  type ArenaAnswer,
   type ArenaChallenge,
   type ArenaEvaluationResult,
   type ArenaLeaderboardEntry,
+  type ArenaSubmission,
   type ArenaTemplate,
   type Dispute,
   type DisputeVerdict,
@@ -61,35 +61,148 @@ import {
   WORK_ORDER_TEMPLATES,
   normalizeWorkOrderSpec,
 } from '@pact/shared';
-import { API_BASE, PactApiError, agentRegistrationMessage, api, creatorTaskMessage, type PublishTaskInput, type TrustModel } from './api';
+import { API_BASE, PactApiError, agentRegistrationMessage, api, arenaAttemptMessage, creatorTaskMessage, type PublishTaskInput, type TrustModel } from './api';
 import { useLocale } from './locale';
 import { useAccount, useConnect, useDisconnect, useSignMessage } from 'wagmi';
 
-function WalletHeader() {
+function WalletHeader({
+  activeAddress,
+  activeIsConnected,
+  onOpenConnectModal,
+  onDisconnect,
+}: {
+  activeAddress?: string;
+  activeIsConnected: boolean;
+  onOpenConnectModal: () => void;
+  onDisconnect: () => void;
+}) {
   const { t } = useLocale();
-  const { address, isConnected } = useAccount();
-  const { connect, connectors } = useConnect();
-  const { disconnect } = useDisconnect();
 
-  if (isConnected && address) {
+  if (activeIsConnected && activeAddress) {
     return (
       <div className="operator">
         <span className="operator__avatar">WEB3</span>
         <span>
           <strong>{t('Connected')}</strong>
-          <small>{shortAddress(address)}</small>
+          <small className="mono">{shortAddress(activeAddress)}</small>
         </span>
-        <button className="button button--small" onClick={() => disconnect()} type="button">{t('Disconnect')}</button>
+        <button className="button button--small button--outline" onClick={onDisconnect} type="button">
+          {t('Disconnect')}
+        </button>
       </div>
     );
   }
 
   return (
     <div className="operator">
-      <button className="button button--primary button--small" onClick={() => connect({ connector: connectors[0] })} type="button">
-        {t('Connect Wallet')}
+      <button className="button button--primary button--small" onClick={onOpenConnectModal} type="button">
+        <WalletCards size={14} /> {t('Connect Wallet')}
       </button>
     </div>
+  );
+}
+
+function WalletConnectModal({
+  onClose,
+  onSelectDemoWallet,
+}: {
+  onClose: () => void;
+  onSelectDemoWallet: (address: string) => void;
+}) {
+  const { connect, connectors } = useConnect();
+  const { t } = useLocale();
+  const [customAddress, setCustomAddress] = useState('');
+  const [customError, setCustomError] = useState<string | null>(null);
+
+  const handleCustomConnect = (event: FormEvent) => {
+    event.preventDefault();
+    const addr = customAddress.trim();
+    if (!/^0x[a-fA-F0-9]{40}$/.test(addr)) {
+      setCustomError('Enter a valid 20-byte EVM address starting with 0x');
+      return;
+    }
+    onSelectDemoWallet(addr);
+    onClose();
+  };
+
+  return (
+    <Modal eyebrow="WEB3 & DEMO AUTH" title={t('Connect a wallet to PACT')} onClose={onClose} className="modal--wallet">
+      <div className="wallet-modal__grid">
+        <div className="wallet-modal__section">
+          <div className="eyebrow">OPTION 01 / BROWSER EXTENSION</div>
+          <h3>Web3 Provider Wallet</h3>
+          <p>Connect your MetaMask, Coinbase Wallet, or Rabby extension directly.</p>
+          {connectors.length > 0 ? (
+            <div className="wallet-modal__connectors">
+              {connectors.map((connector) => (
+                <button
+                  key={connector.id}
+                  className="button button--primary button--block"
+                  type="button"
+                  onClick={() => {
+                    connect({ connector });
+                    onClose();
+                  }}
+                >
+                  <WalletCards /> {connector.name}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="wallet-modal__note">
+              <span>No Web3 browser extension detected. You can use a 1-click demo test wallet below to publish tasks or register agents.</span>
+            </div>
+          )}
+        </div>
+
+        <div className="wallet-modal__section">
+          <div className="eyebrow">OPTION 02 / 1-CLICK DEMO WALLET</div>
+          <h3>Test Accounts (Instant Connect)</h3>
+          <p>Select a test wallet to act as a Task Creator (Client) or AI Agent (Worker).</p>
+          <div className="wallet-modal__demo-buttons">
+            <button
+              type="button"
+              className="button button--outline button--block"
+              onClick={() => {
+                onSelectDemoWallet(DEMO_ADDRESSES.creator);
+                onClose();
+              }}
+            >
+              <Users /> Connect Creator Wallet <small>({shortAddress(DEMO_ADDRESSES.creator)})</small>
+            </button>
+            <button
+              type="button"
+              className="button button--outline button--block"
+              onClick={() => {
+                onSelectDemoWallet(DEMO_ADDRESSES.newbie);
+                onClose();
+              }}
+            >
+              <Bot /> Connect AI Agent Wallet <small>({shortAddress(DEMO_ADDRESSES.newbie)})</small>
+            </button>
+          </div>
+        </div>
+
+        <div className="wallet-modal__section field--wide">
+          <div className="eyebrow">OPTION 03 / CUSTOM ADDRESS</div>
+          <h3>Custom EVM Address</h3>
+          <form onSubmit={handleCustomConnect} className="wallet-modal__custom-form">
+            <input
+              type="text"
+              value={customAddress}
+              onChange={(event) => {
+                setCustomAddress(event.target.value);
+                setCustomError(null);
+              }}
+              placeholder="0x..."
+              className="mono"
+            />
+            <button type="submit" className="button button--secondary">Connect</button>
+          </form>
+          {customError ? <small className="field-error">{customError}</small> : null}
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -108,7 +221,7 @@ function LanguageSwitcher() {
   );
 }
 
-type View = 'overview' | 'protocol' | 'dapp' | 'marketplace' | 'agents' | 'disputes';
+type View = 'overview' | 'protocol' | 'dapp' | 'marketplace' | 'leaderboard' | 'agents' | 'disputes';
 type TaskCategory = 'CREATIVE' | 'SECURITY' | 'RESEARCH' | 'ENGINEERING';
 type MarketCategory = 'ALL' | TaskCategory | 'TRAINING';
 
@@ -126,6 +239,7 @@ const PUBLIC_NAV_ITEMS: Array<{ id: View; label: string; icon: typeof LayoutDash
 const DAPP_NAV_ITEMS: Array<{ id: View; label: string; icon: typeof LayoutDashboard }> = [
   { id: 'dapp', label: 'Cabinet', icon: LayoutDashboard },
   { id: 'marketplace', label: 'Tasks', icon: Boxes },
+  { id: 'leaderboard', label: 'Training leaderboard', icon: Trophy },
   { id: 'agents', label: 'Agent registry', icon: Users },
 ];
 
@@ -524,30 +638,36 @@ function RegisterAgentModal({
   onClose,
   onRegister,
   busy,
+  activeAddress,
 }: {
   onClose: () => void;
   onRegister: (input: { agentAddress: string; displayName: string; capabilityManifest: AgentCapabilityManifest; signature?: string; provisionWallet?: boolean }) => Promise<void>;
   busy: boolean;
+  activeAddress?: string;
 }) {
+  // OpenClaw remains part of the planned runtime roadmap, but is deliberately
+  // unavailable until its isolated gateway adapter has passed the production
+  // security review. Registration must therefore use a runtime we can verify.
+  const openClawAvailable = false;
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const { t } = useLocale();
   const arcMode = import.meta.env.VITE_PACT_MODE === 'arc';
   const [setupStep, setSetupStep] = useState<'runtime' | 'profile'>('runtime');
-  const [runtimeKind, setRuntimeKind] = useState<'OPENCLAW_GATEWAY' | 'EXTERNAL_API'>('OPENCLAW_GATEWAY');
+  const [runtimeKind, setRuntimeKind] = useState<'OPENCLAW_GATEWAY' | 'EXTERNAL_API'>('EXTERNAL_API');
   const [gatewayUrl, setGatewayUrl] = useState('');
   const [paymentRail, setPaymentRail] = useState<'PACT_ESCROW' | 'X402_METERED'>('PACT_ESCROW');
   const [sandboxConfirmed, setSandboxConfirmed] = useState(false);
-  const [walletMode, setWalletMode] = useState<'CONNECTED' | 'PROVISION'>(arcMode ? 'PROVISION' : 'CONNECTED');
+  const [walletMode, setWalletMode] = useState<'CONNECTED' | 'PROVISION'>(arcMode || (!address && !activeAddress) ? 'PROVISION' : 'CONNECTED');
   const [copiedCommand, setCopiedCommand] = useState(false);
   const [form, setForm] = useState({
     displayName: '',
-    agentAddress: address ?? '',
+    agentAddress: activeAddress ?? address ?? '',
     specialty: 'Research & analysis',
-    description: '',
+    description: 'Autonomous AI agent specializing in research, data analysis, and technical verification.',
     inputTypes: 'task brief, URLs, acceptance criteria',
     outputTypes: 'cited report, structured findings',
-    tools: 'OpenClaw Gateway, HTTPS, document parser',
+    tools: 'HTTPS, document parser, sandboxed worker',
     evidenceMethods: 'source manifest, SHA-256 artifact hash',
     maxConcurrentTasks: '1',
     perTaskLimitUsdc: '500',
@@ -583,6 +703,10 @@ function RegisterAgentModal({
     const perTaskLimitUsdc = form.perTaskLimitUsdc.trim();
     const humanApprovalAboveUsdc = form.humanApprovalAboveUsdc.trim();
     setFormError(null);
+    if (runtimeKind === 'OPENCLAW_GATEWAY' && !openClawAvailable) {
+      setFormError('OpenClaw Gateway is not available yet. Connect an existing API runtime for now.');
+      return;
+    }
     if (runtimeKind === 'OPENCLAW_GATEWAY' && !sandboxConfirmed) {
       setFormError('Confirm sandbox mode before connecting an OpenClaw runtime. Non-main sessions must not run with unrestricted host tools.');
       return;
@@ -655,13 +779,13 @@ function RegisterAgentModal({
       {setupStep === 'runtime' ? (
         <div className="agent-setup-flow">
           <div className="agent-setup-progress"><span className="agent-setup-progress__active">01 Runtime</span><span>02 Profile &amp; limits</span><span>03 Wallet receipt</span></div>
-          <div className="form-note field--wide"><Bot /><span>PACT creates the public contract and settlement identity. Your OpenClaw Gateway remains on your machine or server; model keys, channel tokens and private workspace files never enter PACT.</span></div>
+          <div className="form-note field--wide"><Bot /><span>{t('For the current launch, agents execute platform tasks inside the controlled PACT runtime. External off-platform runtimes are a staged API mode and must pass sandbox, wallet and evidence checks before they can take paid work.')}</span></div>
           <div className="runtime-choice-grid">
-            <button className={runtimeKind === 'OPENCLAW_GATEWAY' ? 'runtime-choice runtime-choice--active' : 'runtime-choice'} type="button" onClick={() => setRuntimeKind('OPENCLAW_GATEWAY')}>
-              <Server /><span><strong>OpenClaw Gateway</strong><small>Recommended for a self-hosted agent with local skills, channels and an isolated workspace.</small></span><BadgeCheck />
+            <button className="runtime-choice runtime-choice--disabled" type="button" disabled aria-disabled="true">
+              <Server /><span><strong>OpenClaw Gateway <em>{t('Coming soon')}</em></strong><small>{t('Self-hosted runtime connection will open after isolation and sandbox policies pass review.')}</small></span><span className="runtime-choice__status">{t('Coming soon')}</span>
             </button>
             <button className={runtimeKind === 'EXTERNAL_API' ? 'runtime-choice runtime-choice--active' : 'runtime-choice'} type="button" onClick={() => setRuntimeKind('EXTERNAL_API')}>
-              <Radio /><span><strong>Existing API runtime</strong><small>Use your own worker, framework or fork and connect it through the signed PACT API contract.</small></span><BadgeCheck />
+              <Radio /><span><strong>{t('Controlled PACT runtime')}</strong><small>{t('Use the platform runtime now; connect your own worker or fork later through the signed API contract.')}</small></span><BadgeCheck />
             </button>
           </div>
           {runtimeKind === 'OPENCLAW_GATEWAY' ? (
@@ -674,8 +798,8 @@ function RegisterAgentModal({
             </section>
           ) : (
             <section className="runtime-setup-card">
-              <header><div><div className="eyebrow">EXTERNAL API / SIGNED ONBOARDING</div><h3>Connect a runtime you already operate</h3></div><KeyRound /></header>
-              <p>Your worker signs the same capability manifest, reads eligible tasks, accepts a work order and submits an evidence-bound deliverable. The API URL is a connection detail, not a secret stored in the agent profile.</p>
+              <header><div><div className="eyebrow">PACT RUNTIME / SIGNED ONBOARDING</div><h3>{t('Start inside the platform boundary')}</h3></div><KeyRound /></header>
+              <p>{t('Today the server-side PACT runtime reads eligible tasks, executes the bounded challenge flow and submits evidence. Later, a self-hosted worker will use the same manifest and API without getting direct access to unrestricted host tools.')}</p>
               <label className="field"><span>Public runtime callback URL <small>optional</small></span><input type="url" value={gatewayUrl} onChange={(event) => setGatewayUrl(event.target.value)} placeholder="https://agent.example.com/pact/callback" /></label>
             </section>
           )}
@@ -683,13 +807,13 @@ function RegisterAgentModal({
             <div><div className="eyebrow">PAYMENT FOR RUNTIME CALLS</div><h3>Choose the rail without changing task escrow</h3><p>StreamingVault remains the primary work-order escrow. x402 is optional for metered HTTP/API usage by the runtime; it is not the judge, collateral or Trust Score.</p>{paymentRail === 'X402_METERED' ? <small className="runtime-rail-card__route">Paid resource: <code>GET /api/runtime/paid-capability</code></small> : null}</div>
             <div className="rail-options"><label className={paymentRail === 'PACT_ESCROW' ? 'rail-option rail-option--active' : 'rail-option'}><input type="radio" name="paymentRail" checked={paymentRail === 'PACT_ESCROW'} onChange={() => setPaymentRail('PACT_ESCROW')} /><span><strong>PACT escrow</strong><small>Recommended default</small></span></label><label className={paymentRail === 'X402_METERED' ? 'rail-option rail-option--active' : 'rail-option'}><input type="radio" name="paymentRail" checked={paymentRail === 'X402_METERED'} onChange={() => setPaymentRail('X402_METERED')} /><span><strong>x402 metered</strong><small>Optional API usage rail</small></span></label></div>
           </section>
-          <div className="form-note form-note--muted field--wide"><ShieldCheck /><span>AI provider choice stays inside OpenClaw or your API runtime. PACT's judge remains a separate deterministic/OpenAI/council layer and only returns a fault classification.</span></div>
+          <div className="form-note form-note--muted field--wide"><ShieldCheck /><span>AI provider choice stays inside your API runtime. PACT's judge remains a separate deterministic/OpenAI/council layer and only returns a fault classification.</span></div>
           <div className="modal__actions field--wide"><button className="button button--ghost" type="button" onClick={onClose}>Cancel</button><button className="button button--primary" type="button" onClick={() => setSetupStep('profile')}><ArrowRight /> Continue to profile</button></div>
         </div>
       ) : (
       <form className="form-grid" onSubmit={submit}>
         <div className="agent-setup-progress field--wide"><button type="button" onClick={() => setSetupStep('runtime')}><ArrowRight /> Runtime: {runtimeKind === 'OPENCLAW_GATEWAY' ? 'OpenClaw Gateway' : 'External API'}</button><span className="agent-setup-progress__active">02 Profile &amp; limits</span><span>03 Wallet receipt</span></div>
-        <div className="form-note field--wide"><Bot /><span>This creates a signed public profile for a runtime you own. PACT does not host the bot here. {runtimeKind === 'OPENCLAW_GATEWAY' ? 'OpenClaw remains your execution layer.' : 'Your API worker remains your execution layer.'} External agents can also complete the same onboarding without a human dashboard session.</span></div>
+        <div className="form-note field--wide"><Bot /><span>{t('This creates a signed public profile and a wallet-bound agent identity. Current platform agents run through the controlled PACT runtime; later, approved external runtimes can complete the same onboarding without a human dashboard session.')}</span></div>
         <div className="registration-section field--wide"><span>01 / WALLET IDENTITY</span><strong>Give the agent its own settlement identity</strong><small>Keep creator and agent wallets separate. In Arc production PACT can provision a dedicated Circle agent wallet; otherwise connect the wallet that owns this profile.</small></div>
         {arcMode ? <div className="wallet-mode-grid field--wide"><label className={walletMode === 'PROVISION' ? 'wallet-mode wallet-mode--active' : 'wallet-mode'}><input type="radio" name="walletMode" checked={walletMode === 'PROVISION'} onChange={() => setWalletMode('PROVISION')} /><span><strong>Provision dedicated agent wallet</strong><small>Circle creates a new Arc wallet for this runtime. No private key is shown in the browser.</small></span><WalletCards /></label><label className={walletMode === 'CONNECTED' ? 'wallet-mode wallet-mode--active' : 'wallet-mode'}><input type="radio" name="walletMode" checked={walletMode === 'CONNECTED'} onChange={() => setWalletMode('CONNECTED')} /><span><strong>Use connected wallet</strong><small>Only choose this when the connected wallet is the agent owner, not the creator wallet.</small></span><KeyRound /></label></div> : null}
         <label className="field field--wide">
@@ -767,19 +891,63 @@ function ArenaAttemptModal({
   busy,
   onClose,
   onSubmit,
+  onToolCall,
 }: {
   challenge: ArenaChallenge;
   result: ArenaEvaluationResult | null;
   busy: boolean;
   onClose: () => void;
-  onSubmit: (answers: ArenaAnswer[], consentToTraining: boolean) => Promise<void>;
+  onSubmit: (submission: ArenaSubmission, consentToTraining: boolean) => Promise<void>;
+  onToolCall: (tool: string, input: Record<string, unknown>) => Promise<Record<string, unknown>>;
 }) {
-  const [answers, setAnswers] = useState<Record<string, string>>(() => Object.fromEntries(challenge.questions.map((question) => [question.id, ''])));
+  const payload = challenge.payload;
+  const { t } = useLocale();
+  const [answer, setAnswer] = useState('');
+  const [recordId, setRecordId] = useState('');
+  const [field, setField] = useState('amount');
+  const [code, setCode] = useState(() => payload.kind === 'CODE_REPAIR' ? payload.files[payload.entrypoint] ?? '' : '');
+  const [artifactHash, setArtifactHash] = useState('');
+  const [reasoning, setReasoning] = useState('');
   const [consentToTraining, setConsentToTraining] = useState(false);
+  const [toolBusy, setToolBusy] = useState<string | null>(null);
+  const [sourceReceipt, setSourceReceipt] = useState('');
+  const [transformReceipt, setTransformReceipt] = useState('');
+  const [toolLog, setToolLog] = useState<Array<{ tool: string; output: Record<string, unknown> }>>([]);
   const close = () => {
-    if (!result && !window.confirm('This scored attempt is already consumed. Close without submitting?')) return;
+    if (!result && !window.confirm('Задание останется в работе и не будет засчитано. Закрыть и продолжить позже?')) return;
     onClose();
   };
+
+  const submit = () => {
+    if (payload.kind === 'GROUNDED_QA') {
+      void onSubmit({ kind: 'GROUNDED_QA', answer, citation: { recordId, field }, reasoning }, consentToTraining);
+      return;
+    }
+    if (payload.kind === 'CODE_REPAIR') {
+      void onSubmit({ kind: 'CODE_REPAIR', files: { ...payload.files, [payload.entrypoint]: code }, reasoning }, consentToTraining);
+      return;
+    }
+    void onSubmit({ kind: 'TOOL_WORKFLOW', artifactHash, reasoning }, consentToTraining);
+  };
+
+  const callTool = async (tool: string, input: Record<string, unknown>) => {
+    setToolBusy(tool);
+    try {
+      const output = await onToolCall(tool, input);
+      setToolLog((current) => [...current, { tool, output }]);
+      if (typeof output.sourceReceipt === 'string') setSourceReceipt(output.sourceReceipt);
+      if (typeof output.transformReceipt === 'string') setTransformReceipt(output.transformReceipt);
+      if (typeof output.artifactHash === 'string') setArtifactHash(output.artifactHash);
+    } finally {
+      setToolBusy(null);
+    }
+  };
+
+  const kindLabel = payload.kind === 'GROUNDED_QA'
+    ? 'SOURCE-VERIFIED DATA'
+    : payload.kind === 'CODE_REPAIR'
+      ? 'SANDBOXED CODE REPAIR'
+      : 'ATTEMPT-SCOPED TOOL WORKFLOW';
 
   return (
     <Modal className="modal--arena" eyebrow={`Daily arena / ${challenge.dayKey}`} title={challenge.templateTitle} onClose={close}>
@@ -787,45 +955,62 @@ function ArenaAttemptModal({
         <div className={result.status === 'PASSED' ? 'arena-result arena-result--passed' : 'arena-result arena-result--failed'}>
           <header><Trophy /><span>{result.status}</span><strong>{result.score}<small>/100</small></strong></header>
           <p>{result.status === 'PASSED' ? `${result.pointsAwarded} Platform Points were added to the agent.` : 'No points were awarded. The next scored attempt opens after the UTC reset.'}</p>
+          <div className="arena-score-breakdown">
+            <div><span>DETERMINISTIC</span><strong>{result.deterministicScore}</strong></div>
+            <div><span>QUALITY</span><strong>{result.qualityScore}</strong><small>{result.qualityModifier >= 0 ? '+' : ''}{Math.round(result.qualityModifier * 100)}%</small></div>
+            <div><span>EFFICIENCY</span><strong>{result.efficiencyScore ?? 'N/A'}</strong><small>{result.efficiencyScore === null ? 'not applied' : `${result.efficiencyModifier >= 0 ? '+' : ''}${Math.round(result.efficiencyModifier * 100)}%`}</small></div>
+          </div>
           <div className="arena-result__checks">
             {result.checks.map((check) => <span className={check.passed ? 'arena-check arena-check--pass' : 'arena-check arena-check--fail'} key={check.code}><i />{check.code}</span>)}
           </div>
+          <div className="arena-judge-receipt"><ShieldCheck /><span><strong>{result.judge.provider}</strong>{result.judge.reasoning}<small>{result.judge.receiptHash.slice(0, 28)}…</small></span></div>
+          <div className="arena-points-receipt"><BadgeCheck /><span><strong>{result.pointsReceipt?.mode === 'ARC_TESTNET' ? 'Arc Testnet points' : 'Local demo points'}</strong>{result.pointsReceipt?.mode === 'ARC_TESTNET' && result.pointsReceipt.transactionHash
+            ? <small><a href={`https://testnet.arcscan.app/tx/${result.pointsReceipt.transactionHash}`} target="_blank" rel="noreferrer">View award transaction <SquareArrowOutUpRight /></a>{result.pointsReceipt.agentTotal === null ? null : ` · agent total ${result.pointsReceipt.agentTotal} PTS`}</small>
+            : <small>{result.pointsAwarded > 0 ? 'Award recorded by the configured local demo ledger.' : 'No award transaction: the attempt did not pass.'}</small>}</span></div>
           <button className="button button--primary" onClick={onClose} type="button">Return to Training Ground</button>
         </div>
       ) : (
         <form className="arena-attempt" onSubmit={(event) => {
           event.preventDefault();
-          void onSubmit(challenge.questions.map((question) => ({ questionId: question.id, answer: answers[question.id] ?? '' })), consentToTraining);
+          submit();
         }}>
-          <section className="arena-document">
-            <header>
-              <div><span>{challenge.document.kind} / VERIFIED EXTRACT</span><h3>{challenge.document.title}</h3></div>
-              <a href={challenge.document.sourceUrl} target="_blank" rel="noreferrer">Official source <SquareArrowOutUpRight /></a>
-            </header>
-    <dl><div><dt>Publisher</dt><dd>{challenge.document.sourceName}</dd></div><div><dt>Published</dt><dd>{challenge.document.publishedAt}</dd></div><div><dt>Receipt</dt><dd>{challenge.document.contentHash.slice(0, 22)}…</dd></div></dl>
-            <article>{challenge.document.content.split('\n').map((paragraph) => paragraph ? <p key={paragraph}>{paragraph}</p> : null)}</article>
-            <footer><ShieldCheck /> {challenge.document.notice}</footer>
+          <section className="arena-challenge-head">
+            <div><span>{kindLabel}</span><h3>{payload.kind === 'GROUNDED_QA' ? payload.question.prompt : payload.kind === 'CODE_REPAIR' ? `Repair ${payload.entrypoint}` : payload.goal}</h3></div>
+            <dl><div><dt>Generator</dt><dd>{challenge.generatorVersion}</dd></div><div><dt>Commitment</dt><dd>{challenge.instanceCommitment.slice(0, 24)}...</dd></div></dl>
           </section>
-          <section className="arena-questions">
-            <header><div><span>ANSWER SHEET</span><strong>{challenge.questions.length} checks</strong></div><small>One final submission</small></header>
-            {challenge.questions.map((question, index) => (
-              <label className="arena-question" key={question.id}>
-                <span><i>{String(index + 1).padStart(2, '0')}</i>{question.prompt}<em>{question.weight} PTS</em></span>
-                <input
-                  required
-                  type={question.answerFormat === 'NUMBER' ? 'text' : 'text'}
-                  inputMode={question.answerFormat === 'NUMBER' ? 'decimal' : 'text'}
-                  maxLength={2000}
-                  value={answers[question.id] ?? ''}
-                  onChange={(event) => setAnswers((current) => ({ ...current, [question.id]: event.target.value }))}
-                />
-              </label>
-            ))}
-            <label className="arena-consent"><input type="checkbox" checked={consentToTraining} onChange={(event) => setConsentToTraining(event.target.checked)} /><span><strong>Share this trace with Model Lab</strong><small>Optional. The attempt remains valid when disabled.</small></span></label>
+          <section className="arena-document arena-document--legacy">
+            <dl><div><dt>Issuer</dt><dd>PACT generator</dd></div><div><dt>UTC day</dt><dd>{challenge.dayKey}</dd></div><div><dt>Receipt</dt><dd>{challenge.instanceCommitment.slice(0, 22)}…</dd></div></dl>
+            <div className="arena-document__legacy-copy">This challenge payload is sealed to this attempt. Use the source data above and complete the answer sheet below.</div>
+            <p className="arena-document__notice">{payload.kind === 'GROUNDED_QA' ? payload.dataset.notice : payload.kind === 'CODE_REPAIR' ? 'The submission runs in a network-isolated sandbox. Hidden tests stay on the server.' : payload.goal}</p>
           </section>
-          <div className="arena-attempt__rules">\n            <span>1 scored attempt / UTC day</span><span>server-held answer key</span><span>document receipt required</span><span>Platform Points only</span>\n          </div>\n          <div className="modal__actions">
-            <button className="button button--ghost" onClick={close} type="button">Abandon attempt</button>
-            <button className="button button--primary" disabled={busy} type="submit">{busy ? <RefreshCcw className="spin" /> : <BadgeCheck />} Submit final answers</button>
+          {payload.kind === 'GROUNDED_QA' ? <div className="arena-workspace arena-workspace--grounded">
+            <section className="arena-dataset">
+              <header><div><span>GENERATED JSON LEDGER</span><strong>{payload.dataset.name}</strong></div><small>{payload.dataset.contentHash.slice(0, 22)}…</small></header>
+              <div className="arena-table-wrap"><table><thead><tr>{payload.dataset.columns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{payload.dataset.rows.map((row, index) => <tr key={String(row.recordId ?? index)}>{payload.dataset.columns.map((column) => <td key={column}>{String(row[column])}</td>)}</tr>)}</tbody></table></div>
+              <footer><ShieldCheck /> {payload.dataset.notice}</footer>
+            </section>
+            <section className="arena-answer-panel">
+              <label><span>Final answer</span><input required inputMode="decimal" value={answer} onChange={(event) => setAnswer(event.target.value)} /></label>
+              <div className="field-row"><label><span>Evidence recordId</span><input required value={recordId} onChange={(event) => setRecordId(event.target.value)} /></label><label><span>Evidence field</span><input required value={field} onChange={(event) => setField(event.target.value)} /></label></div>
+              <label><span>Reasoning</span><textarea required minLength={10} maxLength={4000} value={reasoning} onChange={(event) => setReasoning(event.target.value)} placeholder="Explain how the cited row supports the exact answer." /></label>
+            </section>
+          </div> : null}
+
+          {payload.kind === 'CODE_REPAIR' ? <div className="arena-workspace arena-workspace--code">
+            <section className="arena-code-panel"><header><div><span>JAVASCRIPT / CONTAINER GRADE</span><strong>{payload.entrypoint}</strong></div><small>{payload.sourceHash.slice(0, 22)}…</small></header><textarea className="arena-code-editor" required spellCheck={false} maxLength={50000} value={code} onChange={(event) => setCode(event.target.value)} /></section>
+            <section className="arena-test-panel"><header><span>PUBLIC CONTRACT</span><strong>{payload.publicTests.length} visible cases + hidden cases</strong></header>{payload.publicTests.map((test, index) => <code key={test}>{index + 1}. {test}</code>)}<ul>{payload.constraints.map((constraint) => <li key={constraint}>{constraint}</li>)}</ul><label><span>Why this fix generalizes</span><textarea required minLength={10} maxLength={4000} value={reasoning} onChange={(event) => setReasoning(event.target.value)} /></label></section>
+          </div> : null}
+
+          {payload.kind === 'TOOL_WORKFLOW' ? <div className="arena-workspace arena-workspace--tools">
+            <section className="arena-tool-console"><header><div><span>MCP / STREAMABLE HTTP</span><strong>{payload.mcpEndpoint}</strong></div><small>Bearer = private attempt token</small></header><div className="arena-tool-actions"><button className="button button--outline" type="button" disabled={toolBusy !== null} onClick={() => void callTool('fetch_orders', {})}>{toolBusy === 'fetch_orders' ? <RefreshCcw className="spin" /> : <Zap />} 1. fetch_orders</button><button className="button button--outline" type="button" disabled={!sourceReceipt || toolBusy !== null} onClick={() => void callTool('normalize_orders', { sourceReceipt })}>{toolBusy === 'normalize_orders' ? <RefreshCcw className="spin" /> : <Zap />} 2. normalize_orders</button><button className="button button--primary" type="button" disabled={!transformReceipt || toolBusy !== null} onClick={() => void callTool('publish_report', { transformReceipt, format: 'json' })}>{toolBusy === 'publish_report' ? <RefreshCcw className="spin" /> : <BadgeCheck />} 3. publish_report</button></div><div className="arena-tool-log">{toolLog.length ? toolLog.map((entry, index) => <div key={`${entry.tool}-${index}`}><span>{String(index + 1).padStart(2, '0')} / {entry.tool}</span><pre>{JSON.stringify(entry.output, null, 2)}</pre></div>) : <p>No calls yet. External agents can invoke the same tools through the MCP endpoint.</p>}</div></section>
+            <section className="arena-answer-panel"><label><span>Published artifact hash</span><input required readOnly value={artifactHash} placeholder="Returned by publish_report" /></label><label><span>Data-lineage reasoning</span><textarea required minLength={10} maxLength={4000} value={reasoning} onChange={(event) => setReasoning(event.target.value)} placeholder="Describe the fetch → normalize → publish lineage." /></label><div className="arena-mcp-note"><Server /><span><strong>External agent setup</strong>POST JSON-RPC to {payload.mcpEndpoint} with Authorization: Bearer &lt;attemptToken&gt;.</span></div></section>
+          </div> : null}
+
+          <section className="arena-questions"><label className="arena-consent"><input type="checkbox" checked={consentToTraining} onChange={(event) => setConsentToTraining(event.target.checked)} /><span><strong>Share this trace with Model Lab</strong><small>Optional. The attempt remains valid when disabled.</small></span></label></section>
+          <div className="arena-attempt__rules"><span>1 attempt / track / UTC day</span><span>private generated key</span><span>correctness gate</span><span>Platform Points only</span></div>
+          <div className="modal__actions">
+            <button className="button button--ghost" onClick={close} type="button">{t('Save and close')}</button>
+            <button className="button button--primary" disabled={busy || toolBusy !== null} type="submit">{busy ? <RefreshCcw className="spin" /> : <BadgeCheck />} Submit for grading</button>
           </div>
         </form>
       )}
@@ -1194,6 +1379,60 @@ function Leaderboard({
   );
 }
 
+function PlatformLeaderboard({
+  entries,
+  onView,
+}: {
+  entries: ArenaLeaderboardEntry[];
+  onView: (view: View) => void;
+}) {
+  const { t } = useLocale();
+  const topEntry = entries[0];
+  const scoredAgents = entries.filter((entry) => entry.totalAttempts > 0).length;
+  const totalPoints = entries.reduce((sum, entry) => sum + entry.platformPoints, 0);
+
+  return (
+    <div className="view-stack platform-leaderboard-page">
+      <section className="page-intro platform-leaderboard-hero reveal">
+        <div>
+          <div className="eyebrow">PACT PLATFORM / DAILY POINTS</div>
+          <h1>{t('Training leaderboard')}</h1>
+          <p>See which agents are building a verified record in PACT’s daily document challenges. Platform Points are separate from commercial Trust Score.</p>
+          <div className="platform-leaderboard-hero__actions">
+            <button className="button button--primary" onClick={() => onView('marketplace')} type="button"><Boxes /> {t('Browse tasks')}</button>
+            <button className="button button--outline" onClick={() => onView('agents')} type="button"><Users /> {t('Agent registry')}</button>
+          </div>
+        </div>
+        <div className="platform-leaderboard-hero__stats" aria-label="Training leaderboard summary">
+          <div><span>TOP SCORE</span><strong>{topEntry?.platformPoints ?? 0}<small>PTS</small></strong><em>{topEntry?.displayName ?? 'No attempts yet'}</em></div>
+          <div><span>AGENTS SCORED</span><strong>{scoredAgents.toString().padStart(2, '0')}</strong><em>of {entries.length.toString().padStart(2, '0')} registered</em></div>
+          <div><span>POINTS IN PLAY</span><strong>{totalPoints}</strong><em>Platform Points</em></div>
+        </div>
+      </section>
+
+      <section className="platform-leaderboard-card reveal" aria-labelledby="platform-leaderboard-title">
+        <header className="platform-leaderboard-card__header">
+          <div><div className="eyebrow">{t('Platform Points')}</div><h2 id="platform-leaderboard-title">{t('Training leaderboard')}</h2><p>One scored attempt per agent per UTC day. Results are ranked by awarded points, then average answer score.</p></div>
+          <span>{entries.length} registered</span>
+        </header>
+        {entries.length ? (
+          <div className="platform-leaderboard__rows">
+            {entries.map((entry) => (
+              <div className={entry.rank === 1 ? 'platform-leaderboard__row platform-leaderboard__row--top' : 'platform-leaderboard__row'} key={entry.agentAddress}>
+                <strong className="platform-leaderboard__rank">#{entry.rank}</strong>
+                <div className="platform-leaderboard__identity"><strong>{entry.displayName}</strong><small>{shortAddress(entry.agentAddress)}</small></div>
+                <div className="platform-leaderboard__record"><strong>{entry.passedAttempts}/{entry.totalAttempts}</strong><span>passed <em>· avg {entry.averageScore}%</em></span></div>
+                <strong className="platform-leaderboard__points">{entry.platformPoints}<small>PTS</small></strong>
+              </div>
+            ))}
+          </div>
+        ) : <EmptyState icon={<Trophy />} title="No scored attempts yet" copy="Open a daily challenge to become the first agent on the board." />}
+        <footer className="platform-leaderboard-card__note"><ShieldCheck /> Only completed platform challenges count here. Trust Score and settlement outcomes remain separate.</footer>
+      </section>
+    </div>
+  );
+}
+
 function AgentCatalog({
   agents,
   tasks,
@@ -1279,12 +1518,12 @@ function AgentCatalog({
   );
 }
 
-function AgentRankStrip({ agents, selected, onSelect }: { agents: ReputationSnapshot[]; selected: string; onSelect: (address: string) => void }) {
+function AgentRankStrip({ agents, selected, onSelect, onViewProfile }: { agents: ReputationSnapshot[]; selected: string; onSelect: (address: string) => void; onViewProfile: (address: string) => void }) {
   const ranked = useMemo(() => [...agents].sort((left, right) => right.score - left.score).slice(0, 3), [agents]);
   return (
     <section className="agent-rank-strip" aria-label="Top agents">
       <div className="agent-rank-strip__intro"><div className="eyebrow">Public ranking</div><strong>Top agents</strong><span>Trust Score is earned through finalized work.</span></div>
-      <div className="agent-rank-strip__list">{ranked.map((agent, index) => <button className={selected === agent.agentAddress ? 'agent-rank-chip agent-rank-chip--active' : 'agent-rank-chip'} type="button" key={agent.agentAddress} onClick={() => onSelect(agent.agentAddress)}><span>0{index + 1}</span><AgentMark agent={agent} /><strong>{agent.displayName}</strong><b>{agent.score}</b><ChevronRight /></button>)}</div>
+      <div className="agent-rank-strip__list">{ranked.map((agent, index) => <button className={selected === agent.agentAddress ? 'agent-rank-chip agent-rank-chip--active' : 'agent-rank-chip'} type="button" key={agent.agentAddress} onClick={() => { onSelect(agent.agentAddress); onViewProfile(agent.agentAddress); }} title={agent.displayName}><span>0{index + 1}</span><AgentMark agent={agent} /><strong>{agent.displayName}</strong><b>{agent.score}</b><ChevronRight /></button>)}</div>
     </section>
   );
 }
@@ -1364,31 +1603,41 @@ function DappDashboard({
   return (
     <div className={`view-stack dapp-page ${connected && !myOrders.length ? 'dapp-page--empty' : ''}`}>
       <section className="dapp-hero reveal">
-        <div>
-          <div className="eyebrow">{t('Кабинет')}</div>
-          <h1>{connected ? t('Ваш кабинет') : t('Подключите кошелёк')}</h1>
+        <div className="dapp-hero__copy">
+          <div className="eyebrow">{t('Client dashboard')}</div>
+          <h1>{connected ? t('Run work from one wallet.') : t('Подключите кошелёк')}</h1>
+          <p>{connected ? t('Connect a wallet to publish funded work, create agent profiles, hire agents, and approve results.') : t('Connect a wallet to publish work, create an agent profile, and manage private records in one place.')}</p>
           {!connected ? <button className="button button--primary" onClick={onConnect} type="button"><WalletCards /> {t('Подключить кошелёк')}</button> : <div className="dapp-identity"><span className="live-dot" /><span>{t('Ваш кошелёк')}</span><strong>{shortAddress(connectedAddress!)}</strong></div>}
         </div>
-        <div className="dapp-hero__status">
-          <span>{t('Ваш статус')}</span>
-          <strong>{connected ? t('Кошелёк подключён') : t('Подключите кошелёк')}</strong>
-          {connected ? <small>{`${myOrders.length} ${t(myOrders.length === 1 ? 'задание' : 'заданий')} ${t('в вашем кабинете')}`}</small> : null}
-        </div>
+        <aside className="dapp-hero__aside">
+          <div className="dapp-hero__status">
+            <span>{t('CLIENT STATUS')}</span>
+            <strong>{connected ? t('Connected') : t('Подключите кошелёк')}</strong>
+            <small>{connected ? `${myOrders.length} ${t(myOrders.length === 1 ? 'work order in your cabinet' : 'Orders in your cabinet')}` : t('Public task information only')}</small>
+          </div>
+          {connected ? <div className="dapp-hero__stats" aria-label={t('CLIENT STATUS')}>
+            <div><strong>{myOrders.length}</strong><span>{t('My work orders')}</span></div>
+            <div><strong>{activeOrders.length}</strong><span>{t('IN PROGRESS')}</span></div>
+          </div> : null}
+        </aside>
       </section>
 
       <section className="role-launcher reveal">
         <header className="panel-heading panel-heading--wide">
-          <div><div className="eyebrow">{t('CLIENT ACTIONS')}</div><h2>{t('Что вы хотите сделать?')}</h2></div>
+          <div><div className="eyebrow">{t('Быстрый старт')}</div><h2>{t('Что вы хотите сделать?')}</h2></div>
+          <p className="role-launcher__note">{t('Run work from one wallet.')}</p>
         </header>
         <div className="role-launcher__grid">
           <article className="role-launch-card role-launch-card--creator">
             <span className="role-launch-card__number">01 / {t('CLIENT')}</span><Users />
             <h3>{t('Создать задание')}</h3>
+            <p>{t('Fund a brief, set acceptance criteria, and invite or hire an agent to deliver it.')}</p>
             <button className="button button--primary" onClick={onPublish} type="button"><Plus /> {t('Создать задание')}</button>
           </article>
           <article className="role-launch-card role-launch-card--developer">
             <span className="role-launch-card__number">02 / {t('FOR AGENTS')}</span><Bot />
             <h3>{t('Подключить своего агента')}</h3>
+            <p>{t('Configure an agent you own, declare its skills, and set safe limits for eligible work.')}</p>
             <button className="button button--outline" onClick={onCreateAgent} type="button"><Bot /> {t('Подключить агента')}</button>
           </article>
         </div>
@@ -1397,14 +1646,14 @@ function DappDashboard({
       {connected ? (
         <>
           <section className="dapp-quick-grid reveal">
-            <button className="dapp-quick-card" onClick={() => onView('dapp')} type="button"><span><Boxes /></span><strong>My work orders</strong><small>{myOrders.length} owned · {activeOrders.length} active</small><ArrowRight /></button>
-            <button className="dapp-quick-card" onClick={() => onView('marketplace')} type="button"><span><Zap /></span><strong>Open task board</strong><small>{openOrders.length} orders ready for an eligible agent</small><ArrowRight /></button>
-            <button className="dapp-quick-card" onClick={() => onView('agents')} type="button"><span><Users /></span><strong>Agent registry</strong><small>{snapshot.agents.length} public profiles</small><ArrowRight /></button>
+            <button className="dapp-quick-card" onClick={() => onView('dapp')} type="button"><span><Boxes /></span><strong>{t('My work orders')}</strong><small>{myOrders.length} {t('owned')} · {activeOrders.length} {t('active')}</small><ArrowRight /></button>
+            <button className="dapp-quick-card" onClick={() => onView('marketplace')} type="button"><span><Zap /></span><strong>{t('Open task board')}</strong><small>{openOrders.length} {t(openOrders.length === 1 ? 'open order ready for an eligible agent' : 'orders ready for an eligible agent')}</small><ArrowRight /></button>
+            <button className="dapp-quick-card" onClick={() => onView('agents')} type="button"><span><Users /></span><strong>{t('Agent registry')}</strong><small>{snapshot.agents.length} {t(snapshot.agents.length === 1 ? 'public profile' : 'public profiles')}</small><ArrowRight /></button>
           </section>
           <section className="client-orders section-block reveal" aria-labelledby="client-orders-title">
             <header className="panel-heading panel-heading--wide">
-              <div><div className="eyebrow">Wallet-owned work</div><h2 id="client-orders-title">My work orders</h2></div>
-              <button className="button button--outline button--small" onClick={() => onView('marketplace')} type="button"><Plus /> Publish a work order</button>
+              <div><div className="eyebrow">{t('Wallet-owned work')}</div><h2 id="client-orders-title">{t('My work orders')}</h2></div>
+              <button className="button button--outline button--small" onClick={onPublish} type="button"><Plus /> Publish a work order</button>
             </header>
             {myOrders.length ? (
               <div className="client-orders__grid">
@@ -1416,16 +1665,16 @@ function DappDashboard({
                     <article className="client-order-card" key={task.id}>
                       <header><StatusPill status={task.status} /><span className="mono">{task.id.slice(-8).toUpperCase()}</span></header>
                       <h3>{task.title}</h3>
-                      <p>{task.successCriteria || 'Acceptance criteria are defined in the work order.'}</p>
-                      <div className="client-order-card__meta"><span>{invitedAgent && !assignedAgent ? 'INVITED AGENT' : 'AGENT'}<strong>{assignedAgent?.displayName ?? invitedAgent?.displayName ?? (task.agentAddress ? shortAddress(task.agentAddress) : 'Awaiting claim')}</strong></span><span>ESCROW<strong>${money(task.totalAmount)}</strong></span></div>
+                      <p>{task.successCriteria || t('Acceptance criteria are defined in the work order.')}</p>
+                      <div className="client-order-card__meta"><span>{invitedAgent && !assignedAgent ? t('INVITED AGENT') : t('AGENT')}<strong>{assignedAgent?.displayName ?? invitedAgent?.displayName ?? (task.agentAddress ? shortAddress(task.agentAddress) : t('Awaiting claim'))}</strong></span><span>{t('ESCROW')}<strong>${money(task.totalAmount)}</strong></span></div>
                       {deliverable?.status === 'SUBMITTED' ? (
-                        <div className="client-order-card__decision"><strong>Result ready for review</strong><div><button className="button button--primary button--small" disabled={!onAccept} onClick={() => onAccept?.(deliverable)} type="button"><BadgeCheck /> Accept &amp; settle</button><button className="button button--warning button--small" disabled={!onDispute} onClick={() => onDispute?.(task)} type="button"><Scale /> Dispute</button></div></div>
-                      ) : <small className="client-order-card__hint">{task.status === 'OPEN' ? 'Waiting for an eligible agent to claim this work.' : 'PACT will show the evidence packet here when the agent submits.'}</small>}
+                        <div className="client-order-card__decision"><strong>{t('Result ready for review')}</strong><div><button className="button button--primary button--small" disabled={!onAccept} onClick={() => onAccept?.(deliverable)} type="button"><BadgeCheck /> {t('Accept & settle')}</button><button className="button button--warning button--small" disabled={!onDispute} onClick={() => onDispute?.(task)} type="button"><Scale /> {t('Dispute')}</button></div></div>
+                      ) : <small className="client-order-card__hint">{task.status === 'OPEN' ? t('Waiting for an eligible agent to claim this work.') : t('PACT will show the evidence packet here when the agent submits.')}</small>}
                     </article>
                   );
                 })}
               </div>
-            ) : <div className="dapp-empty-state"><EmptyState icon={<Boxes />} title="No work orders yet" copy="Publish a funded brief to see assignments, evidence and settlement here." /></div>}
+            ) : <div className="dapp-empty-state"><EmptyState icon={<Boxes />} title={t('No work orders yet')} copy={t('Fund a brief, set acceptance criteria, and invite or hire an agent to deliver it.')} /></div>}
           </section>
         </>
       ) : (
@@ -1528,44 +1777,53 @@ const PROTOCOL_STEPS = [
 ];
 
 function AgentProtocol({ onView }: { onView: (view: View) => void }) {
+  const { t } = useLocale();
+
+  const protocolSteps = [
+    { phase: '01', actor: t('CLIENT'), title: t('Set the brief'), copy: t('Name the result, budget, checklist and evidence you expect.'), state: t('BRIEF') },
+    { phase: '02', actor: t('AGENT'), title: t('Choose the work'), copy: t('A registered agent checks its capabilities, terms and available collateral.'), state: t('MATCH') },
+    { phase: '03', actor: t('PACT'), title: t('Protect the run'), copy: t('Payment and any required collateral stay reserved while the work is underway.'), state: t('IN PROGRESS') },
+    { phase: '04', actor: t('CLIENT'), title: t('Accept or review'), copy: t('Approve the evidence to settle, or open a private dispute if the brief was missed.'), state: t('SETTLE / REVIEW') },
+  ];
+
   return (
     <div className="view-stack protocol-page protocol-simple">
       <section className="protocol-simple__hero reveal">
         <div className="protocol-simple__hero-copy">
-          <div className="eyebrow">HOW PACT WORKS</div>
-          <h1>Work with agents<br /><em>without guessing.</em></h1>
-          <p>People publish a clear result. Agents choose work they can prove. PACT keeps the terms, evidence and settlement visible from start to finish.</p>
+          <div className="eyebrow">{t('HOW PACT WORKS')}</div>
+          <h1>{t('Work with agents')} <br /><em>{t('without guessing.')}</em></h1>
+          <p>{t('People publish a clear result. Agents choose work they can prove. PACT keeps the terms, evidence and settlement visible from start to finish.')}</p>
           <div className="home-hero__actions">
-            <button className="button button--primary" onClick={() => onView('marketplace')} type="button"><Boxes /> Browse tasks</button>
-            <button className="button button--outline" onClick={() => onView('dapp')} type="button"><WalletCards /> Open dashboard</button>
+            <button className="button button--primary" onClick={() => onView('marketplace')} type="button"><Boxes /> {t('Browse tasks')}</button>
+            <button className="button button--outline" onClick={() => onView('dapp')} type="button"><WalletCards /> {t('Open dashboard')}</button>
           </div>
         </div>
         <div className="protocol-simple__loop">
-          <span className="protocol-simple__label">THE PACT LOOP</span>
-          <div><strong>Brief</strong><span>→</span><strong>Work</strong><span>→</span><strong>Proof</strong><span>→</span><strong>Settle</strong></div>
-          <small>One shared record for the client, agent and platform.</small>
+          <span className="protocol-simple__label">{t('THE PACT LOOP')}</span>
+          <div><strong>{t('Brief')}</strong><span>→</span><strong>{t('Work')}</strong><span>→</span><strong>{t('Proof')}</strong><span>→</span><strong>{t('Settle')}</strong></div>
+          <small>{t('One shared record for the client, agent and platform.')}</small>
         </div>
       </section>
 
       <section className="protocol-simple__roles reveal">
         <header className="protocol-simple__heading">
-          <div><div className="eyebrow">THE MODEL</div><h2>Three roles.<br /><em>One outcome.</em></h2></div>
-          <p>The same rules apply whether the agent is built by PACT, forked by a developer or connected through the API.</p>
+          <div><div className="eyebrow">{t('THE MODEL')}</div><h2>{t('Three roles.')} <br /><em>{t('One outcome.')}</em></h2></div>
+          <p>{t('The same rules apply whether the agent is built by PACT, forked by a developer or connected through the API.')}</p>
         </header>
         <div className="protocol-simple__role-grid">
-          <article><span>01 / CLIENT</span><Users /><h3>Defines the job</h3><p>Publishes the result, budget, acceptance checklist and evidence request.</p><strong>Starts the work</strong></article>
-          <article><span>02 / AGENT</span><Bot /><h3>Does the work</h3><p>Matches its registered capabilities, accepts the terms and returns proof.</p><strong>Delivers the result</strong></article>
-          <article><span>03 / PACT</span><ShieldCheck /><h3>Protects the exchange</h3><p>Holds the terms, records the outcome and keeps settlement separate from reputation.</p><strong>Closes the loop</strong></article>
+          <article><span>01 / {t('CLIENT')}</span><Users /><h3>{t('Defines the job')}</h3><p>{t('Publishes the result, budget, acceptance checklist and evidence request.')}</p><strong>{t('Starts the work')}</strong></article>
+          <article><span>02 / {t('AGENT')}</span><Bot /><h3>{t('Does the work')}</h3><p>{t('Matches its registered capabilities, accepts the terms and returns proof.')}</p><strong>{t('Delivers the result')}</strong></article>
+          <article><span>03 / {t('PACT')}</span><ShieldCheck /><h3>{t('Protects the exchange')}</h3><p>{t('Holds the terms, records the outcome and keeps settlement separate from reputation.')}</p><strong>{t('Closes the loop')}</strong></article>
         </div>
       </section>
 
       <section className="protocol-simple__steps reveal">
         <header className="protocol-simple__heading protocol-simple__heading--line">
-          <div><div className="eyebrow">ONE WORK ORDER</div><h2>From brief to payment.</h2></div>
-          <p>No hidden handoffs. Every task moves through the same four visible moments.</p>
+          <div><div className="eyebrow">{t('ONE WORK ORDER')}</div><h2>{t('From brief to payment.')}</h2></div>
+          <p>{t('No hidden handoffs. Every task moves through the same four visible moments.')}</p>
         </header>
         <div className="protocol-simple__step-list">
-          {PROTOCOL_STEPS.map((step) => (
+          {protocolSteps.map((step) => (
             <article key={step.phase}>
               <span className="protocol-simple__step-number">{step.phase}</span>
               <div><small>{step.actor}</small><h3>{step.title}</h3><p>{step.copy}</p></div>
@@ -1577,21 +1835,21 @@ function AgentProtocol({ onView }: { onView: (view: View) => void }) {
 
       <section className="protocol-simple__trust reveal">
         <div className="protocol-simple__trust-copy">
-          <div className="eyebrow">IF SOMETHING GOES WRONG</div>
-          <h2>Judging, settlement and Trust Score stay separate.</h2>
-          <p>A dispute is private and evidence-based. The judge returns only a fault classification. The settlement layer applies collateral policy. Trust Score changes only after acceptance or a finalized dispute.</p>
-          <button className="button button--outline" onClick={() => onView('dapp')} type="button"><Scale /> Open private workspace</button>
+          <div className="eyebrow">{t('IF SOMETHING GOES WRONG')}</div>
+          <h2>{t('Judging, settlement and Trust Score stay separate.')}</h2>
+          <p>{t('A dispute is private and evidence-based. The judge returns only a fault classification. The settlement layer applies collateral policy. Trust Score changes only after acceptance or a finalized dispute.')}</p>
+          <button className="button button--outline" onClick={() => onView('dapp')} type="button"><Scale /> {t('Open private workspace')}</button>
         </div>
         <div className="protocol-simple__layers">
-          <article><span>01</span><BadgeCheck /><div><strong>Judge</strong><p>NO_FAULT · PARTIAL_FAULT · FULL_FAULT</p></div></article>
-          <article><span>02</span><WalletCards /><div><strong>Settlement</strong><p>Applies the agreed collateral and payment policy.</p></div></article>
-          <article><span>03</span><Gauge /><div><strong>Trust Score</strong><p>Updates separately from the judge's decision.</p></div></article>
+          <article><span>01</span><BadgeCheck /><div><strong>{t('Judge')}</strong><p>NO_FAULT · PARTIAL_FAULT · FULL_FAULT</p></div></article>
+          <article><span>02</span><WalletCards /><div><strong>{t('Settlement')}</strong><p>{t('Applies the agreed collateral and payment policy.')}</p></div></article>
+            <article><span>03</span><Gauge /><div><strong>{t('Trust Score')}</strong><p>{t('Updates separately from the judge decision.')}</p></div></article>
         </div>
       </section>
 
       <section className="protocol-simple__builder reveal">
-        <div><div className="eyebrow">FOR AGENT BUILDERS</div><h2>Bring your runtime.<br /><em>Keep control.</em></h2><p>Connect through the API, publish a signed profile, read eligible tasks and return evidence. Forks start as new agents with their own wallet and reputation.</p></div>
-        <button className="button button--primary" onClick={() => onView('agents')} type="button"><Bot /> View agent registry</button>
+        <div><div className="eyebrow">{t('FOR AGENT BUILDERS')}</div><h2>{t('Bring your runtime.')}<br /><em>{t('Keep control.')}</em></h2><p>{t('Connect through the API, publish a signed profile, read eligible tasks and return evidence. Forks start as new agents with their own wallet and reputation.')}</p></div>
+        <button className="button button--primary" onClick={() => onView('agents')} type="button"><Bot /> {t('View agent registry')}</button>
       </section>
     </div>
   );
@@ -1601,6 +1859,15 @@ export default function App() {
   const { t } = useLocale();
   const { address: connectedAddress, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
+  const { disconnect } = useDisconnect();
+  const { signMessageAsync: signArenaMessageAsync } = useSignMessage();
+
+  const [demoWalletAddress, setDemoWalletAddress] = useState<string | null>(null);
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
+
+  const activeAddress = connectedAddress ?? demoWalletAddress ?? undefined;
+  const activeIsConnected = Boolean(connectedAddress || demoWalletAddress);
+
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [templates, setTemplates] = useState<ArenaTemplate[]>([]);
   const [arenaLeaderboard, setArenaLeaderboard] = useState<ArenaLeaderboardEntry[]>([]);
@@ -1611,8 +1878,6 @@ export default function App() {
   const [selectedAgent, setSelectedAgent] = useState<string>(DEMO_ADDRESSES.newbie);
   const [registryProfile, setRegistryProfile] = useState<string | null>(null);
   const [hireAgentAddress, setHireAgentAddress] = useState<string | null>(null);
-  // New agents should land on the risk-free platform challenges first. Paid
-  // work remains one click away through the other category filters.
   const [marketCategory, setMarketCategory] = useState<MarketCategory>('TRAINING');
   const [publishOpen, setPublishOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
@@ -1625,44 +1890,37 @@ export default function App() {
   const [mobileNav, setMobileNav] = useState(false);
   const [demoSeedAttempted, setDemoSeedAttempted] = useState(false);
 
-  // Registration is wallet-bound. If the account is disconnected while the
-  // modal is open, close it instead of leaving a stale address editable.
-  useEffect(() => {
-    if (!isConnected) setRegisterOpen(false);
-  }, [isConnected]);
+  const handleDisconnect = useCallback(() => {
+    if (isConnected) disconnect();
+    setDemoWalletAddress(null);
+  }, [disconnect, isConnected]);
 
   const requestPublish = useCallback((preferredAgentAddress?: string) => {
-    if (!isConnected || !connectedAddress) {
-      setToast({ tone: 'error', message: 'Connect a creator wallet before publishing a funded task.' });
+    if (!activeIsConnected || !activeAddress) {
+      setWalletModalOpen(true);
       return;
     }
     setHireAgentAddress(preferredAgentAddress ?? null);
     setPublishOpen(true);
-  }, [connectedAddress, isConnected]);
+  }, [activeAddress, activeIsConnected]);
 
   const requestCreateAgent = useCallback(() => {
-    if (!isConnected || !connectedAddress) {
-      setToast({ tone: 'error', message: 'Connect a wallet to create an agent profile.' });
-      return;
-    }
     setRegisterOpen(true);
-  }, [connectedAddress, isConnected]);
+  }, []);
 
   const requestHire = useCallback((agentAddress: string) => {
-    if (!isConnected || !connectedAddress) {
-      setToast({ tone: 'error', message: 'Connect a creator wallet before hiring an agent.' });
+    if (!activeIsConnected || !activeAddress) {
+      setWalletModalOpen(true);
       return;
     }
     setSelectedAgent(agentAddress);
     setHireAgentAddress(agentAddress);
     setPublishOpen(true);
-  }, [connectedAddress, isConnected]);
+  }, [activeAddress, activeIsConnected]);
 
   const connectAgent = useCallback(() => {
-    const connector = connectors[0];
-    if (connector) connect({ connector });
-    else setToast({ tone: 'error', message: 'No wallet connector is available in this browser.' });
-  }, [connect, connectors]);
+    setWalletModalOpen(true);
+  }, []);
 
   const loadDashboard = useCallback(async (quiet = false, signal?: AbortSignal) => {
     if (!quiet) setLoading(true);
@@ -1709,10 +1967,13 @@ export default function App() {
 
   useEffect(() => {
     if (!window.location.hash) window.history.replaceState(null, '', '#overview');
+    // A hash route is a full-screen view, so never restore a stale scroll
+    // position from the previous view (or from the browser's history cache).
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     const syncView = () => {
       setView(viewFromLocation());
       setMobileNav(false);
-      window.scrollTo({ top: 0 });
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     };
     window.addEventListener('popstate', syncView);
     window.addEventListener('hashchange', syncView);
@@ -1738,11 +1999,11 @@ export default function App() {
   }, [toast]);
 
   useEffect(() => {
-    if (!publishOpen && !registerOpen && !disputeTask && !reviewDispute && !arenaChallenge && !registryProfile) return undefined;
+    if (!publishOpen && !registerOpen && !disputeTask && !reviewDispute && !arenaChallenge && !registryProfile && !walletModalOpen) return undefined;
     const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = previous; };
-  }, [publishOpen, registerOpen, disputeTask, reviewDispute, arenaChallenge, registryProfile]);
+  }, [publishOpen, registerOpen, disputeTask, reviewDispute, arenaChallenge, registryProfile, walletModalOpen]);
 
   const perform = useCallback(async (key: string, successMessage: string | ((result: unknown) => string), action: () => Promise<unknown>): Promise<unknown | false> => {
     setBusyKey(key);
@@ -1764,9 +2025,21 @@ export default function App() {
   const startArena = useCallback(async (template: ArenaTemplate) => {
     setBusyKey(`arena-start:${template.id}`);
     try {
-      const challenge = await api.startArenaAttempt(template.id, selectedAgent);
+      const signatureRequired = import.meta.env.VITE_REQUIRE_ARENA_SIGNATURES === 'true' || import.meta.env.VITE_PACT_MODE === 'arc';
+      let signature: string | undefined;
+      if (signatureRequired) {
+        if (!connectedAddress || connectedAddress.toLowerCase() !== selectedAgent.toLowerCase()) {
+          setWalletModalOpen(true);
+          throw new Error('Connect the selected agent wallet before starting a signed daily attempt.');
+        }
+        signature = await signArenaMessageAsync({ message: arenaAttemptMessage(template.id, selectedAgent) });
+      }
+      const challenge = await api.startArenaAttempt(template.id, selectedAgent, signature);
       setArenaResult(null);
       setArenaChallenge(challenge);
+      // Opening a challenge only creates a STARTED attempt. Refresh the cards
+      // immediately so the daily state reads "IN PROGRESS", never "DONE".
+      void api.arenaTemplates(selectedAgent).then(setTemplates).catch(() => undefined);
       setError(null);
     } catch (actionError) {
       const message = actionError instanceof PactApiError ? actionError.message : actionError instanceof Error ? actionError.message : 'Unable to open the daily document challenge.';
@@ -1774,13 +2047,13 @@ export default function App() {
     } finally {
       setBusyKey(null);
     }
-  }, [selectedAgent]);
+  }, [connectedAddress, selectedAgent, signArenaMessageAsync]);
 
-  const submitArena = useCallback(async (answers: ArenaAnswer[], consentToTraining: boolean) => {
+  const submitArena = useCallback(async (submission: ArenaSubmission, consentToTraining: boolean) => {
     if (!arenaChallenge) return;
     setBusyKey('arena-submit');
     try {
-      const result = await api.submitArenaAttempt(arenaChallenge, answers, consentToTraining);
+      const result = await api.submitArenaAttempt(arenaChallenge, submission, consentToTraining);
       setArenaResult(result);
       await Promise.all([
         loadDashboard(true),
@@ -1796,6 +2069,17 @@ export default function App() {
     }
   }, [arenaChallenge, loadDashboard, selectedAgent]);
 
+  const callArenaTool = useCallback(async (tool: string, input: Record<string, unknown>) => {
+    if (!arenaChallenge) throw new Error('No active arena attempt');
+    try {
+      return await api.callArenaTool(arenaChallenge, tool, input);
+    } catch (actionError) {
+      const message = actionError instanceof PactApiError ? actionError.message : actionError instanceof Error ? actionError.message : 'Tool call failed.';
+      setToast({ tone: 'error', message });
+      throw actionError;
+    }
+  }, [arenaChallenge]);
+
   const currentAgent = snapshot?.agents.find((agent) => agent.agentAddress === selectedAgent) ?? snapshot?.agents[0];
   const openTasks = snapshot?.tasks.filter((task) => task.status === 'OPEN') ?? [];
   const visibleOpenTasks = marketCategory === 'ALL' || marketCategory === 'TRAINING' ? openTasks : openTasks.filter((task) => taskCategory(task) === marketCategory);
@@ -1807,23 +2091,24 @@ export default function App() {
     [snapshot?.tasks],
   );
   const privateDisputes = useMemo(() => {
-    if (!connectedAddress || !snapshot) return [];
-    const wallet = connectedAddress.toLowerCase();
+    if (!activeAddress || !snapshot) return [];
+    const wallet = activeAddress.toLowerCase();
     return snapshot.disputes.filter((dispute) => {
       const task = tasksById.get(dispute.taskId);
       return task?.creatorAddress.toLowerCase() === wallet || task?.agentAddress?.toLowerCase() === wallet;
     });
-  }, [connectedAddress, snapshot, tasksById]);
+  }, [activeAddress, snapshot, tasksById]);
 
   const changeView = (next: View) => {
     const hash = next === 'marketplace' ? 'work-orders' : next;
     if (window.location.hash !== `#${hash}`) window.history.pushState(null, '', `#${hash}`);
     setView(next);
     setMobileNav(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Avoid capturing a half-scrolled layout while the new route is rendering.
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   };
 
-  const isDappView = view === 'dapp' || view === 'marketplace' || view === 'agents' || view === 'disputes';
+  const isDappView = view === 'dapp' || view === 'marketplace' || view === 'leaderboard' || view === 'agents' || view === 'disputes';
   const visibleNavItems = isDappView ? DAPP_NAV_ITEMS : PUBLIC_NAV_ITEMS;
   const viewTitle = view === 'disputes' ? 'Private disputes' : t(visibleNavItems.find((item) => item.id === view)?.label ?? 'Overview');
 
@@ -1859,8 +2144,8 @@ export default function App() {
           <div className="topbar__tools">
             {isDappView ? <button className="icon-button icon-button--top" disabled={busyKey !== null} onClick={() => void loadDashboard()} type="button" aria-label="Refresh dashboard"><RefreshCcw className={loading ? 'spin' : ''} /></button> : null}
             <LanguageSwitcher />
-            {isDappView && view !== 'disputes' ? <button className="button button--small button--outline" disabled={busyKey !== null} onClick={() => isConnected ? requestCreateAgent() : connectAgent()} type="button"><Bot /> {isConnected ? 'Create agent' : 'Connect wallet'}</button> : null}
-            <WalletHeader />
+            {isDappView && view !== 'disputes' && activeIsConnected ? <button className="button button--small button--outline" disabled={busyKey !== null} onClick={requestCreateAgent} type="button"><Bot /> {t('Create agent')}</button> : null}
+            <WalletHeader activeAddress={activeAddress} activeIsConnected={activeIsConnected} onOpenConnectModal={() => setWalletModalOpen(true)} onDisconnect={handleDisconnect} />
           </div>
         </header>
 
@@ -1879,13 +2164,14 @@ export default function App() {
             <>
               {view === 'overview' ? <Overview snapshot={snapshot} onView={changeView} /> : null}
               {view === 'protocol' ? <AgentProtocol onView={changeView} /> : null}
-              {view === 'dapp' ? <DappDashboard snapshot={snapshot} connectedAddress={connectedAddress} onConnect={connectAgent} onPublish={() => requestPublish()} onCreateAgent={requestCreateAgent} onView={changeView} onAccept={(deliverable) => void perform(`accept:${deliverable.taskId}`, 'Result accepted. Settlement and reputation are finalized.', () => api.acceptDeliverable(deliverable.id))} onDispute={(task) => setDisputeTask(task)} /> : null}
+              {view === 'dapp' ? <DappDashboard snapshot={snapshot} connectedAddress={activeAddress} onConnect={connectAgent} onPublish={() => requestPublish()} onCreateAgent={requestCreateAgent} onView={changeView} onAccept={(deliverable) => void perform(`accept:${deliverable.taskId}`, 'Result accepted. Settlement and reputation are finalized.', () => api.acceptDeliverable(deliverable.id))} onDispute={(task) => setDisputeTask(task)} /> : null}
+              {view === 'leaderboard' ? <PlatformLeaderboard entries={arenaLeaderboard} onView={changeView} /> : null}
 
               {view === 'marketplace' ? (
                 <div className="view-stack marketplace-page">
                   <section className="page-intro marketplace-intro reveal">
-                    <div><div className="eyebrow">{trainingView ? 'PACT PLATFORM TASKS / DAILY POINTS' : snapshot.mode === 'demo' ? 'OPEN WORK / VERIFIABLE DELIVERY' : 'FUNDED WORK ORDERS / VERIFIABLE DELIVERY'}</div><h1>{trainingView ? 'Training Ground' : 'Open work orders'}</h1><p>{trainingView ? 'Start with platform-owned document tasks. Read the source, answer once per UTC day, and earn Platform Points before taking paid work.' : 'Browse funded tasks that agents can claim. Every order has a clear result, escrow, acceptance criteria, and proof requirements.'}</p></div>
-                    <div className="marketplace-intro__action"><span><strong>{trainingView ? `${dailyTrainingReward} PTS` : `$${compactMoney(openEscrow)}`}</strong><small>{trainingView ? 'DAILY PLATFORM REWARD' : snapshot.mode === 'demo' ? 'PLATFORM DEMO ESCROW' : 'OPEN ESCROW'}</small></span>{trainingView ? <button className="button button--primary" onClick={() => setMarketCategory('ALL')} type="button"><WalletCards /> View paid work</button> : <button className="button button--primary" onClick={() => requestPublish()} type="button"><WalletCards /> {isConnected ? t('Publish a task') : 'Connect to publish'}</button>}<small className="marketplace-intro__gate">{trainingView ? 'No USDC collateral' : 'Creator wallet required'}</small></div>
+                    <div><div className="eyebrow">{trainingView ? 'PACT PLATFORM TASKS / DAILY POINTS' : snapshot.mode === 'demo' ? 'OPEN WORK / VERIFIABLE DELIVERY' : 'FUNDED WORK ORDERS / VERIFIABLE DELIVERY'}</div><h1>{trainingView ? 'Training Ground' : 'Open work orders'}</h1><p>{trainingView ? 'Choose a daily challenge and submit your answer.' : 'Browse funded tasks that agents can claim. Every order has a clear result, escrow, acceptance criteria, and proof requirements.'}</p></div>
+                    <div className="marketplace-intro__action"><span><strong>{trainingView ? `${dailyTrainingReward} PTS` : `$${compactMoney(openEscrow)}`}</strong><small>{trainingView ? 'DAILY PLATFORM REWARD' : snapshot.mode === 'demo' ? 'PLATFORM DEMO ESCROW' : 'OPEN ESCROW'}</small></span>{trainingView ? <button className="button button--primary" onClick={() => setMarketCategory('ALL')} type="button"><WalletCards /> View paid work</button> : <button className="button button--primary" onClick={() => requestPublish()} type="button"><WalletCards /> {activeIsConnected ? t('Publish a task') : 'Connect to publish'}</button>}<small className="marketplace-intro__gate">{trainingView ? 'Platform Points' : 'Creator wallet required'}</small></div>
                   </section>
                   <section className="market-summary reveal">
                     <div><span>{trainingView ? 'PLATFORM TASKS' : 'OPEN WORK'}</span><strong>{trainingView ? templates.length.toString().padStart(2, '0') : openTasks.length.toString().padStart(2, '0')}</strong></div>
@@ -1893,55 +2179,48 @@ export default function App() {
                     <div><span>REGISTERED AGENTS</span><strong>{snapshot.agents.length.toString().padStart(2, '0')}</strong></div>
                     <div><span>{trainingView ? 'SETTLEMENT' : 'SETTLEMENT'}</span><strong>{trainingView ? 'POINTS' : 'USDC'}</strong></div>
                   </section>
+                  {trainingView ? <button className="training-leaderboard-link reveal" onClick={() => changeView('leaderboard')} type="button"><span><Trophy /><span><strong>{t('Training leaderboard')}</strong><small>Compare Platform Points and daily passes.</small></span></span><ArrowRight /></button> : null}
                   <section className="market-toolbar reveal">
                     <div className="market-filters" role="group" aria-label="Filter work orders by category">{MARKET_CATEGORIES.map((category) => <button className={marketCategory === category ? 'market-filter market-filter--active' : 'market-filter'} key={category} onClick={() => setMarketCategory(category)} type="button">{category}</button>)}</div>
                     <div className="market-toolbar__agents">
-                      <div className="agent-context"><span>CLAIMING AS</span><strong>{connectedAddress ? shortAddress(connectedAddress) : 'Connect an agent wallet'}</strong></div>
-                      <button className="button button--outline button--small" onClick={() => isConnected ? requestCreateAgent() : connectAgent()} type="button"><Bot /> {isConnected ? 'Create agent' : 'Connect wallet'}</button>
+                      <div className="agent-context"><span>CLAIMING AS</span><strong>{activeAddress ? shortAddress(activeAddress) : 'Connect an agent wallet'}</strong></div>
+                      <button className="button button--outline button--small" onClick={() => activeIsConnected ? requestCreateAgent() : connectAgent()} type="button"><Bot /> {activeIsConnected ? 'Create agent' : 'Connect wallet'}</button>
                     </div>
                   </section>
                   {marketCategory === 'TRAINING' ? (
                     templates.length ? (
                       <>
-                      <section className="training-ground-panel reveal">
-                        <div className="training-ground-panel__intro">
-                          <div><div className="eyebrow">PACT PLATFORM PROGRAM</div><h2>Training Ground</h2><p>These starter tasks are published by PACT. Agents study a server-selected extract from a real economic or legal source, then submit one scored answer set per UTC day.</p></div>
-                          <div className="training-ground-panel__program"><span className="status-pill status-pill--neutral">PLATFORM-OWNED</span><strong>Platform Points only</strong><small>No USDC collateral. Commercial Trust Score stays separate until paid work is accepted or a dispute is finalized.</small><button className="button button--outline button--small" onClick={() => changeView('overview')} type="button"><Bot /> Connect an external agent</button></div>
-                          <div className="deposit-explainer"><ShieldCheck /><div><strong>Why a deposit exists</strong><span>Collateral is not a fee. It locks only when an agent claims a paid work order; Training Ground uses Platform Points and carries no USDC risk.</span></div></div>
-                        </div>
-                      </section>
                       <section className="task-grid">
                         {templates.map((template) => (
                           <article className="task-card reveal" key={template.id}>
                             <div className="task-card__content">
                               <header className="task-card__header">
                                 <div className="task-card__labels"><span className="status-pill status-pill--neutral">PACT PLATFORM</span><span className="mono">{template.ownerName}</span></div>
-                                 <span className="mono">TMPL/{template.documentKind === 'ECONOMIC' ? 'ECON-V1' : 'LEGAL-V1'}</span>
+                                  <span className="mono">TRACK/{template.kind.replaceAll('_', '-')}</span>
                               </header>
                               <h3>{template.title}</h3>
                               <p>{template.description}</p>
                               <dl className="task-card__facts">
                                 <div><dt>Reward</dt><dd>{template.rewardPoints} <small>PTS</small></dd></div>
-                                <div><dt>Documents</dt><dd>{template.documentPoolSize} <small>SOURCES</small></dd></div>
-                                <div><dt>Today</dt><dd>{template.completedToday ? 'DONE' : template.availableToday ? 'OPEN' : 'LOCKED'}</dd></div>
+                                <div><dt>Variants</dt><dd>{template.variantCount} <small>PRIVATE</small></dd></div>
+                                <div><dt>Today</dt><dd>{template.completedToday ? t('DONE') : template.inProgressToday ? t('IN PROGRESS') : template.availableToday ? t('OPEN') : t('LOCKED')}</dd></div>
                               </dl>
                             </div>
                             <div className="claim-zone">
-                                <button className="button button--primary button--block" disabled={!template.availableToday || template.completedToday || busyKey === `arena-start:${template.id}`} onClick={() => void startArena(template)} type="button">
+                                <button className="button button--primary button--block" disabled={(!template.availableToday && !template.inProgressToday) || template.completedToday || busyKey === `arena-start:${template.id}`} onClick={() => void startArena(template)} type="button">
                                   {busyKey === `arena-start:${template.id}` ? <RefreshCcw className="spin" /> : <Zap />}
-                                  {template.completedToday ? 'Completed today' : 'Open daily challenge'}
+                                  {template.completedToday ? t('Completed today') : template.inProgressToday ? t('Attempt in progress') : t('Open daily challenge')}
                                 </button>
                               </div>
                           </article>
                         ))}
                       </section>
-                      <section className="arena-leaderboard reveal"><header><div><div className="eyebrow">Platform Points</div><h3>Training leaderboard</h3></div><span>Public training score · commercial Trust Score is separate</span></header>{arenaLeaderboard.length ? <div className="arena-leaderboard__rows">{arenaLeaderboard.slice(0, 5).map((entry) => <div className="arena-leaderboard__row" key={entry.agentAddress}><strong>#{entry.rank}</strong><span>{entry.displayName}<small>{shortAddress(entry.agentAddress)}</small></span><b>{entry.platformPoints} PTS</b><em>{entry.passedAttempts}/{entry.totalAttempts} passed</em></div>)}</div> : <p>No scored attempts yet. Be the first agent on the board.</p>}</section>
                       </>
                     ) : <EmptyState icon={<Boxes />} title="No training templates" copy="Wait for the platform to add training tasks." />
                   ) : (
                     visibleOpenTasks.length ? (
                       <section className="task-grid">
-                        {visibleOpenTasks.map((task) => <TaskCard key={task.id} task={task} agents={snapshot.agents} connectedAddress={connectedAddress} onConnect={connectAgent} busy={busyKey === `claim:${task.id}`} onClaim={(taskId, agentAddress) => void perform(`claim:${taskId}`, 'Task claimed. Settlement terms are live.', () => api.claimTask(taskId, agentAddress))} />)}
+                        {visibleOpenTasks.map((task) => <TaskCard key={task.id} task={task} agents={snapshot.agents} connectedAddress={activeAddress} onConnect={connectAgent} busy={busyKey === `claim:${task.id}`} onClaim={(taskId, agentAddress) => void perform(`claim:${taskId}`, 'Task claimed. Settlement terms are live.', () => api.claimTask(taskId, agentAddress))} />)}
                       </section>
                     ) : <div className="empty-state-stack"><EmptyState icon={<Boxes />} title="No work orders in this category" copy="Choose another category or publish a funded work order." /></div>
                   )}
@@ -1950,16 +2229,16 @@ export default function App() {
 
               {view === 'agents' ? (
                 <div className="view-stack agents-page">
-                  <section className="page-intro agents-page__hero reveal"><div><div className="eyebrow">Public agent directory</div><h1>Find the right agent for the job.</h1><p>Browse registered agents by skills, availability and settlement terms. Open a profile when you are ready to review the evidence history or send a funded invitation.</p><div className="agents-page__hero-actions"><button className="button button--primary" onClick={() => isConnected ? requestCreateAgent() : connectAgent()} type="button"><Bot /> {isConnected ? 'Create an agent' : 'Connect wallet'}</button><button className="button button--outline" onClick={() => changeView('marketplace')} type="button"><Boxes /> Browse tasks</button></div></div><div className="agents-page__hero-aside"><div className="registry-seal"><ShieldCheck /><span>PUBLIC REGISTRY<strong>FINALIZED SCORE</strong></span></div><div className="agents-page__hero-stats"><div><strong>{snapshot.agents.length}</strong><span>registered agents</span></div><div><strong>{openTasks.length}</strong><span>open tasks</span></div><div><strong>{snapshot.agents.length ? Math.max(...snapshot.agents.map((agent) => agent.score)) : 0}</strong><span>top score</span></div></div></div></section>
+                  <section className="page-intro agents-page__hero reveal"><div><div className="eyebrow">Public agent directory</div><h1>Find the right agent for the job.</h1><p>Browse registered agents by skills, availability and settlement terms. Open a profile when you are ready to review the evidence history or send a funded invitation.</p><div className="agents-page__hero-actions"><button className="button button--primary" onClick={() => activeIsConnected ? requestCreateAgent() : connectAgent()} type="button"><Bot /> {activeIsConnected ? 'Create an agent' : 'Connect wallet'}</button><button className="button button--outline" onClick={() => changeView('marketplace')} type="button"><Boxes /> Browse tasks</button></div></div><div className="agents-page__hero-aside"><div className="registry-seal"><ShieldCheck /><span>PUBLIC REGISTRY<strong>FINALIZED SCORE</strong></span></div><div className="agents-page__hero-stats"><div><strong>{snapshot.agents.length}</strong><span>registered agents</span></div><div><strong>{openTasks.length}</strong><span>open tasks</span></div><div><strong>{snapshot.agents.length ? Math.max(...snapshot.agents.map((agent) => agent.score)) : 0}</strong><span>top score</span></div></div></div></section>
                   <div className="registry-entry-note"><span><strong>Looking to hire?</strong> Connect a creator wallet to invite an agent. External runtimes can join directly through API onboarding.</span><button className="text-link" type="button" onClick={() => changeView('protocol')}>How the flow works <ArrowRight /></button></div>
+                  {snapshot.agents.length ? <AgentRankStrip agents={snapshot.agents} selected={registryProfile ?? selectedAgent} onSelect={setSelectedAgent} onViewProfile={setRegistryProfile} /> : null}
                   {snapshot.agents.length ? <AgentCatalog agents={snapshot.agents} tasks={snapshot.tasks} selected={registryProfile ?? selectedAgent} onSelect={setSelectedAgent} onViewProfile={setRegistryProfile} onHire={requestHire} /> : <EmptyState icon={<Users />} title={t('No registered agents')} copy="Seed the demo to populate the reputation registry." />}
-                  {snapshot.agents.length ? <AgentRankStrip agents={snapshot.agents} selected={registryProfile ?? selectedAgent} onSelect={setSelectedAgent} /> : null}
                   {registryProfile ? (() => { const profileAgent = snapshot.agents.find((agent) => agent.agentAddress === registryProfile); return profileAgent ? <Modal title={profileAgent.displayName} eyebrow="Agent profile" className="agent-profile-modal" onClose={() => setRegistryProfile(null)}><AgentProfile agent={profileAgent} tasks={snapshot.tasks} onHire={(address) => { setRegistryProfile(null); requestHire(address); }} /></Modal> : null; })() : null}
                 </div>
               ) : null}
 
               {view === 'disputes' ? (
-                !connectedAddress ? (
+                !activeAddress ? (
                   <div className="view-stack disputes-page">
                     <section className="private-gate reveal"><div className="private-gate__icon"><Scale /></div><div><div className="eyebrow">PRIVATE DAPP SECTION</div><h1>Disputes are locked.</h1><p>Connect the wallet that created or claimed a work order to see its evidence, verdict, and settlement history.</p><button className="button button--primary" onClick={connectAgent} type="button"><WalletCards /> Connect wallet</button></div></section>
                   </div>
@@ -2011,9 +2290,10 @@ export default function App() {
         </div>
       </main>
 
-      {publishOpen && connectedAddress ? <PublishModal preferredAgent={snapshot?.agents.find((agent) => agent.agentAddress.toLowerCase() === hireAgentAddress?.toLowerCase())} creatorAddress={connectedAddress} busy={busyKey === 'publish'} onClose={() => { setPublishOpen(false); setHireAgentAddress(null); }} onPublish={async (input) => { const succeeded = await perform('publish', hireAgentAddress ? 'Invitation published. The selected agent must accept it from their wallet.' : 'Work order published to open work.', () => api.publishTask(input)); if (succeeded) { setPublishOpen(false); setHireAgentAddress(null); } }} /> : null}
-      {registerOpen ? <RegisterAgentModal busy={busyKey === 'register'} onClose={() => setRegisterOpen(false)} onRegister={async (input) => { const result = await perform('register', input.provisionWallet ? 'Dedicated agent wallet provisioned and profile registered.' : 'Agent registered in the public registry.', () => api.registerAgent(input)); if (result) { const provisionedAddress = typeof result === 'object' && result !== null && 'agent' in result && typeof result.agent === 'object' && result.agent !== null && 'agentAddress' in result.agent && typeof result.agent.agentAddress === 'string' ? result.agent.agentAddress : input.agentAddress; setRegisterOpen(false); setSelectedAgent(provisionedAddress); changeView('agents'); } }} /> : null}
-      {arenaChallenge ? <ArenaAttemptModal challenge={arenaChallenge} result={arenaResult} busy={busyKey === 'arena-submit'} onClose={() => { setArenaChallenge(null); setArenaResult(null); }} onSubmit={submitArena} /> : null}
+      {walletModalOpen ? <WalletConnectModal onClose={() => setWalletModalOpen(false)} onSelectDemoWallet={(addr) => { setDemoWalletAddress(addr); setWalletModalOpen(false); }} /> : null}
+      {publishOpen && activeAddress ? <PublishModal preferredAgent={snapshot?.agents.find((agent) => agent.agentAddress.toLowerCase() === hireAgentAddress?.toLowerCase())} creatorAddress={activeAddress} busy={busyKey === 'publish'} onClose={() => { setPublishOpen(false); setHireAgentAddress(null); }} onPublish={async (input) => { const succeeded = await perform('publish', hireAgentAddress ? 'Invitation published. The selected agent must accept it from their wallet.' : 'Work order published to open work.', () => api.publishTask(input)); if (succeeded) { setPublishOpen(false); setHireAgentAddress(null); } }} /> : null}
+      {registerOpen ? <RegisterAgentModal activeAddress={activeAddress} busy={busyKey === 'register'} onClose={() => setRegisterOpen(false)} onRegister={async (input) => { const result = await perform('register', input.provisionWallet ? 'Dedicated agent wallet provisioned and profile registered.' : 'Agent registered in the public registry.', () => api.registerAgent(input)); if (result) { const provisionedAddress = typeof result === 'object' && result !== null && 'agent' in result && typeof result.agent === 'object' && result.agent !== null && 'agentAddress' in result.agent && typeof result.agent.agentAddress === 'string' ? result.agent.agentAddress : input.agentAddress; setRegisterOpen(false); setSelectedAgent(provisionedAddress); changeView('agents'); } }} /> : null}
+      {arenaChallenge ? <ArenaAttemptModal challenge={arenaChallenge} result={arenaResult} busy={busyKey === 'arena-submit'} onClose={() => { setArenaChallenge(null); setArenaResult(null); }} onSubmit={submitArena} onToolCall={callArenaTool} /> : null}
       {disputeTask ? <DisputeModal task={disputeTask} busy={busyKey === `dispute:${disputeTask.id}`} onClose={() => setDisputeTask(null)} onSubmit={async (reason, evidence) => { const succeeded = await perform(`dispute:${disputeTask.id}`, (result) => { const decision = result as Dispute; return `Dispute resolved: ${decision.verdict?.replaceAll('_', ' ') ?? 'reviewed'}, ${decision.slashPct ?? 0}% slash.`; }, () => api.createDispute({ taskId: disputeTask.id, reason, evidence })); if (succeeded) { setDisputeTask(null); changeView('disputes'); } }} /> : null}
       {reviewDispute ? <HumanReviewModal dispute={reviewDispute} busy={busyKey === `review:${reviewDispute.id}`} onClose={() => setReviewDispute(null)} onSubmit={async (verdict, reasoning) => { const succeeded = await perform(`review:${reviewDispute.id}`, `Human review finalized: ${verdict.replaceAll('_', ' ')}.`, () => api.finalizeHumanReview(reviewDispute.id, { verdict, reasoning })); if (succeeded) setReviewDispute(null); }} /> : null}
 

@@ -363,4 +363,30 @@ describe("PACT contracts", () => {
       module.connect(intruder).settle(1, 50, keccak256(toUtf8Bytes("intruder"))),
     ).rejects.toThrow();
   });
+
+  it("awards non-transferable platform points once per training attempt", async () => {
+    const points = await deploy("PlatformPoints", owner, [await owner.getAddress()]);
+    const attemptId = keccak256(toUtf8Bytes("arena-attempt-1"));
+
+    await expect((async () => {
+      const unauthorized = await points.connect(intruder).awardPoints(await agent.getAddress(), 30, attemptId);
+      await unauthorized.wait();
+    })()).rejects.toThrow();
+
+    await (await points.setAuthorizedAwarder(await owner.getAddress(), true)).wait();
+    await (await points.awardPoints(await agent.getAddress(), 30, attemptId)).wait();
+
+    expect(await points.pointsOf(await agent.getAddress())).toBe(30n);
+    expect(await points.totalIssued()).toBe(30n);
+    expect(await points.awardedAttempts(attemptId)).toBe(true);
+
+    await expect((async () => {
+      const duplicate = await points.awardPoints(await agent.getAddress(), 30, attemptId);
+      await duplicate.wait();
+    })()).rejects.toThrow();
+    await expect((async () => {
+      const zero = await points.awardPoints(await agent.getAddress(), 0, keccak256(toUtf8Bytes("zero")));
+      await zero.wait();
+    })()).rejects.toThrow();
+  });
 });

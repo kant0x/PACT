@@ -13,6 +13,10 @@
     "demo:seed": "tsx scripts/seed.ts",
     "demo:run": "tsx scripts/run-scenario.ts",
     "arena:agent": "tsx scripts/arena-agent.ts",
+    "arena:judge:prepare": "tsx scripts/prepare-arena-judge-finetune.ts",
+    "arena:judge:label": "tsx scripts/label-arena-judge-candidates.ts",
+    "arena:judge:train": "tsx scripts/create-arena-judge-finetune.ts",
+    "arena:judge:eval": "tsx scripts/evaluate-arena-judge.ts",
     "circle:wallet": "tsx scripts/create-circle-wallet.ts",
     "circle:agent": "tsx scripts/circle-agent.ts",
     "circle:gateway": "tsx scripts/gateway.ts",
@@ -29,6 +33,7 @@
     "helmet": "^8.3.0",
     "openai": "^6.47.0",
     "pg": "^8.22.0",
+    "viem": "^2.55.2",
     "ws": "^8.18.3"
   },
   "devDependencies": {

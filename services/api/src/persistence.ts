@@ -18,6 +18,7 @@ export class SqliteStatePersistence<T> implements StatePersistence<T> {
     this.database.exec(`
       PRAGMA journal_mode = WAL;
       PRAGMA synchronous = NORMAL;
+      PRAGMA busy_timeout = 5000;
       CREATE TABLE IF NOT EXISTS pact_state (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL,

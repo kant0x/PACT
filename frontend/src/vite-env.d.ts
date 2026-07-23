@@ -5,6 +5,7 @@ interface ImportMetaEnv {
   readonly VITE_API_TOKEN?: string;
   readonly VITE_PACT_MODE?: 'demo' | 'arc';
   readonly VITE_AUTO_SEED_DEMO?: 'true' | 'false';
+  readonly VITE_REQUIRE_ARENA_SIGNATURES?: 'true' | 'false';
 }
 
 interface ImportMeta {

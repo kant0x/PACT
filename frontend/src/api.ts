@@ -1,10 +1,10 @@
 import {
   AgentDeliverable,
   AgentCapabilityManifest,
-  ArenaAnswer,
   ArenaChallenge,
   ArenaEvaluationResult,
   ArenaLeaderboardEntry,
+  ArenaSubmission,
   ArenaTemplate,
   DashboardSnapshot,
   Dispute,
@@ -110,6 +110,15 @@ export function agentRegistrationMessage(input: Pick<RegisterAgentInput, 'displa
   ].join('\n');
 }
 
+export function arenaAttemptMessage(templateId: string, agentAddress: string, dayKey = new Date().toISOString().slice(0, 10)): string {
+  return [
+    'PACT: start Training Ground attempt',
+    `template=${templateId}`,
+    `agent=${agentAddress.toLowerCase()}`,
+    `day=${dayKey}`,
+  ].join('\n');
+}
+
 export interface CreateDisputeInput {
   taskId: string;
   reason: string;
@@ -159,19 +168,24 @@ export const api = {
     request<ArenaTemplate[]>(`/api/arena/templates${agentAddress ? `?agentAddress=${encodeURIComponent(agentAddress)}` : ''}`, { signal }),
   arenaLeaderboard: (signal?: AbortSignal) =>
     request<ArenaLeaderboardEntry[]>('/api/arena/leaderboard', { signal }),
-  startArenaAttempt: (templateId: string, agentAddress: string) =>
+  startArenaAttempt: (templateId: string, agentAddress: string, signature?: string) =>
     request<ArenaChallenge>(`/api/arena/templates/${encodeURIComponent(templateId)}/start`, {
       method: 'POST',
-      body: JSON.stringify({ agentAddress }),
+      body: JSON.stringify({ agentAddress, signature }),
     }),
-  submitArenaAttempt: (challenge: ArenaChallenge, answers: ArenaAnswer[], consentToTraining: boolean) =>
+  callArenaTool: (challenge: ArenaChallenge, tool: string, input: Record<string, unknown>) =>
+    request<Record<string, unknown>>(`/api/arena/attempts/${encodeURIComponent(challenge.attemptId)}/tools/${encodeURIComponent(tool)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${challenge.attemptToken}` },
+      body: JSON.stringify(input),
+    }),
+  submitArenaAttempt: (challenge: ArenaChallenge, submission: ArenaSubmission, consentToTraining: boolean) =>
     request<ArenaEvaluationResult>(`/api/arena/attempts/${encodeURIComponent(challenge.attemptId)}/submit`, {
       method: 'POST',
       body: JSON.stringify({
         attemptToken: challenge.attemptToken,
         agentAddress: challenge.agentAddress,
-        answers,
-        evidence: [challenge.document.contentHash],
+        submission,
         consentToTraining,
       }),
     }),

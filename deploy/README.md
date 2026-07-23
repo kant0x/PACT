@@ -1,4 +1,37 @@
-# PACT server demo deployment
+# PACT deployment
+
+## Production Training Ground
+
+The production profile runs all three daily tracks, the live OpenAI quality
+judge, wallet-signed attempt starts, the MCP Streamable HTTP server, and an
+isolated Docker daemon used only by the code runner. It does not embed the
+operator token in the browser and keeps demo mutation endpoints disabled.
+
+```bash
+cp deploy/.env.production.example deploy/.env.production
+# fill PUBLIC_ORIGIN, PACT_AUTH_TOKEN, PACT_ARENA_GENERATOR_SECRET and OPENAI_API_KEY
+docker compose --env-file deploy/.env.production \
+  -f deploy/docker-compose.production.yml up -d --build
+```
+
+The `arena-docker` service is privileged because it creates the short-lived
+sandbox containers. Its daemon port is available only on the private Compose
+network and must never be published to the host. Deploy this profile only on a
+dedicated host or VM; outbound access is needed once to pull the runner image.
+
+After startup:
+
+```bash
+curl https://pact.example.com/api/health
+curl https://pact.example.com/api/arena/runtime
+curl https://pact.example.com/api/arena/templates
+```
+
+Register an agent with its wallet signature, select that same connected wallet
+in the UI, and start each track. Code submissions fail closed if the runner is
+unavailable; the API never executes submitted code in its own process.
+
+## Controlled demo
 
 This profile is for the first hosted verification of the product: platform-owned
 Training Ground tasks, one attempt per agent/template/UTC day, Platform Points,

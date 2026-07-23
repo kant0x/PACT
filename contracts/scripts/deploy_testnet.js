@@ -18,6 +18,8 @@ const EXPECTED_CHAIN_ID = BigInt(process.env.EXPECTED_CHAIN_ID || '5042002');
 const PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY || process.env.PRIVATE_KEY;
 const USDC_ADDRESS = process.env.ARC_USDC_ADDRESS;
 const CONFIGURED_DISPUTE_MODULE_ADDRESS = process.env.DISPUTE_MODULE_ADDRESS?.trim() || null;
+const CONFIGURED_PLATFORM_POINTS_ADDRESS = process.env.PLATFORM_POINTS_ADDRESS?.trim() || null;
+const PLATFORM_POINTS_AWARDER_ADDRESS = process.env.PLATFORM_POINTS_AWARDER_ADDRESS?.trim() || process.env.AUTHORIZED_OPERATOR_ADDRESS?.trim() || null;
 const COLLATERAL_TIMEOUT_SECONDS = Number(process.env.COLLATERAL_TIMEOUT_SECONDS || 86_400);
 const AUTHORIZED_OPERATOR_ADDRESS = process.env.AUTHORIZED_OPERATOR_ADDRESS;
 
@@ -87,6 +89,7 @@ async function main() {
   const reputationArtifact = loadContract('ReputationRegistry');
   const vaultArtifact = loadContract('StreamingVault');
   const disputeModuleArtifact = loadContract('DisputeModule');
+  const platformPointsArtifact = loadContract('PlatformPoints');
 
   let disputeModuleContract = null;
   let disputeModuleAddress = CONFIGURED_DISPUTE_MODULE_ADDRESS;
@@ -179,6 +182,45 @@ async function main() {
     throw new Error('StreamingVault constructor configuration does not match the requested deployment inputs');
   }
 
+  // Platform Points are a separate, non-transferable training ledger. They
+  // never represent USDC and are awarded only after the server has finalized a
+  // daily Training Ground attempt.
+  let platformPointsContract = null;
+  let platformPointsAddress = CONFIGURED_PLATFORM_POINTS_ADDRESS;
+  if (platformPointsAddress) {
+    requiredAddress('PLATFORM_POINTS_ADDRESS', platformPointsAddress);
+    const pointsCode = await provider.getCode(platformPointsAddress);
+    if (pointsCode === '0x') throw new Error(`No contract code found at PLATFORM_POINTS_ADDRESS ${platformPointsAddress}`);
+    console.log(`Using configured PlatformPoints contract: ${platformPointsAddress}`);
+  } else {
+    console.log('\nDeploying PlatformPoints...');
+    const PlatformPointsFactory = new ethers.ContractFactory(
+      platformPointsArtifact.abi,
+      platformPointsArtifact.bytecode,
+      wallet
+    );
+    platformPointsContract = await PlatformPointsFactory.deploy(wallet.address);
+    await platformPointsContract.waitForDeployment();
+    platformPointsAddress = await platformPointsContract.getAddress();
+    console.log(`PlatformPoints deployed at: ${platformPointsAddress}`);
+  }
+
+  const platformPointsAwarderAddress = PLATFORM_POINTS_AWARDER_ADDRESS || wallet.address;
+  requiredAddress('PLATFORM_POINTS_AWARDER_ADDRESS', platformPointsAwarderAddress);
+  if (!platformPointsContract) {
+    platformPointsContract = new ethers.Contract(platformPointsAddress, platformPointsArtifact.abi, wallet);
+  }
+  const pointsAwarders = [...new Set([wallet.address.toLowerCase(), platformPointsAwarderAddress.toLowerCase()])];
+  const awarderReceipts = [];
+  for (const awarder of pointsAwarders) {
+    const awarderTx = await platformPointsContract.setAuthorizedAwarder(awarder, true);
+    await awarderTx.wait();
+    if (!(await platformPointsContract.authorizedAwarders(awarder))) {
+      throw new Error(`PlatformPoints awarder authorization did not persist for ${awarder}`);
+    }
+    awarderReceipts.push({ awarder, txHash: awarderTx.hash });
+  }
+
   let operatorTxHash = null;
   if (AUTHORIZED_OPERATOR_ADDRESS) {
     console.log(`\nAuthorizing operator ${AUTHORIZED_OPERATOR_ADDRESS} on StreamingVault...`);
@@ -202,8 +244,11 @@ async function main() {
     vaultOperatorAuthorizationTx: operatorTxHash,
     contracts: {
       ReputationRegistry: reputationAddress,
-      StreamingVault: vaultAddress
+      StreamingVault: vaultAddress,
+      PlatformPoints: platformPointsAddress
     },
+    platformPointsAwarder: platformPointsAwarderAddress,
+    platformPointsAwarderAuthorizationTx: awarderReceipts,
     deployedAt: new Date().toISOString()
   };
 

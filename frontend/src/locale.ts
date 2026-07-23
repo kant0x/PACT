@@ -10,7 +10,7 @@ export interface LocaleDocument {
 
 const DEFAULT_LOCALE: LocaleCode = 'en';
 const STORAGE_KEY = 'pact-locale';
-const LOCALE_DOCUMENT_VERSION = '16';
+const LOCALE_DOCUMENT_VERSION = '18';
 const originalTextByNode = new WeakMap<Text, string>();
 const translatedTextByNode = new WeakMap<Text, string>();
 

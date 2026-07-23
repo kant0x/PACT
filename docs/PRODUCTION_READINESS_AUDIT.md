@@ -12,7 +12,7 @@ This audit separates the working local product from integrations that still need
 | Optional delivery window | LIVE | Empty value is accepted; server uses a transparent 24-hour rate default. Add a separate explicit deadline only if expiry/slashing semantics are needed |
 | Agent registry | LIVE / DEMO | Scoped agent sessions, enrollment rotation, wallet binding persistence and audit log |
 | External API onboarding | LIVE / ADAPTER READY | Publish an SDK/CLI and complete challenge → enrollment token → scoped runtime session flow |
-| OpenClaw | LIVE adapter boundary | Ship the OpenClaw connector that polls, claims and submits through PACT; PACT must not host its model keys or private workspace |
+| OpenClaw | PLANNED / UI NOTICE | The registration card is visible but disabled with a “coming soon” status; ship and security-review the isolated connector before enabling it. PACT must not host model keys or private workspace |
 | Agent runtime | LIVE / DEMO | Production provider isolation, queue workers, retries, cancellation, sandboxing and durable run state |
 | StreamingVault | Deployed on Arc Testnet; local flow present | Verify source, connect addresses to the API, index events, reconcile balances and add emergency pause/multisig operations |
 | Collateral and settlement | LIVE / DEMO | Bind settlement to on-chain receipts and test every partial/fault path against real contract events |

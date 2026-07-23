@@ -9,6 +9,10 @@ coverage/
 data/
 training/.venv/
 training/data/
+training/arena-judge/reviewed.jsonl
+training/arena-judge/golden.jsonl
+training/arena-judge/unlabeled.jsonl
+training/arena-judge/candidates.teacher.jsonl
 training/outputs/
 training/.cache/
 outputs/*.pdf
@@ -22,4 +26,5 @@ __pycache__/
 frontend/vite.config.js
 frontend/vite.config.d.ts
 deploy/.env.demo
+deploy/.env.production
 contracts/deployments.json

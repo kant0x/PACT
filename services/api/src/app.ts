@@ -14,6 +14,9 @@ import { verifyMessage } from 'viem';
 import { defaultExternalManifest, validateCapabilityManifest } from './capability-validation.js';
 import { defaultWorkOrderForTask, validateWorkOrderSpec } from './work-order-validation.js';
 import { createX402RuntimeIntegration } from './integrations/x402.js';
+import { DockerArenaCodeRunner, type ArenaCodeRunner } from './arena-code-runner.js';
+import { createArenaQualityJudgeFromEnv, type ArenaQualityJudge } from './arena-quality-judge.js';
+import { createPlatformPointsFromEnv, type PlatformPointsService } from './platform-points.js';
 
 const text = (value: unknown) => typeof value === 'string' ? value : '';
 const ETHEREUM_ADDRESS = /^0x[a-fA-F0-9]{40}$/;
@@ -46,6 +49,13 @@ const agentRegistrationMessage = (input: { displayName: string; capabilityManife
     : null)}`,
 ].join('\n');
 
+const arenaAttemptMessage = (input: { templateId: string; agentAddress: string; dayKey: string }) => [
+  'PACT: start Training Ground attempt',
+  `template=${input.templateId}`,
+  `agent=${input.agentAddress.toLowerCase()}`,
+  `day=${input.dayKey}`
+].join('\n');
+
 export interface AppOptions {
   arbitrator?: Arbitrator;
   authToken?: string;
@@ -53,13 +63,31 @@ export interface AppOptions {
   enableDemoEndpoints?: boolean;
   humanReviewerId?: string;
   agentProvider?: AgentModelProvider;
+  arenaCodeRunner?: ArenaCodeRunner;
+  arenaQualityJudge?: ArenaQualityJudge;
+  platformPoints?: PlatformPointsService;
 }
 
 export function createApp(store: DemoStore = demoStore, options: AppOptions = {}) {
   const app = express();
   const openaiKey = process.env.OPENAI_API_KEY;
+  const deterministicProvidersAllowed = process.env.NODE_ENV !== 'production'
+    || process.env.PACT_ALLOW_DETERMINISTIC_PROVIDERS === 'true';
+  if (process.env.NODE_ENV === 'production' && !openaiKey && !deterministicProvidersAllowed) {
+    throw new Error('OPENAI_API_KEY is required in production; set PACT_ALLOW_DETERMINISTIC_PROVIDERS=true only for an explicitly labelled controlled demo');
+  }
+  if (process.env.NODE_ENV === 'production' && !deterministicProvidersAllowed
+    && (process.env.ARENA_JUDGE_PROVIDER === 'deterministic' || process.env.ARBITRATOR_PROVIDER === 'deterministic')) {
+    throw new Error('Deterministic judges are disabled in production');
+  }
   const defaultAgentProvider = openaiKey ? new OpenAIAgentProvider(openaiKey) : new DeterministicAgentProvider();
   const agentRuntime = new AgentRuntime(options.agentProvider ?? defaultAgentProvider, store);
+  const arenaCodeRunner = options.arenaCodeRunner ?? new DockerArenaCodeRunner();
+  const arenaQualityJudge = options.arenaQualityJudge ?? createArenaQualityJudgeFromEnv();
+  const platformPoints = options.platformPoints ?? createPlatformPointsFromEnv();
+  if (process.env.PACT_MODE === 'arc' && process.env.PLATFORM_POINTS_REQUIRED === 'true' && !platformPoints) {
+    throw new Error('PLATFORM_POINTS_REQUIRED=true but no Arc PlatformPoints adapter is configured');
+  }
   const x402Integration = createX402RuntimeIntegration();
   const arbitrator = options.arbitrator ?? (process.env.NODE_ENV === 'test' ? new DeterministicArbitrator() : createArbitratorFromEnv());
   const authToken = options.authToken ?? process.env.PACT_AUTH_TOKEN;
@@ -79,6 +107,9 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
   const agentSignatureRequired = process.env.NODE_ENV === 'production'
     || process.env.PACT_MODE === 'arc'
     || (process.env.NODE_ENV !== 'test' && process.env.PACT_REQUIRE_AGENT_SIGNATURES === 'true');
+  const arenaSignatureRequired = process.env.NODE_ENV === 'production'
+    || process.env.PACT_MODE === 'arc'
+    || process.env.PACT_REQUIRE_ARENA_SIGNATURES === 'true';
   const assertCreatorSignature = async (input: Record<string, unknown>) => {
     if (!creatorSignatureRequired) return;
     const creatorAddress = text(input.creatorAddress).trim();
@@ -143,6 +174,11 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
   app.use(express.json({ limit: process.env.PACT_JSON_LIMIT ?? '64kb' }));
   app.use('/api', (request, response, next) => {
     if (['GET', 'HEAD', 'OPTIONS'].includes(request.method)) return next();
+    // Attempt-scoped arena mutations authenticate with the private attempt
+    // token, so an MCP client never needs the platform-wide operator token.
+    if (request.path.startsWith('/arena/attempts/')) return next();
+    if (/^\/arena\/templates\/[^/]+\/start$/.test(request.path)) return next();
+    if (request.method === 'POST' && request.path === '/agents') return next();
     return requireAuth(request, response, next);
   });
 
@@ -207,15 +243,134 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
   });
   app.get('/api/leaderboard', (_request, response) => response.json(store.leaderboard()));
   app.get('/api/agents', (_request, response) => response.json(store.leaderboard()));
-  app.get('/api/arena/leaderboard', (_request, response) => response.json(store.arenaLeaderboard()));
+  app.get('/api/arena/leaderboard', async (_request, response, next) => {
+    try {
+      const localRows = store.arenaLeaderboard();
+      if (!platformPoints) {
+        response.json(localRows);
+        return;
+      }
+
+      // Arc is authoritative when the points adapter is enabled. The local
+      // attempt statistics remain useful, but the displayed point total is
+      // read from the contract so a restart cannot erase the leaderboard.
+      const rows = await Promise.all(localRows.map(async (row) => ({
+        ...row,
+        platformPoints: await platformPoints.getPoints(row.agentAddress)
+      })));
+      rows.sort((left, right) => right.platformPoints - left.platformPoints || right.averageScore - left.averageScore || left.agentAddress.localeCompare(right.agentAddress));
+      response.json(rows.map((row, index) => ({ ...row, rank: index + 1 })));
+    } catch (error) {
+      if (process.env.PLATFORM_POINTS_REQUIRED === 'true') {
+        next(new ApiProblem(503, 'PLATFORM_POINTS_UNAVAILABLE', 'Arc Platform Points could not be read; leaderboard is fail-closed'));
+        return;
+      }
+      response.json(store.arenaLeaderboard());
+    }
+  });
+  app.get('/api/arena/runtime', (_request, response) => response.json({
+    generator: 'private deterministic HMAC instances',
+    qualityJudge: arenaQualityJudge.provider,
+    codeRunner: arenaCodeRunner.describe(),
+    platformPoints: platformPoints?.describe() ?? {
+      mode: 'OFFCHAIN',
+      reason: 'Configure PLATFORM_POINTS_ADDRESS and PLATFORM_POINTS_AWARDER_PRIVATE_KEY to record points on Arc Testnet'
+    },
+    toolTransport: 'MCP Streamable HTTP',
+    startAuthentication: arenaSignatureRequired ? 'EIP-191 wallet signature' : 'development bypass'
+  }));
   app.get('/api/arena/templates', (request, response) => response.json(store.listArenaTemplates(text(request.query.agentAddress) || undefined)));
-  app.post('/api/arena/templates/:id/start', (request, response) => {
-    const agentAddress = text(request.body?.agentAddress);
+  app.post('/api/arena/templates/:id/start', async (request, response) => {
+    const agentAddress = text(request.body?.agentAddress).trim();
     if (!agentAddress) throw new ApiProblem(400, 'INVALID_ARENA_START', 'agentAddress is required');
+    if (!ETHEREUM_ADDRESS.test(agentAddress)) throw new ApiProblem(400, 'INVALID_ARENA_START', 'agentAddress must be an EVM address');
+    if (arenaSignatureRequired) {
+      const signature = text(request.body?.signature).trim();
+      if (!signature) throw new ApiProblem(401, 'ARENA_SIGNATURE_REQUIRED', 'Connect the selected agent wallet and sign the daily attempt');
+      try {
+        const valid = await verifyMessage({
+          address: agentAddress as `0x${string}`,
+          message: arenaAttemptMessage({
+            templateId: request.params.id,
+            agentAddress,
+            dayKey: new Date().toISOString().slice(0, 10)
+          }),
+          signature: signature as `0x${string}`
+        });
+        if (!valid) throw new ApiProblem(403, 'INVALID_ARENA_SIGNATURE', 'The selected agent wallet did not approve this attempt');
+      } catch (error) {
+        if (error instanceof ApiProblem) throw error;
+        throw new ApiProblem(403, 'INVALID_ARENA_SIGNATURE', 'The selected agent wallet did not approve this attempt');
+      }
+    }
     response.status(201).json(store.startArenaAttempt(request.params.id, agentAddress));
   });
-  app.post('/api/arena/attempts/:id/submit', (request, response) => response.json(store.submitArenaAttempt(request.params.id, request.body)));
-  app.post('/api/arena/documents', requireAuth, (request, response) => response.status(201).json(store.addArenaDocument(request.body)));
+  app.post('/api/arena/attempts/:id/submit', async (request, response) => {
+    response.json(await store.submitArenaAttempt(request.params.id, request.body, {
+      codeRunner: arenaCodeRunner,
+      qualityJudge: arenaQualityJudge,
+      platformPoints
+    }));
+  });
+
+  const attemptBearer = (request: Request) => {
+    const match = request.get('authorization')?.match(/^Bearer\s+(.+)$/i);
+    if (!match?.[1]) throw new ApiProblem(401, 'ARENA_TOKEN_REQUIRED', 'Use the attempt token as a Bearer credential');
+    return match[1];
+  };
+
+  app.post('/api/arena/attempts/:id/tools/:tool', (request, response) => {
+    const output = store.executeArenaTool(request.params.id, attemptBearer(request), request.params.tool, request.body ?? {});
+    response.json(output);
+  });
+
+  app.post('/api/arena/attempts/:id/mcp', async (request, response) => {
+    const attemptToken = attemptBearer(request);
+    const attemptId = request.params.id;
+    const rpc = request.body as { jsonrpc?: unknown; id?: unknown; method?: unknown; params?: unknown };
+    if (!rpc || Array.isArray(rpc) || rpc.jsonrpc !== '2.0' || typeof rpc.method !== 'string') {
+      return response.status(400).json({ jsonrpc: '2.0', id: rpc?.id ?? null, error: { code: -32600, message: 'Invalid JSON-RPC request' } });
+    }
+    const id = typeof rpc.id === 'string' || typeof rpc.id === 'number' ? rpc.id : null;
+    const success = (result: Record<string, unknown>) => response.json({ jsonrpc: '2.0', id, result });
+    if (rpc.method === 'notifications/initialized' || rpc.method === 'notifications/cancelled') {
+      return response.status(202).end();
+    }
+    if (id === null) return response.status(202).end();
+    if (rpc.method === 'initialize') {
+      const params = rpc.params && typeof rpc.params === 'object' ? rpc.params as Record<string, unknown> : {};
+      return success({
+        protocolVersion: typeof params.protocolVersion === 'string' ? params.protocolVersion : '2025-03-26',
+        capabilities: { tools: { listChanged: false } },
+        serverInfo: { name: 'pact-arena-tools', version: '2.0.0' },
+        instructions: 'Call fetch_orders, normalize_orders, then publish_report. Pass each returned receipt to the next tool.'
+      });
+    }
+    if (rpc.method === 'ping') return success({});
+    if (rpc.method === 'tools/list') {
+      return success({ tools: [
+        { name: 'fetch_orders', description: 'Fetch attempt-scoped source orders.', inputSchema: { type: 'object', properties: {}, additionalProperties: false } },
+        { name: 'normalize_orders', description: 'Normalize SETTLED orders using the source receipt.', inputSchema: { type: 'object', properties: { sourceReceipt: { type: 'string', minLength: 1, maxLength: 200 } }, required: ['sourceReceipt'], additionalProperties: false } },
+        { name: 'publish_report', description: 'Publish the final JSON report using the transform receipt.', inputSchema: { type: 'object', properties: { transformReceipt: { type: 'string', minLength: 1, maxLength: 200 }, format: { type: 'string', const: 'json' } }, required: ['transformReceipt', 'format'], additionalProperties: false } }
+      ] });
+    }
+    if (rpc.method === 'tools/call') {
+      const params = rpc.params && typeof rpc.params === 'object' ? rpc.params as Record<string, unknown> : {};
+      const name = text(params.name);
+      const args = params.arguments && typeof params.arguments === 'object' && !Array.isArray(params.arguments)
+        ? params.arguments as Record<string, unknown>
+        : {};
+      try {
+        const output = store.executeArenaTool(attemptId, attemptToken, name, args);
+        return success({ content: [{ type: 'text', text: JSON.stringify(output) }], structuredContent: output });
+      } catch (error) {
+        return success({ isError: true, content: [{ type: 'text', text: error instanceof Error ? error.message : 'Arena tool failed' }] });
+      }
+    }
+    return response.status(404).json({ jsonrpc: '2.0', id, error: { code: -32601, message: `Method not found: ${rpc.method}` } });
+  });
+  app.get('/api/arena/attempts/:id/mcp', (_request, response) => response.status(405).json({ error: 'METHOD_NOT_ALLOWED', message: 'Use MCP Streamable HTTP POST.' }));
+  app.delete('/api/arena/attempts/:id/mcp', (_request, response) => response.status(405).json({ error: 'METHOD_NOT_ALLOWED', message: 'Stateless MCP sessions do not require DELETE.' }));
 
   // Production PostgreSQL Dashboard
   app.get('/api/dashboard/pg', async (request, response, next) => {

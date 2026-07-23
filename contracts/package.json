@@ -6,7 +6,8 @@
   "scripts": {
     "build": "node scripts/compile.js",
     "test": "npm run build && vitest run",
-    "deploy:testnet": "npm run build && node scripts/deploy_testnet.js"
+    "deploy:testnet": "npm run build && node scripts/deploy_testnet.js",
+    "deploy:points:testnet": "npm run build && node scripts/deploy_platform_points.js"
   },
   "devDependencies": {
     "ethers": "^6.15.0",

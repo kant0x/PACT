@@ -468,60 +468,109 @@ export interface TaskTemplate {
   createdAt: number;
 }
 
-export type ArenaDocumentKind = 'ECONOMIC' | 'LEGAL';
-export type ArenaEvaluationMode = 'DETERMINISTIC';
-
+export type ArenaChallengeKind = 'GROUNDED_QA' | 'CODE_REPAIR' | 'TOOL_WORKFLOW';
+export type ArenaEvaluationMode = 'HYBRID';
 
 export interface ArenaTemplate {
   id: string;
   title: string;
   description: string;
-  documentKind: ArenaDocumentKind;
+  kind: ArenaChallengeKind;
   evaluationMode: ArenaEvaluationMode;
   rewardPoints: number;
   ownerType: 'PLATFORM';
   ownerName: string;
-  documentPoolSize: number;
+  variantCount: number;
+  expectedMinutes: number;
   isActive: boolean;
   availableToday: boolean;
   completedToday: boolean;
+  /** A daily attempt has been opened but its final answer has not been submitted yet. */
+  inProgressToday: boolean;
   nextAttemptAt: number;
 }
 
-export interface ArenaDocumentView {
-  title: string;
-  kind: ArenaDocumentKind;
-  sourceName: string;
-  sourceUrl: string;
-  publishedAt: string;
-  content: string;
-  contentHash: string;
-  notice: string;
+export interface ArenaGroundedPayload {
+  kind: 'GROUNDED_QA';
+  dataset: {
+    name: string;
+    format: 'JSON';
+    columns: string[];
+    rows: Array<Record<string, string | number>>;
+    contentHash: string;
+    notice: string;
+  };
+  question: {
+    prompt: string;
+    answerFormat: 'TEXT' | 'NUMBER';
+    citationInstructions: string;
+  };
 }
 
-export interface ArenaQuestionView {
-  id: string;
-  prompt: string;
-  answerFormat: 'TEXT' | 'NUMBER';
-  weight: number;
+export interface ArenaCodePayload {
+  kind: 'CODE_REPAIR';
+  language: 'javascript';
+  entrypoint: 'index.mjs';
+  files: Record<string, string>;
+  publicTests: string[];
+  constraints: string[];
+  sourceHash: string;
 }
+
+export interface ArenaToolDescriptor {
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+}
+
+export interface ArenaToolPayload {
+  kind: 'TOOL_WORKFLOW';
+  goal: string;
+  mcpEndpoint: string;
+  transport: 'STREAMABLE_HTTP';
+  authentication: 'ATTEMPT_BEARER_TOKEN';
+  tools: ArenaToolDescriptor[];
+  outputSchema: Record<string, unknown>;
+  minimumRequiredCalls: number;
+}
+
+export type ArenaChallengePayload = ArenaGroundedPayload | ArenaCodePayload | ArenaToolPayload;
 
 export interface ArenaChallenge {
   attemptId: string;
   attemptToken: string;
   templateId: string;
   templateTitle: string;
+  kind: ArenaChallengeKind;
   dayKey: string;
   agentAddress: string;
-  document: ArenaDocumentView;
-  questions: ArenaQuestionView[];
+  payload: ArenaChallengePayload;
+  generatorVersion: string;
+  rubricVersion: string;
+  instanceCommitment: string;
   startedAt: number;
 }
 
-export interface ArenaAnswer {
-  questionId: string;
+export interface ArenaGroundedSubmission {
+  kind: 'GROUNDED_QA';
   answer: string;
+  citation: { recordId: string; field: string };
+  reasoning: string;
 }
+
+export interface ArenaCodeSubmission {
+  kind: 'CODE_REPAIR';
+  files: Record<string, string>;
+  reasoning: string;
+}
+
+export interface ArenaToolSubmission {
+  kind: 'TOOL_WORKFLOW';
+  artifactHash: string;
+  reasoning: string;
+}
+
+export type ArenaSubmission = ArenaGroundedSubmission | ArenaCodeSubmission | ArenaToolSubmission;
 
 export interface ArenaCheckResult {
   code: string;
@@ -532,12 +581,37 @@ export interface ArenaCheckResult {
 export interface ArenaEvaluationResult {
   attemptId: string;
   templateId: string;
+  kind: ArenaChallengeKind;
   dayKey: string;
   status: 'PASSED' | 'FAILED';
   score: number;
+  deterministicScore: number;
+  qualityScore: number;
+  qualityModifier: number;
+  efficiencyScore: number | null;
+  efficiencyModifier: number;
+  criticalChecksPassed: boolean;
   pointsAwarded: number;
+  pointsReceipt?: {
+    mode: 'OFFCHAIN' | 'ARC_TESTNET';
+    transactionHash: string | null;
+    contractAddress: string | null;
+    chainId: number | null;
+    agentTotal: number | null;
+  };
   checks: ArenaCheckResult[];
-  answerScores: Array<{ questionId: string; score: number }>;
+  judge: {
+    provider: string;
+    rubricVersion: string;
+    reasoning: string;
+    receiptHash: string;
+  };
+  execution: {
+    durationMs: number;
+    toolCalls: number;
+    tokensUsed: number | null;
+    artifactHash: string | null;
+  };
   submittedAt: number;
   nextAttemptAt: number;
   trainingConsent: boolean;
@@ -551,6 +625,7 @@ export interface ArenaLeaderboardEntry {
   passedAttempts: number;
   totalAttempts: number;
   averageScore: number;
+  trackScores: Record<ArenaChallengeKind, number | null>;
 }
 
 export interface Dispute {
