@@ -71,7 +71,10 @@ export interface AppOptions {
 export function createApp(store: DemoStore = demoStore, options: AppOptions = {}) {
   const app = express();
   const openaiKey = process.env.OPENAI_API_KEY;
+  const controlledDemoMode = process.env.PACT_MODE === 'demo'
+    && process.env.PACT_ENABLE_DEMO_ENDPOINTS === 'true';
   const deterministicProvidersAllowed = process.env.NODE_ENV !== 'production'
+    || controlledDemoMode
     || process.env.PACT_ALLOW_DETERMINISTIC_PROVIDERS === 'true';
   if (process.env.NODE_ENV === 'production' && !openaiKey && !deterministicProvidersAllowed) {
     throw new Error('OPENAI_API_KEY is required in production; set PACT_ALLOW_DETERMINISTIC_PROVIDERS=true only for an explicitly labelled controlled demo');
@@ -91,25 +94,27 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
   const x402Integration = createX402RuntimeIntegration();
   const arbitrator = options.arbitrator ?? (process.env.NODE_ENV === 'test' ? new DeterministicArbitrator() : createArbitratorFromEnv());
   const authToken = options.authToken ?? process.env.PACT_AUTH_TOKEN;
-  if (process.env.NODE_ENV === 'production' && !authToken) throw new Error('PACT_AUTH_TOKEN is required in production');
+  if (process.env.NODE_ENV === 'production' && !authToken && !controlledDemoMode) {
+    throw new Error('PACT_AUTH_TOKEN is required in production; set PACT_MODE=demo and PACT_ENABLE_DEMO_ENDPOINTS=true only for a controlled public demo');
+  }
   const demoEndpointsEnabled = options.enableDemoEndpoints
-    ?? (process.env.PACT_ENABLE_DEMO_ENDPOINTS === undefined
+    ?? (controlledDemoMode || (process.env.PACT_ENABLE_DEMO_ENDPOINTS === undefined
       ? process.env.NODE_ENV !== 'production'
-      : process.env.PACT_ENABLE_DEMO_ENDPOINTS === 'true');
+      : process.env.PACT_ENABLE_DEMO_ENDPOINTS === 'true'));
   // A funded work order must be explicitly approved by the creator wallet. Tests can
   // use the in-memory store without a Web3 signature; every real/dev HTTP request is
   // protected unless an operator deliberately opts into the legacy bypass.
-  const creatorSignatureRequired = process.env.NODE_ENV === 'production'
-    || (process.env.NODE_ENV !== 'test' && process.env.PACT_ALLOW_UNSIGNED_TASKS !== 'true');
+  const creatorSignatureRequired = !controlledDemoMode && (process.env.NODE_ENV === 'production'
+    || (process.env.NODE_ENV !== 'test' && process.env.PACT_ALLOW_UNSIGNED_TASKS !== 'true'));
   // Demo mode keeps the local showcase frictionless. Arc/production registration
   // must still prove wallet ownership over the exact capability JSON that is
   // persisted; a bearer token alone is not an agent identity proof.
-  const agentSignatureRequired = process.env.NODE_ENV === 'production'
+  const agentSignatureRequired = !controlledDemoMode && (process.env.NODE_ENV === 'production'
     || process.env.PACT_MODE === 'arc'
-    || (process.env.NODE_ENV !== 'test' && process.env.PACT_REQUIRE_AGENT_SIGNATURES === 'true');
-  const arenaSignatureRequired = process.env.NODE_ENV === 'production'
+    || (process.env.NODE_ENV !== 'test' && process.env.PACT_REQUIRE_AGENT_SIGNATURES === 'true'));
+  const arenaSignatureRequired = !controlledDemoMode && (process.env.NODE_ENV === 'production'
     || process.env.PACT_MODE === 'arc'
-    || process.env.PACT_REQUIRE_ARENA_SIGNATURES === 'true';
+    || process.env.PACT_REQUIRE_ARENA_SIGNATURES === 'true');
   const assertCreatorSignature = async (input: Record<string, unknown>) => {
     if (!creatorSignatureRequired) return;
     const creatorAddress = text(input.creatorAddress).trim();
@@ -186,7 +191,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
     status: 'ok',
     service: 'pact-api',
     mode: process.env.PACT_MODE === 'arc' ? 'arc' : 'demo',
-    persistence: process.env.PACT_MODE === 'arc' ? 'postgres-adapter' : 'sqlite',
+    persistence: (process.env.PACT_DATABASE_URL ?? process.env.DATABASE_URL) ? 'postgres' : 'memory',
     timestamp: new Date().toISOString()
   });
   app.get('/health', health);
