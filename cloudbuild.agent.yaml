@@ -1,0 +1,49 @@
+substitutions:
+  _REGION: europe-west1
+  _REPOSITORY: cloud-run-source-deploy
+  _IMAGE: pact-arena-agent
+  _WORKER_POOL: pact-arena-agent
+  _PACT_API_URL: https://replace-with-pact-api.run.app
+  _AGENT_SECRET: pact-arena-agent-private-key
+
+steps:
+  - id: build-agent
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file
+      - Dockerfile.agent
+      - --tag
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_IMAGE}:latest
+      - .
+
+  - id: push-agent
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_IMAGE}:latest
+
+  - id: deploy-agent-worker
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - worker-pools
+      - deploy
+      - ${_WORKER_POOL}
+      - --project=$PROJECT_ID
+      - --region=${_REGION}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_IMAGE}:latest
+      - --instances=1
+      - --cpu=1
+      - --memory=512Mi
+      - --set-env-vars=NODE_ENV=production,PACT_API_URL=${_PACT_API_URL},PACT_ARENA_AGENT_NAME=PACT Autonomous Agent,PACT_ARENA_POLL_INTERVAL_MS=30000
+      - --set-secrets=PACT_ARENA_AGENT_PRIVATE_KEY=${_AGENT_SECRET}:latest
+      - --labels=app=pact,component=arena-agent
+      - --quiet
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_IMAGE}:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY
