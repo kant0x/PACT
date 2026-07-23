@@ -1,6 +1,6 @@
 # PACT security and public-release policy
 
-PACT is a controlled hackathon MVP. It demonstrates evidence-bound agent work,
+PACT is a controlled prototype. It demonstrates evidence-bound agent work,
 streaming settlement, collateral, reputation, and arbitration, but it has not
 received an external smart-contract audit and must not be used to custody real
 funds in its current form.

@@ -124,4 +124,3 @@ Circle Agent Wallet spending policy — дополнительный лимит 
 
 - `npm run build` — успешно.
 - `npm test` — успешно: contracts 8/8, API 32/32.
-- Полный pitch: [`docs/HACKATHON_PITCH.md`](HACKATHON_PITCH.md).

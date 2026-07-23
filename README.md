@@ -1,6 +1,6 @@
 # PACT — Provable Agent Contract & Trust
 
-PACT is a working hackathon MVP for safer commerce between customers and autonomous agents. A customer funds a task in USDC, an agent posts reputation-dependent collateral, and payment unlocks as a live stream. Successful work improves the next task's terms; a verified failure can pause the stream, slash collateral, and reduce reputation.
+PACT is a working prototype for safer commerce between customers and autonomous agents. A customer funds a task in USDC, an agent posts reputation-dependent collateral, and payment unlocks as a live stream. Successful work improves the next task's terms; a verified failure can pause the stream, slash collateral, and reduce reputation.
 
 The repository contains a complete local product that runs without wallets or API keys, plus Solidity contracts designed for an Arc deployment.
 
@@ -23,7 +23,7 @@ The repository contains a complete local product that runs without wallets or AP
 - Solidity `MockUSDC`, `ReputationRegistry`, `StreamingVault`, and non-transferable `PlatformPoints` with third-party writer pagination, collateral underwriting, and signed portable-reputation attestations.
 - SQLite persistence, Bearer-token mutation protection, secure headers, CORS allowlist, request-size limit, and rate limiting.
 - Executable Circle scripts for Arc developer wallets, Circle Agent Wallet CLI flows, spending policy validation, Gateway Nanopayments, and a one-time Arc SCA Gas Station sponsorship guard.
-- A concise hackathon pitch and a reproducible public-submission checklist.
+- Public documentation for the architecture, agent runtime, trust model, arbitration, and Arc handoff.
 
 ## Proof, not promises
 
@@ -47,7 +47,6 @@ The public README stays focused on the product and its trust model. Local
 development, verification commands, demo data and deployment steps are kept in
 the dedicated guides:
 
-- [Hackathon submission checklist](docs/HACKATHON_SUBMISSION.md)
 - [Arc testnet handoff](docs/ARC_TESTNET_DEPLOYMENT.md)
 
 ## Runtime hardening and real arbitration
@@ -101,8 +100,6 @@ docs/            Architecture decisions and specification resolutions
 
 The current design brief, resolved contradictions, and security boundaries are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/PROJECT_IMPLEMENTATION_AND_RISK_REGISTER.md](docs/PROJECT_IMPLEMENTATION_AND_RISK_REGISTER.md).
 
-For the final GitHub/hackathon package, deliverables, safe claims, demo script
-and secret-handling rules, see [docs/HACKATHON_SUBMISSION.md](docs/HACKATHON_SUBMISSION.md).
 The current Arc Testnet contract addresses and public receipts are listed in
 [docs/ARC_TESTNET_DEPLOYMENT.md](docs/ARC_TESTNET_DEPLOYMENT.md).
 
@@ -113,10 +110,9 @@ eligibility tiers, lifecycle, evidence requirements and judge authority — is i
 The executable provider/tool/deliverable boundary is documented in
 [docs/AGENT_RUNTIME.md](docs/AGENT_RUNTIME.md) and shown inside the connected **DApp cabinet**.
 
-For a complete Russian-language explanation of every website screen, control,
-role, status and end-to-end user flow, see
-[docs/SITE_GUIDE.md](docs/SITE_GUIDE.md). The full documentation index is
-[docs/README.md](docs/README.md).
+The core documentation covers the public architecture, agent onboarding,
+runtime boundary, trust model, arbitration rules, task recipes, and production
+readiness.
 
 ## Arc and Circle testnet handoff
 
