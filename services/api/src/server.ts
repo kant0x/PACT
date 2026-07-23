@@ -3,7 +3,7 @@ import { pathToFileURL } from 'node:url';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createApp } from './app.js';
 import { DemoStore, type PersistedDemoState } from './store.js';
-import { SqliteStatePersistence } from './persistence.js';
+import { createStatePersistenceFromEnv } from './postgres-persistence.js';
 
 export interface PactServer {
   server: Server;
@@ -11,7 +11,7 @@ export interface PactServer {
 }
 
 export function createPactServer(store?: DemoStore): PactServer {
-  const persistence = store ? null : new SqliteStatePersistence<PersistedDemoState>(process.env.PACT_DB_PATH ?? 'data/pact.sqlite');
+  const persistence = store ? null : createStatePersistenceFromEnv<PersistedDemoState>();
   const activeStore = store ?? new DemoStore(persistence ?? undefined);
   const server = createHttpServer(createApp(activeStore));
   const sockets = new WebSocketServer({ noServer: true });
@@ -50,16 +50,17 @@ export function createPactServer(store?: DemoStore): PactServer {
   return {
     server,
     close: () => new Promise<void>((resolve, reject) => {
+      const closePersistence = () => Promise.resolve(persistence?.close?.()).then(() => undefined);
       clearInterval(ticker);
       for (const socket of sockets.clients) socket.terminate();
       sockets.close();
       if (!server.listening) {
-        persistence?.close();
-        return resolve();
+        closePersistence().then(resolve, reject);
+        return;
       }
       server.close((error) => {
-        persistence?.close();
-        error ? reject(error) : resolve();
+        if (error) reject(error);
+        else closePersistence().then(resolve, reject);
       });
     })
   };
@@ -71,7 +72,7 @@ if (isEntrypoint) {
   const host = process.env.HOST ?? '0.0.0.0';
   const runtime = createPactServer();
   runtime.server.listen(port, host, () => {
-    console.log(`PACT API running at http://${host}:${port} with SQLite persistence`);
+    console.log(`PACT API running at http://${host}:${port}`);
     console.log(`WebSocket endpoint: ws://${host}:${port}/api/streams/:taskId/live`);
   });
 }

@@ -51,6 +51,9 @@ import type { ArenaCodeRunner } from './arena-code-runner.js';
 import type { ArenaQualityJudge } from './arena-quality-judge.js';
 import type { PlatformPointsService } from './platform-points.js';
 
+const isPromiseLike = <T>(value: unknown): value is PromiseLike<T> =>
+  typeof value === 'object' && value !== null && 'then' in value && typeof (value as { then?: unknown }).then === 'function';
+
 export interface CreateTaskInput {
   title: string;
   description?: string;
@@ -300,7 +303,14 @@ export class DemoStore {
 
   constructor(private readonly persistence?: StatePersistence<PersistedDemoState>) {
     const saved = persistence?.load();
-    if (saved?.version === 1) this.hydrate(saved);
+    if (isPromiseLike<PersistedDemoState | null>(saved)) {
+      this.reset();
+      saved
+        .then((persisted) => {
+          if (persisted?.version === 1) this.hydrate(persisted);
+        })
+        .catch((error) => console.error('PACT persistence load failed', error));
+    } else if (saved?.version === 1) this.hydrate(saved);
     else this.reset();
   }
 
@@ -1557,7 +1567,8 @@ export class DemoStore {
   }
 
   private emitSnapshot() {
-    this.persistence?.save(this.serialize());
+    const saved = this.persistence?.save(this.serialize());
+    if (isPromiseLike<void>(saved)) saved.catch((error) => console.error('PACT persistence save failed', error));
     if (this.listeners.size === 0) return;
     const event: StoreEvent = { type: 'snapshot', snapshot: this.dashboard() };
     for (const listener of this.listeners) listener(event);
