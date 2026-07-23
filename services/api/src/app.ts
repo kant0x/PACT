@@ -15,7 +15,7 @@ import { defaultExternalManifest, validateCapabilityManifest } from './capabilit
 import { defaultWorkOrderForTask, validateWorkOrderSpec } from './work-order-validation.js';
 import { createX402RuntimeIntegration } from './integrations/x402.js';
 import { DockerArenaCodeRunner, type ArenaCodeRunner } from './arena-code-runner.js';
-import { createArenaQualityJudgeFromEnv, type ArenaQualityJudge } from './arena-quality-judge.js';
+import { createArenaQualityJudgeFromEnv, DeterministicArenaQualityJudge, type ArenaQualityJudge } from './arena-quality-judge.js';
 import { createPlatformPointsFromEnv, type PlatformPointsService } from './platform-points.js';
 
 const text = (value: unknown) => typeof value === 'string' ? value : '';
@@ -71,8 +71,9 @@ export interface AppOptions {
 export function createApp(store: DemoStore = demoStore, options: AppOptions = {}) {
   const app = express();
   const openaiKey = process.env.OPENAI_API_KEY;
-  const controlledDemoMode = process.env.PACT_MODE === 'demo'
-    && process.env.PACT_ENABLE_DEMO_ENDPOINTS === 'true';
+  const controlledDemoMode = process.env.PACT_MODE !== 'arc'
+    || process.env.NODE_ENV === 'demo'
+    || process.env.PACT_ENABLE_DEMO_ENDPOINTS === 'true';
   const deterministicProvidersAllowed = process.env.NODE_ENV !== 'production'
     || controlledDemoMode
     || process.env.PACT_ALLOW_DETERMINISTIC_PROVIDERS === 'true';
@@ -86,13 +87,45 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
   const defaultAgentProvider = openaiKey ? new OpenAIAgentProvider(openaiKey) : new DeterministicAgentProvider();
   const agentRuntime = new AgentRuntime(options.agentProvider ?? defaultAgentProvider, store);
   const arenaCodeRunner = options.arenaCodeRunner ?? new DockerArenaCodeRunner();
-  const arenaQualityJudge = options.arenaQualityJudge ?? createArenaQualityJudgeFromEnv();
-  const platformPoints = options.platformPoints ?? createPlatformPointsFromEnv();
-  if (process.env.PACT_MODE === 'arc' && process.env.PLATFORM_POINTS_REQUIRED === 'true' && !platformPoints) {
+  const arenaQualityJudge = options.arenaQualityJudge ?? (() => {
+    try {
+      return createArenaQualityJudgeFromEnv();
+    } catch (error) {
+      if (!controlledDemoMode) throw error;
+      console.warn('PACT demo: arena judge disabled/fallback to deterministic because configuration is incomplete', error);
+      return new DeterministicArenaQualityJudge();
+    }
+  })();
+  const platformPoints = options.platformPoints ?? (() => {
+    try {
+      return createPlatformPointsFromEnv();
+    } catch (error) {
+      if (!controlledDemoMode) throw error;
+      console.warn('PACT demo: platform points chain adapter disabled because configuration is incomplete', error);
+      return null;
+    }
+  })();
+  if (!controlledDemoMode && process.env.PACT_MODE === 'arc' && process.env.PLATFORM_POINTS_REQUIRED === 'true' && !platformPoints) {
     throw new Error('PLATFORM_POINTS_REQUIRED=true but no Arc PlatformPoints adapter is configured');
   }
-  const x402Integration = createX402RuntimeIntegration();
-  const arbitrator = options.arbitrator ?? (process.env.NODE_ENV === 'test' ? new DeterministicArbitrator() : createArbitratorFromEnv());
+  const x402Integration = (() => {
+    try {
+      return createX402RuntimeIntegration();
+    } catch (error) {
+      if (!controlledDemoMode) throw error;
+      console.warn('PACT demo: x402 integration disabled because configuration is incomplete', error);
+      return null;
+    }
+  })();
+  const arbitrator = options.arbitrator ?? (() => {
+    try {
+      return process.env.NODE_ENV === 'test' ? new DeterministicArbitrator() : createArbitratorFromEnv();
+    } catch (error) {
+      if (!controlledDemoMode) throw error;
+      console.warn('PACT demo: arbitrator fallback to deterministic because configuration is incomplete', error);
+      return new DeterministicArbitrator();
+    }
+  })();
   const authToken = options.authToken ?? process.env.PACT_AUTH_TOKEN;
   if (process.env.NODE_ENV === 'production' && !authToken && !controlledDemoMode) {
     throw new Error('PACT_AUTH_TOKEN is required in production; set PACT_MODE=demo and PACT_ENABLE_DEMO_ENDPOINTS=true only for a controlled public demo');
