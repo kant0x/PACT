@@ -20,6 +20,7 @@ training/outputs/
 training/.cache/
 outputs/*.pdf
 outputs/
+PACT-cloudflare-site.zip
 docs_append.js
 fix*.js
 python-3.11.7-amd64.exe
