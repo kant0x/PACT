@@ -25,5 +25,7 @@ export function authGuard(token?: string) {
 }
 
 export function parseCorsOrigins(raw = process.env.PACT_CORS_ORIGINS ?? process.env.WEB_ORIGIN ?? 'http://localhost:5173,http://127.0.0.1:5173') {
-  return raw.split(',').map((origin) => origin.trim()).filter(Boolean);
+  const value = raw.trim();
+  if (value === '*') return true;
+  return value.split(',').map((origin) => origin.trim()).filter(Boolean);
 }

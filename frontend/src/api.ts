@@ -15,9 +15,12 @@ import {
   normalizeWorkOrderSpec,
 } from '@pact/shared';
 
-const configuredBase = (import.meta.env.VITE_API_URL ?? 'http://localhost:4100').replace(/\/$/, '');
-const apiToken = import.meta.env.VITE_API_TOKEN;
-const isArcMode = import.meta.env.VITE_PACT_MODE === 'arc';
+const runtimeConfig = typeof window !== 'undefined'
+  ? (window as Window & { __PACT_CONFIG__?: { apiUrl?: string; apiToken?: string; pactMode?: 'demo' | 'arc' } }).__PACT_CONFIG__
+  : undefined;
+const configuredBase = (runtimeConfig?.apiUrl ?? import.meta.env.VITE_API_URL ?? 'http://localhost:4100').replace(/\/$/, '');
+const apiToken = runtimeConfig?.apiToken ?? import.meta.env.VITE_API_TOKEN;
+const isArcMode = (runtimeConfig?.pactMode ?? import.meta.env.VITE_PACT_MODE) === 'arc';
 
 export const API_BASE = configuredBase;
 
@@ -153,9 +156,9 @@ export const api = {
       body: JSON.stringify(input),
     }),
   registerAgent: (input: RegisterAgentInput) =>
-    request<unknown>(import.meta.env.VITE_PACT_MODE === 'arc' ? '/api/agents/pg' : '/api/agents', {
+    request<unknown>(isArcMode ? '/api/agents/pg' : '/api/agents', {
       method: 'POST',
-      body: JSON.stringify(import.meta.env.VITE_PACT_MODE === 'arc'
+      body: JSON.stringify(isArcMode
         ? { address: input.agentAddress, displayName: input.displayName, capabilityManifest: input.capabilityManifest, signature: input.signature, provisionWallet: input.provisionWallet }
         : input),
     }),

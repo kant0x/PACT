@@ -59,7 +59,7 @@ const arenaAttemptMessage = (input: { templateId: string; agentAddress: string; 
 export interface AppOptions {
   arbitrator?: Arbitrator;
   authToken?: string;
-  corsOrigins?: string[];
+  corsOrigins?: string[] | boolean;
   enableDemoEndpoints?: boolean;
   humanReviewerId?: string;
   agentProvider?: AgentModelProvider;
