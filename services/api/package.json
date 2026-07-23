@@ -26,6 +26,7 @@
     "@circle-fin/developer-controlled-wallets": "10.3.1",
     "@circle-fin/x402-batching": "^3.2.0",
     "@pact/shared": "0.1.0",
+    "@x402/evm": "^2.11.0",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^5.1.0",
