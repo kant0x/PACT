@@ -34,6 +34,7 @@ COPY --from=build /app/shared/package.json ./shared/package.json
 COPY --from=build /app/contracts/package.json ./contracts/package.json
 COPY --from=build /app/services/api/package.json ./services/api/package.json
 COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/services/api/node_modules ./services/api/node_modules
 COPY --from=build /app/shared/dist ./shared/dist
 COPY --from=build /app/services/api/dist ./services/api/dist
 RUN mkdir -p /app/data
