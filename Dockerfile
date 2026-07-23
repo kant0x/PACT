@@ -33,4 +33,4 @@ COPY --from=build /app/services/api/dist ./services/api/dist
 
 RUN mkdir -p /app/data
 EXPOSE 4100
-CMD ["npm", "run", "start", "-w", "@pact/api"]
+CMD ["node", "services/api/dist/src/server.js"]
