@@ -1,0 +1,35 @@
+FROM node:24-bookworm-slim AS build
+
+WORKDIR /app
+COPY package*.json ./
+COPY shared/package.json shared/package-lock.json* ./shared/
+COPY contracts/package.json contracts/package-lock.json* ./contracts/
+COPY services/api/package.json services/api/package-lock.json* ./services/api/
+RUN npm ci
+
+COPY shared ./shared
+COPY contracts ./contracts
+COPY services/api ./services/api
+COPY tsconfig.base.json ./tsconfig.base.json
+RUN npm run build -w @pact/shared
+RUN npm run build -w @pact/api
+RUN npm prune --omit=dev
+
+FROM node:24-bookworm-slim AS runtime
+
+ENV NODE_ENV=production
+ENV PACT_ARENA_POLL_INTERVAL_MS=30000
+WORKDIR /app
+
+COPY --from=build /app/package*.json ./
+COPY --from=build /app/shared/package.json ./shared/package.json
+COPY --from=build /app/contracts/package.json ./contracts/package.json
+COPY --from=build /app/services/api/package.json ./services/api/package.json
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/services/api/node_modules ./services/api/node_modules
+COPY --from=build /app/shared/dist ./shared/dist
+COPY --from=build /app/services/api/dist ./services/api/dist
+
+# This image is a persistent outbound worker, not an HTTP service. Deploy it
+# as a Cloud Run Worker Pool; no PORT or inbound route is required.
+CMD ["node", "services/api/dist/scripts/arena-agent.js"]

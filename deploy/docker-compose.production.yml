@@ -45,6 +45,20 @@ services:
       - runner
     restart: unless-stopped
 
+  arena-agent:
+    build:
+      context: ..
+      dockerfile: Dockerfile.agent
+    env_file:
+      - ${PACT_ENV_FILE:-.env.production}
+    environment:
+      NODE_ENV: production
+      PACT_API_URL: http://api:4100
+      PACT_ARENA_POLL_INTERVAL_MS: ${PACT_ARENA_POLL_INTERVAL_MS:-30000}
+    depends_on:
+      - api
+    restart: unless-stopped
+
 networks:
   runner:
     driver: bridge

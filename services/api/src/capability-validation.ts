@@ -78,14 +78,11 @@ export function validateCapabilityManifest(input: unknown): AgentCapabilityManif
     const gatewayUrl = runtimeCandidate.gatewayUrl;
     assert(gatewayUrl === null || gatewayUrl === undefined || (typeof gatewayUrl === 'string' && gatewayUrl.length <= 2048 && /^https?:\/\//i.test(gatewayUrl)),
       400, 'INVALID_RUNTIME_BINDING', 'runtime.gatewayUrl must be an http(s) URL or null');
-    assert(runtimeCandidate.paymentRail === 'PACT_ESCROW' || runtimeCandidate.paymentRail === 'X402_METERED',
-      400, 'INVALID_RUNTIME_BINDING', 'runtime.paymentRail is not recognized');
     assert(typeof runtimeCandidate.sandboxRequired === 'boolean',
       400, 'INVALID_RUNTIME_BINDING', 'runtime.sandboxRequired must be boolean');
     runtime = {
       kind: runtimeCandidate.kind,
       gatewayUrl: gatewayUrl === undefined ? null : gatewayUrl as string | null,
-      paymentRail: runtimeCandidate.paymentRail,
       sandboxRequired: runtimeCandidate.sandboxRequired
     };
   }

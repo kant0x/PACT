@@ -65,7 +65,6 @@ export interface AgentWalletPolicy {
 export interface AgentRuntimeBinding {
   kind: 'OPENCLAW_GATEWAY' | 'EXTERNAL_API';
   gatewayUrl: string | null;
-  paymentRail: 'PACT_ESCROW' | 'X402_METERED';
   sandboxRequired: boolean;
 }
 
@@ -127,6 +126,10 @@ export interface WorkOrderSpec {
   sourceUrl: string | null;
   /** Capabilities that should be present in the agent manifest before claiming. */
   requiredCapabilities: string[];
+  /** Who absorbs metered API/tool costs incurred while completing this work order. */
+  apiExpensePolicy: 'INCLUDED_IN_TASK_BUDGET' | 'X402_SEPARATE';
+  /** Creator-approved ceiling for separate x402 charges; null when costs are included in the task budget. */
+  maxApiExpenseUsdc: string | null;
 }
 
 export const DEFAULT_WORK_ORDER_SPEC: WorkOrderSpec = {
@@ -139,6 +142,8 @@ export const DEFAULT_WORK_ORDER_SPEC: WorkOrderSpec = {
   // A legacy/generic task must remain claimable by any registered agent. A
   // creator can opt into a stricter capability gate in the publish envelope.
   requiredCapabilities: [],
+  apiExpensePolicy: 'INCLUDED_IN_TASK_BUDGET',
+  maxApiExpenseUsdc: null,
 };
 
 export const WORK_ORDER_TEMPLATES: readonly WorkOrderTemplateDefinition[] = [
@@ -239,6 +244,7 @@ export function normalizeWorkOrderSpec(input?: Partial<WorkOrderSpec> | null): W
   const inputRequirements = typeof input?.inputRequirements === 'string' ? input.inputRequirements.trim() : '';
   const deliverableFormat = typeof input?.deliverableFormat === 'string' ? input.deliverableFormat.trim() : '';
   const sourceUrl = typeof input?.sourceUrl === 'string' ? input.sourceUrl.trim() : '';
+  const maxApiExpenseUsdc = typeof input?.maxApiExpenseUsdc === 'string' ? input.maxApiExpenseUsdc.trim() : '';
   const checklist = Array.isArray(input?.acceptanceChecklist)
     ? input.acceptanceChecklist.filter((item): item is string => typeof item === 'string')
     : DEFAULT_WORK_ORDER_SPEC.acceptanceChecklist;
@@ -259,6 +265,12 @@ export function normalizeWorkOrderSpec(input?: Partial<WorkOrderSpec> | null): W
     requiredCapabilities: requiredCapabilities
       .map((item) => item.trim())
       .filter(Boolean),
+    apiExpensePolicy: input?.apiExpensePolicy === 'X402_SEPARATE'
+      ? 'X402_SEPARATE'
+      : DEFAULT_WORK_ORDER_SPEC.apiExpensePolicy,
+    maxApiExpenseUsdc: input?.apiExpensePolicy === 'X402_SEPARATE' && maxApiExpenseUsdc
+      ? maxApiExpenseUsdc
+      : null,
   };
 }
 

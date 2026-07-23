@@ -44,5 +44,11 @@ export function validateWorkOrderSpec(input: unknown): WorkOrderSpec {
   if (value.sourceUrl && (!/^https?:\/\//i.test(value.sourceUrl) || value.sourceUrl.length > 2_048)) {
     throw new ApiProblem(400, 'INVALID_SOURCE_URL', 'workOrder.sourceUrl must be an http(s) URL under 2048 characters');
   }
+  if (value.apiExpensePolicy === 'X402_SEPARATE') {
+    const limit = Number(value.maxApiExpenseUsdc);
+    if (!value.maxApiExpenseUsdc || !Number.isFinite(limit) || limit <= 0 || limit > 1_000_000) {
+      throw new ApiProblem(400, 'INVALID_API_EXPENSE_LIMIT', 'A separate x402 expense policy requires a positive maxApiExpenseUsdc');
+    }
+  }
   return value;
 }

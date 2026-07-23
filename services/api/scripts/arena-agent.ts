@@ -5,11 +5,20 @@
  * wallet-bound profile, opens one daily challenge, and submits a typed,
  * evidence-bound result. It never receives the private answer key.
  */
+import { privateKeyToAccount } from 'viem/accounts';
 
 const API_URL = (process.env.PACT_API_URL ?? 'http://localhost:4100').replace(/\/$/, '');
-const AGENT_ADDRESS = process.env.PACT_ARENA_AGENT_ADDRESS ?? '0xB100000000000000000000000000000000000011';
+const AGENT_PRIVATE_KEY = process.env.PACT_ARENA_AGENT_PRIVATE_KEY?.trim();
+const AGENT_ACCOUNT = AGENT_PRIVATE_KEY
+  ? privateKeyToAccount((AGENT_PRIVATE_KEY.startsWith('0x') ? AGENT_PRIVATE_KEY : `0x${AGENT_PRIVATE_KEY}`) as `0x${string}`)
+  : null;
+const AGENT_ADDRESS = AGENT_ACCOUNT?.address
+  ?? process.env.PACT_ARENA_AGENT_ADDRESS
+  ?? '0xB100000000000000000000000000000000000011';
 const AGENT_NAME = process.env.PACT_ARENA_AGENT_NAME ?? 'PACT Research Smoke Agent';
 const TEMPLATE_ID = process.env.PACT_ARENA_TEMPLATE_ID;
+const RUN_ONCE = process.env.PACT_ARENA_RUN_ONCE === 'true' || process.argv.includes('--once');
+const POLL_INTERVAL_MS = Math.max(5_000, Number(process.env.PACT_ARENA_POLL_INTERVAL_MS ?? 30_000));
 
 type Json = Record<string, any>;
 type Challenge = {
@@ -33,9 +42,17 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
 
 const register = async () => {
   try {
+    const signature = AGENT_ACCOUNT
+      ? await AGENT_ACCOUNT.signMessage({
+          message: [
+            `Registering on PACT as ${AGENT_NAME.trim()}`,
+            'manifest=null',
+          ].join('\n')
+        })
+      : undefined;
     await request('/api/agents', {
       method: 'POST',
-      body: JSON.stringify({ agentAddress: AGENT_ADDRESS, displayName: AGENT_NAME })
+      body: JSON.stringify({ agentAddress: AGENT_ADDRESS, displayName: AGENT_NAME, signature })
     });
     console.log(`Registered ${AGENT_NAME} (${AGENT_ADDRESS})`);
   } catch (error) {
@@ -115,31 +132,74 @@ const runToolWorkflow = async (challenge: Challenge) => {
   };
 };
 
-await register();
-const templates = await request<Array<{ id: string; title: string; availableToday: boolean }>>(
-  `/api/arena/templates?agentAddress=${encodeURIComponent(AGENT_ADDRESS)}`
-);
-const template = templates.find((candidate) => candidate.id === TEMPLATE_ID && candidate.availableToday)
-  ?? templates.find((candidate) => candidate.availableToday);
-if (!template) throw new Error('No platform challenge is available today for this agent.');
+const arenaAttemptMessage = (templateId: string, dayKey = new Date().toISOString().slice(0, 10)) => [
+  'PACT: start Training Ground attempt',
+  `template=${templateId}`,
+  `agent=${AGENT_ADDRESS.toLowerCase()}`,
+  `day=${dayKey}`,
+].join('\n');
 
-const challenge = await request<Challenge>(`/api/arena/templates/${encodeURIComponent(template.id)}/start`, {
-  method: 'POST',
-  body: JSON.stringify({ agentAddress: AGENT_ADDRESS })
-});
-const submission = challenge.kind === 'GROUNDED_QA'
-  ? runGrounded(challenge)
-  : challenge.kind === 'CODE_REPAIR'
-    ? runCode(challenge)
-    : await runToolWorkflow(challenge);
-const result = await request<Json>(`/api/arena/attempts/${encodeURIComponent(challenge.attemptId)}/submit`, {
-  method: 'POST',
-  body: JSON.stringify({
-    attemptToken: challenge.attemptToken,
-    agentAddress: AGENT_ADDRESS,
-    submission,
-    consentToTraining: true
-  })
-});
+const runAvailableChallenge = async () => {
+  const templates = await request<Array<{
+    id: string;
+    title: string;
+    availableToday: boolean;
+    inProgressToday?: boolean;
+  }>>(`/api/arena/templates?agentAddress=${encodeURIComponent(AGENT_ADDRESS)}`);
+  const template = templates.find((candidate) =>
+    candidate.id === TEMPLATE_ID && (candidate.availableToday || candidate.inProgressToday))
+    ?? templates.find((candidate) => candidate.inProgressToday)
+    ?? templates.find((candidate) => candidate.availableToday);
+  if (!template) {
+    console.log(`[arena-worker] ${new Date().toISOString()} no pending platform task`);
+    return false;
+  }
 
-console.log(JSON.stringify({ agent: AGENT_NAME, template: template.title, kind: challenge.kind, result }, null, 2));
+  const signature = AGENT_ACCOUNT
+    ? await AGENT_ACCOUNT.signMessage({ message: arenaAttemptMessage(template.id) })
+    : undefined;
+  const challenge = await request<Challenge>(`/api/arena/templates/${encodeURIComponent(template.id)}/start`, {
+    method: 'POST',
+    body: JSON.stringify({ agentAddress: AGENT_ADDRESS, signature })
+  });
+  const submission = challenge.kind === 'GROUNDED_QA'
+    ? runGrounded(challenge)
+    : challenge.kind === 'CODE_REPAIR'
+      ? runCode(challenge)
+      : await runToolWorkflow(challenge);
+  const result = await request<Json>(`/api/arena/attempts/${encodeURIComponent(challenge.attemptId)}/submit`, {
+    method: 'POST',
+    body: JSON.stringify({
+      attemptToken: challenge.attemptToken,
+      agentAddress: AGENT_ADDRESS,
+      submission,
+      consentToTraining: true
+    })
+  });
+
+  console.log(JSON.stringify({
+    event: 'platform_task_completed',
+    agent: AGENT_NAME,
+    template: template.title,
+    kind: challenge.kind,
+    result,
+  }, null, 2));
+  return true;
+};
+
+const wait = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+console.log(`[arena-worker] polling ${API_URL} every ${POLL_INTERVAL_MS}ms as ${AGENT_NAME} (${AGENT_ADDRESS})`);
+let registered = false;
+do {
+  try {
+    if (!registered) {
+      await register();
+      registered = true;
+    }
+    await runAvailableChallenge();
+  } catch (error) {
+    console.error('[arena-worker] cycle failed:', error instanceof Error ? error.message : error);
+  }
+  if (!RUN_ONCE) await wait(POLL_INTERVAL_MS);
+} while (!RUN_ONCE);
