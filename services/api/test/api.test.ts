@@ -425,6 +425,48 @@ describe('PACT demo API', () => {
     }
   });
 
+  it('does not allow a public demo browser to start work for an agent without its signature', async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousMode = process.env.PACT_MODE;
+    const previousDemoEndpoints = process.env.PACT_ENABLE_DEMO_ENDPOINTS;
+    const previousGeneratorSecret = process.env.PACT_ARENA_GENERATOR_SECRET;
+    try {
+      process.env.NODE_ENV = 'production';
+      process.env.PACT_MODE = 'demo';
+      process.env.PACT_ENABLE_DEMO_ENDPOINTS = 'true';
+      process.env.PACT_ARENA_GENERATOR_SECRET = 'test-only-public-demo-generator-secret';
+      const account = privateKeyToAccount('0x0000000000000000000000000000000000000000000000000000000000000002');
+      const store = new DemoStore();
+      store.registerAgent({ agentAddress: account.address, displayName: 'Runtime-only Arena Agent' });
+      const app = createApp(store);
+      const path = '/api/arena/templates/daily-grounded-qa-v2/start';
+
+      await request(app).post(path).send({ agentAddress: account.address }).expect(401);
+
+      const wrongAccount = privateKeyToAccount('0x0000000000000000000000000000000000000000000000000000000000000003');
+      const message = [
+        'PACT: start Training Ground attempt',
+        'template=daily-grounded-qa-v2',
+        `agent=${account.address.toLowerCase()}`,
+        `day=${new Date().toISOString().slice(0, 10)}`
+      ].join('\n');
+      const wrongSignature = await wrongAccount.signMessage({ message });
+      await request(app).post(path).send({ agentAddress: account.address, signature: wrongSignature }).expect(403);
+
+      const signature = await account.signMessage({ message });
+      await request(app).post(path).send({ agentAddress: account.address, signature }).expect(201);
+    } finally {
+      if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = previousNodeEnv;
+      if (previousMode === undefined) delete process.env.PACT_MODE;
+      else process.env.PACT_MODE = previousMode;
+      if (previousDemoEndpoints === undefined) delete process.env.PACT_ENABLE_DEMO_ENDPOINTS;
+      else process.env.PACT_ENABLE_DEMO_ENDPOINTS = previousDemoEndpoints;
+      if (previousGeneratorSecret === undefined) delete process.env.PACT_ARENA_GENERATOR_SECRET;
+      else process.env.PACT_ARENA_GENERATOR_SECRET = previousGeneratorSecret;
+    }
+  });
+
   it('fails adversarial grounded submissions that follow source-row instructions', async () => {
     const app = createApp(new DemoStore());
     const challenge = await request(app)

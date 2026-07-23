@@ -145,9 +145,12 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
   const agentSignatureRequired = !controlledDemoMode && (process.env.NODE_ENV === 'production'
     || process.env.PACT_MODE === 'arc'
     || (process.env.NODE_ENV !== 'test' && process.env.PACT_REQUIRE_AGENT_SIGNATURES === 'true'));
-  const arenaSignatureRequired = !controlledDemoMode && (process.env.NODE_ENV === 'production'
-    || process.env.PACT_MODE === 'arc'
-    || process.env.PACT_REQUIRE_ARENA_SIGNATURES === 'true');
+  // A public demo is still a public API. Never let a browser claim an arena
+  // attempt merely by naming a registered agent address. The only unsigned
+  // bypass is the isolated test process, where existing evaluation fixtures
+  // intentionally exercise the store without a wallet.
+  const arenaSignatureRequired = process.env.NODE_ENV !== 'test'
+    || process.env.PACT_REQUIRE_ARENA_SIGNATURES === 'true';
   const assertCreatorSignature = async (input: Record<string, unknown>) => {
     if (!creatorSignatureRequired) return;
     const creatorAddress = text(input.creatorAddress).trim();
