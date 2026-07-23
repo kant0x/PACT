@@ -5,7 +5,6 @@ COPY package*.json ./
 COPY shared/package.json shared/package-lock.json* ./shared/
 COPY contracts/package.json contracts/package-lock.json* ./contracts/
 COPY services/api/package.json services/api/package-lock.json* ./services/api/
-COPY frontend/package.json frontend/package-lock.json* ./frontend/
 RUN npm ci
 
 COPY shared ./shared

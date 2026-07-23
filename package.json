@@ -6,19 +6,17 @@
   "workspaces": [
     "shared",
     "contracts",
-    "services/api",
-    "frontend"
+    "services/api"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "dev": "concurrently -n api,web -c yellow,cyan \"npm run dev -w @pact/api\" \"npm run dev -w @pact/frontend\"",
+    "dev": "npm run dev -w @pact/api",
     "start": "npm run start -w @pact/api",
     "demo:seed": "npm run demo:seed -w @pact/api",
     "demo:run": "npm run demo:run -w @pact/api",
     "contracts:compile": "npm run build -w @pact/contracts",
-    "check:locales": "node scripts/check-locales.mjs",
-    "check": "npm run check:locales && npm run build && npm test"
+    "check": "npm run build && npm test"
   },
   "engines": {
     "node": ">=22"

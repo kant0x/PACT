@@ -1,5 +1,8 @@
 node_modules/
 .planning/
+frontend/
+Dockerfile.web
+deploy/web-entrypoint.sh
 dist/
 artifacts/
 coverage/

@@ -18,21 +18,5 @@ services:
       - pact-data:/app/data
     restart: unless-stopped
 
-  web:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile.web
-      args:
-        VITE_API_URL: /
-        VITE_API_TOKEN: ${VITE_API_TOKEN:-}
-        VITE_PACT_MODE: demo
-        VITE_AUTO_SEED_DEMO: "true"
-    depends_on:
-      api:
-        condition: service_healthy
-    ports:
-      - "${WEB_PORT:-80}:80"
-    restart: unless-stopped
-
 volumes:
   pact-data:
