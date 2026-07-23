@@ -11,6 +11,7 @@ COPY shared ./shared
 COPY contracts ./contracts
 COPY services/api ./services/api
 COPY tsconfig.base.json ./tsconfig.base.json
+RUN npm run build -w @pact/shared
 RUN npm run build -w @pact/api
 RUN npm prune --omit=dev
 

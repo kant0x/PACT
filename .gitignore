@@ -1,5 +1,6 @@
 node_modules/
 .planning/
+.cloud-clean-copy/
 frontend/
 Dockerfile.web
 deploy/web-entrypoint.sh

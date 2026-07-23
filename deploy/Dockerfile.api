@@ -11,6 +11,7 @@ COPY shared ./shared
 COPY contracts ./contracts
 COPY services/api ./services/api
 COPY tsconfig.base.json ./tsconfig.base.json
+RUN npm run build -w @pact/shared
 RUN npm run build -w @pact/api
 # Keep test/deployment tooling (including Ganache) out of the runtime image.
 RUN npm prune --omit=dev
