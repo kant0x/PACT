@@ -11,6 +11,11 @@ export interface AgentRecord {
   platformPoints: number;
   lastUpdated: number;
   capabilityManifest: AgentCapabilityManifest;
+  walletProvider: 'CIRCLE' | 'EXTERNAL';
+  walletAccountType: 'SCA' | 'EOA';
+  controllerAddress: string;
+  circleWalletId: string | null;
+  circleWalletSetId: string | null;
 }
 
 export class AgentRepository {
@@ -18,8 +23,9 @@ export class AgentRepository {
     await query(`
       INSERT INTO agents (
         agent_address, display_name, score, completed_tasks, failed_tasks,
-        total_volume_streamed, platform_points, last_updated, capability_manifest
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        total_volume_streamed, platform_points, last_updated, capability_manifest,
+        wallet_provider, wallet_account_type, controller_address, circle_wallet_id, circle_wallet_set_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
     `, [
       agent.agentAddress,
       agent.displayName,
@@ -29,7 +35,12 @@ export class AgentRepository {
       agent.totalVolumeStreamed,
       agent.platformPoints,
       agent.lastUpdated,
-      JSON.stringify(agent.capabilityManifest)
+      JSON.stringify(agent.capabilityManifest),
+      agent.walletProvider,
+      agent.walletAccountType,
+      agent.controllerAddress,
+      agent.circleWalletId,
+      agent.circleWalletSetId
     ]);
   }
 
@@ -46,7 +57,12 @@ export class AgentRepository {
       totalVolumeStreamed: row.total_volume_streamed.toString(),
       platformPoints: parseInt(row.platform_points, 10),
       lastUpdated: parseInt(row.last_updated, 10),
-      capabilityManifest: typeof row.capability_manifest === 'string' ? JSON.parse(row.capability_manifest) : row.capability_manifest
+      capabilityManifest: typeof row.capability_manifest === 'string' ? JSON.parse(row.capability_manifest) : row.capability_manifest,
+      walletProvider: row.wallet_provider ?? 'EXTERNAL',
+      walletAccountType: row.wallet_account_type ?? 'EOA',
+      controllerAddress: row.controller_address ?? row.agent_address,
+      circleWalletId: row.circle_wallet_id ?? null,
+      circleWalletSetId: row.circle_wallet_set_id ?? null
     };
   }
 
@@ -61,7 +77,12 @@ export class AgentRepository {
       totalVolumeStreamed: row.total_volume_streamed.toString(),
       platformPoints: parseInt(row.platform_points, 10),
       lastUpdated: parseInt(row.last_updated, 10),
-      capabilityManifest: typeof row.capability_manifest === 'string' ? JSON.parse(row.capability_manifest) : row.capability_manifest
+      capabilityManifest: typeof row.capability_manifest === 'string' ? JSON.parse(row.capability_manifest) : row.capability_manifest,
+      walletProvider: row.wallet_provider ?? 'EXTERNAL',
+      walletAccountType: row.wallet_account_type ?? 'EOA',
+      controllerAddress: row.controller_address ?? row.agent_address,
+      circleWalletId: row.circle_wallet_id ?? null,
+      circleWalletSetId: row.circle_wallet_set_id ?? null
     }));
   }
 
@@ -71,6 +92,18 @@ export class AgentRepository {
       SET platform_points = platform_points + $1
       WHERE agent_address = $2
     `, [points, address]);
+  }
+
+  async recordCommercialOutcome(address: string, success: boolean, volumeStreamed: string): Promise<void> {
+    await query(`
+      UPDATE agents
+      SET completed_tasks = completed_tasks + CASE WHEN $1 THEN 1 ELSE 0 END,
+          failed_tasks = failed_tasks + CASE WHEN $1 THEN 0 ELSE 1 END,
+          total_volume_streamed = total_volume_streamed + $2::numeric,
+          score = CASE WHEN $1 THEN LEAST(1000, score + 5) ELSE GREATEST(0, score - 25) END,
+          last_updated = $3
+      WHERE agent_address = $4
+    `, [success, volumeStreamed, Math.floor(Date.now() / 1000), address.toLowerCase()]);
   }
 
   async updateCapabilities(address: string, manifest: AgentCapabilityManifest): Promise<AgentRecord | null> {

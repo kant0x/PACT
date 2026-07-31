@@ -96,7 +96,7 @@ export class OpenAIAgentProvider implements AgentModelProvider {
   private readonly client: OpenAI;
   private readonly model: string;
 
-  constructor(apiKey: string, model = process.env.AGENT_MODEL ?? 'gpt-5.6-terra') {
+  constructor(apiKey: string, model = process.env.AGENT_MODEL ?? 'gpt-4o-mini') {
     this.client = new OpenAI({ apiKey, timeout: 25000, maxRetries: 2 });
     this.model = model;
     this.id = `openai:${model}`;
@@ -389,6 +389,12 @@ export class AgentRuntime {
 
     const task = await taskRepository.findById(taskId);
     if (!task) throw new ApiProblem(404, 'TASK_NOT_FOUND', 'Task not found');
+    if (!task.agentAddress || task.agentAddress.toLowerCase() !== agentAddress.toLowerCase()) {
+      throw new ApiProblem(403, 'AGENT_RUN_ASSIGNMENT_MISMATCH', 'Only the agent assigned to this work order can run it');
+    }
+    if (task.status !== 'STREAMING') {
+      throw new ApiProblem(409, 'AGENT_RUN_TASK_NOT_ACTIVE', 'The Arc payment stream must be active before the agent runtime can execute this work order');
+    }
 
     // Find an existing run or create one
     let runs = await agentRunRepository.findByTaskId(taskId);

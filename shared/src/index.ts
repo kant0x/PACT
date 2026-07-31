@@ -1,5 +1,5 @@
 export type PayoutSpeed = 'SLOW' | 'MEDIUM' | 'FAST';
-export type TaskStatus = 'OPEN' | 'ASSIGNED' | 'STREAMING' | 'PAUSED' | 'COMPLETED' | 'DISPUTED' | 'SLASHED';
+export type TaskStatus = 'OPEN' | 'ASSIGNED' | 'STREAMING' | 'PAUSED' | 'COMPLETED' | 'DISPUTED' | 'SLASHED' | 'CANCELLED';
 export type DisputeVerdict = 'NO_FAULT' | 'PARTIAL_FAULT' | 'FULL_FAULT';
 
 /** Internal stream-rate default when a creator leaves the delivery window blank. */
@@ -41,6 +41,13 @@ export interface AgentReputationScore {
   totalVolumeStreamed: string;
   platformPoints: number;
   lastUpdated: number;
+}
+
+export interface AgentWalletSummary {
+  provider: 'CIRCLE' | 'EXTERNAL';
+  accountType: 'SCA' | 'EOA';
+  /** Human wallet that authenticated creation and controls platform policy. */
+  controllerAddress: string;
 }
 
 export type CapabilityVerification = 'SELF_DECLARED' | 'DEMO_VERIFIED' | 'EXTERNAL_ATTESTATION';
@@ -431,6 +438,7 @@ export interface StreamTerms {
 export interface ReputationSnapshot extends AgentReputationScore {
   terms: StreamTerms;
   capabilityManifest: AgentCapabilityManifest;
+  wallet?: AgentWalletSummary;
   previousTerms?: StreamTerms;
 }
 
@@ -447,6 +455,18 @@ export interface MarketplaceTask {
   id: string;
   templateId: string | null;
   chainTaskId: string | null;
+  /** Arc transaction that funded this work order in StreamingVault. */
+  fundingTransactionHash?: string | null;
+  /** Operator transaction that assigned the claiming agent on-chain. */
+  assignmentTransactionHash?: string | null;
+  /** Agent transaction that locked the required collateral. */
+  collateralTransactionHash?: string | null;
+  /** Operator transaction that activated the payment stream. */
+  streamStartTransactionHash?: string | null;
+  /** Creator transaction that accepted and completed the work. */
+  completionTransactionHash?: string | null;
+  /** Final completion or dispute-settlement transaction. */
+  settlementTransactionHash?: string | null;
   title: string;
   description: string;
   successCriteria: string;
@@ -493,6 +513,12 @@ export interface ArenaTemplate {
   ownerType: 'PLATFORM';
   ownerName: string;
   variantCount: number;
+  /** Maximum number of agent attempts accepted by this platform task. */
+  completionLimit: number;
+  /** Submitted attempts across all agents. */
+  completedRuns: number;
+  /** Capacity still available to other agents. */
+  remainingRuns: number;
   expectedMinutes: number;
   isActive: boolean;
   availableToday: boolean;
@@ -640,6 +666,23 @@ export interface ArenaLeaderboardEntry {
   trackScores: Record<ArenaChallengeKind, number | null>;
 }
 
+export type AgentAutomationStatus = 'QUEUED' | 'TRAINING' | 'WAITING_NEXT_TASK' | 'WAITING_DAILY_RESET' | 'ERROR' | 'DISABLED';
+
+export interface AgentAutomationSnapshot {
+  agentAddress: string;
+  enabled: boolean;
+  status: AgentAutomationStatus;
+  currentTemplateId: string | null;
+  currentTaskTitle: string | null;
+  completedToday: number;
+  totalDailyTasks: number;
+  lastRunAt: number | null;
+  nextRunAt: number | null;
+  lastScore: number | null;
+  lastPointsAwarded: number | null;
+  lastError: string | null;
+}
+
 export interface Dispute {
   id: string;
   taskId: string;
@@ -669,6 +712,7 @@ export interface DashboardSnapshot {
     completedTasks: number;
     protectedValue: string;
   };
+  agentAutomation?: Record<string, AgentAutomationSnapshot>;
   mode: 'demo' | 'arc';
 }
 

@@ -43,5 +43,5 @@ npm run arena:judge:eval -w @pact/api
 
 Promotion gates: mean absolute score error `<= 8`, score-band accuracy `>= 90%`,
 all API deterministic tests passing, and manual review of sampled disagreements.
-The current teacher recommendation is `gpt-5.6-terra`; teacher labels remain
+The current teacher recommendation is `gpt-4o-mini`; teacher labels remain
 candidates until a human reviewer approves them.

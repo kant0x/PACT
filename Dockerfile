@@ -5,6 +5,8 @@ COPY package*.json ./
 COPY shared/package.json shared/package-lock.json* ./shared/
 COPY contracts/package.json contracts/package-lock.json* ./contracts/
 COPY services/api/package.json services/api/package-lock.json* ./services/api/
+COPY services/indexer/package.json ./services/indexer/
+COPY frontend/package.json ./frontend/
 RUN npm ci
 
 COPY shared ./shared
@@ -13,29 +15,24 @@ COPY services/api ./services/api
 COPY tsconfig.base.json ./tsconfig.base.json
 RUN npm run build -w @pact/shared
 RUN npm run build -w @pact/api
-RUN npm prune --omit=dev
 
 FROM node:24-bookworm-slim AS runtime
 
-ENV NODE_ENV=demo
-ENV PACT_MODE=demo
-ENV PACT_ENABLE_DEMO_ENDPOINTS=true
-ENV PACT_ALLOW_DETERMINISTIC_PROVIDERS=true
-ENV PACT_ALLOW_UNSIGNED_TASKS=true
-ENV PACT_CORS_ORIGINS=*
-ENV ARENA_JUDGE_PROVIDER=deterministic
-ENV ARBITRATOR_PROVIDER=deterministic
+ENV NODE_ENV=production
+ENV PACT_MODE=arc
+ENV PACT_ENABLE_DEMO_ENDPOINTS=false
 WORKDIR /app
 RUN apt-get update \
   && apt-get install -y --no-install-recommends docker.io ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-COPY --from=build /app/package*.json ./
-COPY --from=build /app/shared/package.json ./shared/package.json
-COPY --from=build /app/contracts/package.json ./contracts/package.json
-COPY --from=build /app/services/api/package.json ./services/api/package.json
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/services/api/node_modules ./services/api/node_modules
+COPY package*.json ./
+COPY shared/package.json ./shared/
+COPY contracts/package.json ./contracts/
+COPY services/api/package.json ./services/api/
+COPY services/indexer/package.json ./services/indexer/
+COPY frontend/package.json ./frontend/
+RUN npm ci --omit=dev --workspace @pact/shared --workspace @pact/api --include-workspace-root=false
 COPY --from=build /app/shared/dist ./shared/dist
 COPY --from=build /app/services/api/dist ./services/api/dist
 

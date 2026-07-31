@@ -20,8 +20,8 @@ external module address is explicitly supplied), then `ReputationRegistry` and
 It authorizes the vault as a registry writer and writes the resulting addresses
 and transaction hashes to `deployments.json`.
 
-The repository includes an ignored `contracts/.env` template. Fill it on the
-deployment machine only (never commit real secrets):
+Create the ignored `env.txt` file in the repository root (`E:\py_scrypt\PACT\env.txt`).
+Fill it only on the deployment machine and never commit or paste its secrets:
 
 ```bash
 ARC_RPC_URL=https://rpc.testnet.arc.network
@@ -32,8 +32,9 @@ ARC_USDC_ADDRESS=0x3600000000000000000000000000000000000000
 # deploys PACT's controlled testnet DisputeModule automatically.
 DISPUTE_MODULE_ADDRESS=
 COLLATERAL_TIMEOUT_SECONDS=86400
-# Optional: an operator wallet allowed to call vault operator-only paths.
-AUTHORIZED_OPERATOR_ADDRESS=0x...
+# Optional owner that can apply finalized DisputeModule verdicts. This address
+# cannot claim work or control the normal StreamingVault lifecycle.
+DISPUTE_ADMIN_ADDRESS=0x...
 # Optional: separate awarder for the non-transferable Training Ground points.
 PLATFORM_POINTS_AWARDER_ADDRESS=0x...
 ```
@@ -44,14 +45,16 @@ Then run:
 npm run deploy:testnet -w @pact/contracts
 ```
 
-The script loads `contracts/.env` automatically. To use another file, set
+The script loads the root `env.txt` automatically and keeps `contracts/.env` as
+a backwards-compatible fallback. To use another file, set
 `PACT_ENV_FILE=/absolute/path/to/file` before running the command.
 
 The script stops before deployment when the chain ID, required addresses or
-USDC contract code do not match. The PACT-controlled module is an operator relay:
-the off-chain Judge decides the verdict, while this contract applies the final
-slash policy once and rejects replayed decision receipts. For real funds, use a
-separately controlled operator or multisig instead of the deployer wallet.
+USDC contract code do not match. Clients fund and approve settlement with their
+own wallets; agents claim, post collateral and withdraw with their own wallets.
+The PACT-controlled dispute module is separate: the off-chain Judge decides the
+verdict, while its admin applies the final slash policy once and cannot control
+normal task lifecycle calls. For real funds, move this role to a multisig.
 After deployment, copy the recorded `ReputationRegistry` and
 `StreamingVault` addresses into the API's Arc environment and verify the
 transaction receipts before enabling real-money routes.

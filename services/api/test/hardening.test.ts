@@ -1,18 +1,33 @@
-import { rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import request from 'supertest';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { DEFAULT_TASK_DURATION_SECONDS, DEMO_ADDRESSES } from '@pact/shared';
 import { createApp } from '../src/app.js';
-import { SqliteStatePersistence } from '../src/persistence.js';
-import { DemoStore, type PersistedDemoState } from '../src/store.js';
+import { DemoStore } from '../src/store.js';
 import { buildSpendingPolicyArgs } from '../src/integrations/circle.js';
+import type { ArcSettlementGateway } from '../src/arc-settlement.js';
 
-const tempFiles: string[] = [];
-afterEach(() => {
-  for (const file of tempFiles.splice(0)) rmSync(file, { force: true });
-});
+const readyArcSettlement: ArcSettlementGateway = {
+  verifyOpenTaskFunding: async () => ({
+    chainTaskId: '1',
+    transactionHash: `0x${'1'.repeat(64)}`,
+    blockNumber: '1',
+  }),
+  verifyAgentClaimed: async () => `0x${'2'.repeat(64)}`,
+  verifyCollateralPosted: async () => `0x${'3'.repeat(64)}`,
+  verifyTaskCompleted: async () => `0x${'4'.repeat(64)}`,
+  verifyTaskCancelled: async () => `0x${'8'.repeat(64)}`,
+  verifyTaskPaused: async () => `0x${'5'.repeat(64)}`,
+  settleDispute: async () => `0x${'7'.repeat(64)}`,
+  readiness: async () => ({
+    chainId: 5_042_002,
+    vaultAddress: '0xE71D1BAE0732153b70b17144d1b858DB70856572',
+    settlementSignerAddress: '0x36392ba753d76c285C32211Ed086eb1b54F83422',
+    disputeModuleAddress: '0x1111111111111111111111111111111111111111',
+    disputeModuleOwned: true,
+    disputeModuleConfigured: true,
+    disputeModulePaused: false,
+  }),
+};
 
 describe('production hardening', () => {
   it('allows a work order without a creator-specified delivery window', () => {
@@ -77,23 +92,79 @@ describe('production hardening', () => {
     }).expect(400);
   });
 
-  it('persists tasks and reputation state in SQLite', () => {
-    const path = join(tmpdir(), `pact-${Date.now()}-${Math.random()}.sqlite`);
-    tempFiles.push(path, `${path}-shm`, `${path}-wal`);
-    const firstPersistence = new SqliteStatePersistence<PersistedDemoState>(path);
-    const first = new DemoStore(firstPersistence);
-    const task = first.createTask({
-      title: 'Persistent task',
-      creatorAddress: DEMO_ADDRESSES.creator,
-      totalAmount: '25',
-      estimatedDurationSeconds: 60
-    });
-    firstPersistence.close();
+  it('requires a production database configuration in Arc mode', () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousMode = process.env.PACT_MODE;
+    const previousDatabaseUrl = process.env.PACT_DATABASE_URL;
+    const previousOpenAiKey = process.env.OPENAI_API_KEY;
+    try {
+      process.env.NODE_ENV = 'production';
+      process.env.PACT_MODE = 'arc';
+      delete process.env.PACT_DATABASE_URL;
+      process.env.OPENAI_API_KEY = 'test-only-openai-key';
+      expect(() => createApp(new DemoStore(), {
+        authToken: 'correct-secret',
+        sessionSecret: 'test-session-secret-with-more-than-thirty-two-characters',
+        authAudience: 'pact-protocol.pages.dev'
+      })).toThrow(/DATABASE_URL/);
+    } finally {
+      if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = previousNodeEnv;
+      if (previousMode === undefined) delete process.env.PACT_MODE;
+      else process.env.PACT_MODE = previousMode;
+      if (previousDatabaseUrl === undefined) delete process.env.PACT_DATABASE_URL;
+      else process.env.PACT_DATABASE_URL = previousDatabaseUrl;
+      if (previousOpenAiKey === undefined) delete process.env.OPENAI_API_KEY;
+      else process.env.OPENAI_API_KEY = previousOpenAiKey;
+    }
+  });
 
-    const secondPersistence = new SqliteStatePersistence<PersistedDemoState>(path);
-    const second = new DemoStore(secondPersistence);
-    expect(second.getTask(task.id).title).toBe('Persistent task');
-    secondPersistence.close();
+  it('reports hardened readiness only when durable persistence is configured', async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousMode = process.env.PACT_MODE;
+    const previousDatabaseUrl = process.env.PACT_DATABASE_URL;
+    const previousOpenAiKey = process.env.OPENAI_API_KEY;
+    const previousCorsOrigins = process.env.PACT_CORS_ORIGINS;
+    try {
+      process.env.NODE_ENV = 'production';
+      process.env.PACT_MODE = 'arc';
+      process.env.PACT_DATABASE_URL = 'postgres://pact:pact@localhost:5432/pact_test';
+      process.env.OPENAI_API_KEY = 'test-only-openai-key';
+      process.env.PACT_CORS_ORIGINS = 'https://pact-protocol.pages.dev';
+      const app = createApp(new DemoStore(), {
+        authToken: 'correct-secret',
+        sessionSecret: 'test-session-secret-with-more-than-thirty-two-characters',
+        authAudience: 'pact-protocol.pages.dev',
+        arcSettlement: readyArcSettlement,
+      });
+      const response = await request(app).get('/api/health').expect(200);
+      expect(response.body).toMatchObject({
+        mode: 'arc',
+        persistence: 'postgres',
+        readiness: {
+          productionReady: true,
+          auth: 'required',
+          cors: 'allowlist',
+          data: 'durable'
+        },
+        boundaries: {
+          judge: 'verdict-only',
+          settlement: 'separate collateral policy',
+          reputation: 'updates after accepted work or finalized dispute'
+        }
+      });
+    } finally {
+      if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = previousNodeEnv;
+      if (previousMode === undefined) delete process.env.PACT_MODE;
+      else process.env.PACT_MODE = previousMode;
+      if (previousDatabaseUrl === undefined) delete process.env.PACT_DATABASE_URL;
+      else process.env.PACT_DATABASE_URL = previousDatabaseUrl;
+      if (previousOpenAiKey === undefined) delete process.env.OPENAI_API_KEY;
+      else process.env.OPENAI_API_KEY = previousOpenAiKey;
+      if (previousCorsOrigins === undefined) delete process.env.PACT_CORS_ORIGINS;
+      else process.env.PACT_CORS_ORIGINS = previousCorsOrigins;
+    }
   });
 
   it('protects mutations with a bearer token while keeping reads available', async () => {

@@ -11,6 +11,7 @@ import type {
 
 export const ARENA_GENERATOR_VERSION = 'pact-arena-generator-v2';
 export const ARENA_RUBRIC_VERSION = 'pact-arena-rubric-v2';
+export const ARENA_TEMPLATE_COMPLETION_LIMIT = 500;
 
 export interface ArenaTemplateRecord {
   id: string;
@@ -208,11 +209,16 @@ export const publicTemplate = (
   template: ArenaTemplateRecord,
   completedToday: boolean,
   inProgressToday = false,
-  timestampSeconds = Math.floor(Date.now() / 1000)
+  timestampSeconds = Math.floor(Date.now() / 1000),
+  completedRuns = 0,
+  completionLimit = ARENA_TEMPLATE_COMPLETION_LIMIT
 ): ArenaTemplate => ({
   ...template,
   evaluationMode: 'HYBRID',
-  availableToday: template.isActive && !completedToday && !inProgressToday,
+  completionLimit,
+  completedRuns,
+  remainingRuns: Math.max(0, completionLimit - completedRuns),
+  availableToday: template.isActive && completedRuns < completionLimit && !completedToday && !inProgressToday,
   completedToday,
   inProgressToday,
   nextAttemptAt: nextUtcDaySeconds(timestampSeconds)

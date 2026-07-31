@@ -4,10 +4,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const workspaceRoot = path.resolve(__dirname, '../..');
 
-// Load contracts/.env automatically for an operator-friendly deployment. Shell
-// variables still win, so CI/secret-manager values override the file.
-const envFile = process.env.PACT_ENV_FILE || path.join(__dirname, '../.env');
+// The local deployment file lives at the workspace root and is ignored by Git.
+// contracts/.env remains a backwards-compatible fallback. Shell/CI variables
+// still win over values loaded from either file.
+const envFile = process.env.PACT_ENV_FILE
+  || (fs.existsSync(path.join(workspaceRoot, 'env.txt'))
+    ? path.join(workspaceRoot, 'env.txt')
+    : path.join(__dirname, '../.env'));
 if (fs.existsSync(envFile) && typeof process.loadEnvFile === 'function') {
   process.loadEnvFile(envFile);
 }
@@ -16,12 +21,12 @@ if (fs.existsSync(envFile) && typeof process.loadEnvFile === 'function') {
 const ARC_RPC_URL = process.env.ARC_RPC_URL || 'https://rpc.testnet.arc.network';
 const EXPECTED_CHAIN_ID = BigInt(process.env.EXPECTED_CHAIN_ID || '5042002');
 const PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY || process.env.PRIVATE_KEY;
-const USDC_ADDRESS = process.env.ARC_USDC_ADDRESS;
+const USDC_ADDRESS = process.env.ARC_USDC_ADDRESS || '0x3600000000000000000000000000000000000000';
 const CONFIGURED_DISPUTE_MODULE_ADDRESS = process.env.DISPUTE_MODULE_ADDRESS?.trim() || null;
 const CONFIGURED_PLATFORM_POINTS_ADDRESS = process.env.PLATFORM_POINTS_ADDRESS?.trim() || null;
-const PLATFORM_POINTS_AWARDER_ADDRESS = process.env.PLATFORM_POINTS_AWARDER_ADDRESS?.trim() || process.env.AUTHORIZED_OPERATOR_ADDRESS?.trim() || null;
+const PLATFORM_POINTS_AWARDER_ADDRESS = process.env.PLATFORM_POINTS_AWARDER_ADDRESS?.trim() || null;
 const COLLATERAL_TIMEOUT_SECONDS = Number(process.env.COLLATERAL_TIMEOUT_SECONDS || 86_400);
-const AUTHORIZED_OPERATOR_ADDRESS = process.env.AUTHORIZED_OPERATOR_ADDRESS;
+const DISPUTE_ADMIN_ADDRESS = process.env.DISPUTE_ADMIN_ADDRESS?.trim() || null;
 
 const isAddress = (value) => typeof value === 'string' && /^0x[a-fA-F0-9]{40}$/.test(value);
 
@@ -41,8 +46,8 @@ async function main() {
   if (CONFIGURED_DISPUTE_MODULE_ADDRESS) {
     requiredAddress('DISPUTE_MODULE_ADDRESS', CONFIGURED_DISPUTE_MODULE_ADDRESS);
   }
-  if (AUTHORIZED_OPERATOR_ADDRESS) {
-    requiredAddress('AUTHORIZED_OPERATOR_ADDRESS', AUTHORIZED_OPERATOR_ADDRESS);
+  if (DISPUTE_ADMIN_ADDRESS) {
+    requiredAddress('DISPUTE_ADMIN_ADDRESS', DISPUTE_ADMIN_ADDRESS);
   }
   if (!Number.isSafeInteger(COLLATERAL_TIMEOUT_SECONDS) || COLLATERAL_TIMEOUT_SECONDS <= 0 || COLLATERAL_TIMEOUT_SECONDS > 0xffffffffffffffff) {
     throw new Error('COLLATERAL_TIMEOUT_SECONDS must be a positive uint64');
@@ -105,7 +110,7 @@ async function main() {
     disputeModuleContract = await DisputeModuleFactory.deploy(wallet.address);
     await disputeModuleContract.waitForDeployment();
     disputeModuleAddress = await disputeModuleContract.getAddress();
-    disputeModuleSource = 'pact-controlled-demo';
+    disputeModuleSource = 'pact-controlled-testnet';
     console.log(`DisputeModule deployed at: ${disputeModuleAddress}`);
   } else {
     const moduleCode = await provider.getCode(disputeModuleAddress);
@@ -151,8 +156,8 @@ async function main() {
     if ((await disputeModuleContract.vault()).toLowerCase() !== vaultAddress.toLowerCase()) {
       throw new Error('DisputeModule vault configuration did not persist');
     }
-    if (AUTHORIZED_OPERATOR_ADDRESS && AUTHORIZED_OPERATOR_ADDRESS.toLowerCase() !== wallet.address.toLowerCase()) {
-      const ownershipTx = await disputeModuleContract.transferOwnership(AUTHORIZED_OPERATOR_ADDRESS);
+    if (DISPUTE_ADMIN_ADDRESS && DISPUTE_ADMIN_ADDRESS.toLowerCase() !== wallet.address.toLowerCase()) {
+      const ownershipTx = await disputeModuleContract.transferOwnership(DISPUTE_ADMIN_ADDRESS);
       await ownershipTx.wait();
     }
   }
@@ -221,15 +226,6 @@ async function main() {
     awarderReceipts.push({ awarder, txHash: awarderTx.hash });
   }
 
-  let operatorTxHash = null;
-  if (AUTHORIZED_OPERATOR_ADDRESS) {
-    console.log(`\nAuthorizing operator ${AUTHORIZED_OPERATOR_ADDRESS} on StreamingVault...`);
-    const operatorTx = await vaultContract.setAuthorizedOperator(AUTHORIZED_OPERATOR_ADDRESS, true);
-    await operatorTx.wait();
-    operatorTxHash = operatorTx.hash;
-    console.log(`Vault operator authorization confirmed in ${operatorTx.hash}`);
-  }
-
   // Save deployment info
   const deploymentInfo = {
     network: network.chainId === 5042002n ? 'arc-testnet' : 'custom-evm',
@@ -238,10 +234,9 @@ async function main() {
     usdc: USDC_ADDRESS,
     disputeModule: disputeModuleAddress,
     disputeModuleSource,
-    disputeModuleOwner: AUTHORIZED_OPERATOR_ADDRESS || wallet.address,
+    disputeModuleOwner: DISPUTE_ADMIN_ADDRESS || wallet.address,
     collateralTimeoutSeconds: COLLATERAL_TIMEOUT_SECONDS,
     registryWriterAuthorizationTx: writerTx.hash,
-    vaultOperatorAuthorizationTx: operatorTxHash,
     contracts: {
       ReputationRegistry: reputationAddress,
       StreamingVault: vaultAddress,

@@ -1,0 +1,29 @@
+FROM node:24-bookworm-slim AS build
+
+WORKDIR /app
+COPY package*.json ./
+COPY shared/package.json ./shared/
+COPY contracts/package.json ./contracts/
+COPY services/api/package.json ./services/api/
+COPY services/indexer/package.json ./services/indexer/
+COPY frontend/package.json ./frontend/
+RUN npm ci
+
+COPY services/indexer ./services/indexer
+RUN npm run build -w @pact/indexer
+
+FROM node:24-bookworm-slim AS runtime
+ENV NODE_ENV=production
+WORKDIR /app
+COPY package*.json ./
+COPY shared/package.json ./shared/
+COPY contracts/package.json ./contracts/
+COPY services/api/package.json ./services/api/
+COPY services/indexer/package.json ./services/indexer/
+COPY frontend/package.json ./frontend/
+RUN npm ci --omit=dev --workspace @pact/indexer --include-workspace-root=false
+COPY --from=build /app/services/indexer/dist ./services/indexer/dist
+EXPOSE 9090
+HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
+  CMD node -e "fetch('http://127.0.0.1:9090/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+CMD ["node", "services/indexer/dist/index.js"]

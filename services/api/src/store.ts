@@ -34,6 +34,7 @@ import { defaultWorkOrderForTask, validateWorkOrderSpec } from './work-order-val
 import {
   ARENA_GENERATOR_VERSION,
   ARENA_RUBRIC_VERSION,
+  ARENA_TEMPLATE_COMPLETION_LIMIT,
   BUILT_IN_ARENA_TEMPLATES,
   createArenaInstance,
   nextUtcDaySeconds,
@@ -116,6 +117,7 @@ export interface PersistedDemoState {
   deliverables?: AgentDeliverable[];
   arenaTemplates?: ArenaTemplateRecord[];
   arenaAttempts?: ArenaAttemptRecord[];
+  autopilotAgents?: string[];
 }
 
 interface ArenaAttemptRecord {
@@ -299,6 +301,7 @@ export class DemoStore {
   private deliverables = new Map<string, AgentDeliverable>();
   private arenaTemplates = new Map<string, ArenaTemplateRecord>();
   private arenaAttempts = new Map<string, ArenaAttemptRecord>();
+  private autopilotAgents = new Set<string>();
   private listeners = new Set<(event: StoreEvent) => void>();
 
   constructor(private readonly persistence?: StatePersistence<PersistedDemoState>) {
@@ -328,6 +331,7 @@ export class DemoStore {
     this.deliverables.clear();
     this.arenaTemplates = new Map(BUILT_IN_ARENA_TEMPLATES.map((template) => [template.id, structuredClone(template)]));
     this.arenaAttempts.clear();
+    this.autopilotAgents.clear();
     this.agents.clear();
     this.ensureAgent(DEMO_ADDRESSES.newbie, 'Agent Newbie');
     this.ensureAgent(DEMO_ADDRESSES.veteran, 'Agent Veteran');
@@ -375,6 +379,45 @@ export class DemoStore {
     if (input.capabilityManifest) return this.updateCapabilities(address, input.capabilityManifest);
     this.emitSnapshot();
     return this.reputation(address);
+  }
+
+  syncAgentProfile(input: RegisterAgentInput & Partial<Pick<AgentRecord, 'score' | 'completedTasks' | 'failedTasks' | 'totalVolumeStreamed' | 'platformPoints' | 'lastUpdated'>>) {
+    const address = input.agentAddress.trim().toLowerCase();
+    const agent = this.ensureAgent(address, input.displayName.trim());
+    agent.displayName = input.displayName.trim();
+    if (input.capabilityManifest) agent.capabilityManifest = validateCapabilityManifest(input.capabilityManifest);
+    if (input.score !== undefined) agent.score = input.score;
+    if (input.completedTasks !== undefined) agent.completedTasks = input.completedTasks;
+    if (input.failedTasks !== undefined) agent.failedTasks = input.failedTasks;
+    if (input.totalVolumeStreamed !== undefined) agent.totalVolumeStreamed = input.totalVolumeStreamed;
+    if (input.platformPoints !== undefined) agent.platformPoints = input.platformPoints;
+    if (input.lastUpdated !== undefined) agent.lastUpdated = input.lastUpdated;
+    this.emitSnapshot();
+    return this.reputation(address);
+  }
+
+  hasRegisteredAgent(agentAddress: string) {
+    return this.agents.has(agentAddress.trim().toLowerCase());
+  }
+
+  enrollAutopilot(agentAddress: string) {
+    const agent = this.getRegisteredAgent(agentAddress);
+    this.autopilotAgents.add(agent.agentAddress.toLowerCase());
+    this.emitSnapshot();
+  }
+
+  disableAutopilot(agentAddress: string) {
+    this.getRegisteredAgent(agentAddress);
+    this.autopilotAgents.delete(agentAddress.toLowerCase());
+    this.emitSnapshot();
+  }
+
+  isAutopilotEnrolled(agentAddress: string) {
+    return this.autopilotAgents.has(agentAddress.toLowerCase());
+  }
+
+  autopilotAgentAddresses() {
+    return [...this.autopilotAgents];
   }
 
   private calculateScore(agent: AgentRecord) {
@@ -495,7 +538,7 @@ export class DemoStore {
     const traces = [...this.executionTraces.values()];
     const eligibleSuccessfulTraces = traces.filter((trace) => trace.consentToTraining && trace.outcome === 'SUCCESS' && trace.reviewStatus === 'APPROVED').length;
     return {
-      baseModel: 'Qwen/Qwen3.5-2B',
+      baseModel: 'Qwen/Qwen2.5-3B-Instruct',
       method: 'QLORA_SFT_ASSISTANT_ONLY' as const,
       minimumReleaseTraces: 200,
       recommendedTraces: 2_000,
@@ -516,13 +559,15 @@ export class DemoStore {
     return [...this.arenaTemplates.values()]
       .filter((template) => template.isActive)
       .map((template) => {
+        const templateAttempts = [...this.arenaAttempts.values()].filter((attempt) => attempt.templateId === template.id);
         const todayAttempt = address
-          ? [...this.arenaAttempts.values()].find((attempt) =>
+          ? templateAttempts.find((attempt) =>
             attempt.agentAddress.toLowerCase() === address && attempt.templateId === template.id && attempt.dayKey === today)
           : undefined;
         const completedToday = todayAttempt?.status === 'SUBMITTED';
         const inProgressToday = todayAttempt?.status === 'STARTED';
-        return publicTemplate(template, completedToday, inProgressToday);
+        const completedRuns = templateAttempts.filter((attempt) => attempt.status === 'SUBMITTED').length;
+        return publicTemplate(template, completedToday, inProgressToday, undefined, completedRuns);
       });
   }
 
@@ -560,6 +605,10 @@ export class DemoStore {
         startedAt: existingAttempt.startedAt
       };
     }
+    const reservedRuns = [...this.arenaAttempts.values()].filter((attempt) =>
+      attempt.templateId === templateId && (attempt.status === 'STARTED' || attempt.status === 'SUBMITTED')).length;
+    assert(reservedRuns < ARENA_TEMPLATE_COMPLETION_LIMIT,
+      409, 'ARENA_TEMPLATE_CAPACITY_REACHED', 'This platform task has reached its 500-agent completion limit');
     const startedAt = nowSeconds();
     const attemptId = randomUUID();
     const generated = createArenaInstance({
@@ -1585,7 +1634,8 @@ export class DemoStore {
       agentRuns: [...this.agentRuns.values()].map((run) => structuredClone(run)),
       deliverables: [...this.deliverables.values()].map((deliverable) => structuredClone(deliverable)),
       arenaTemplates: [...this.arenaTemplates.values()].map((template) => structuredClone(template)),
-      arenaAttempts: [...this.arenaAttempts.values()].map((attempt) => structuredClone(attempt))
+      arenaAttempts: [...this.arenaAttempts.values()].map((attempt) => structuredClone(attempt)),
+      autopilotAgents: [...this.autopilotAgents]
     };
   }
 
@@ -1618,6 +1668,7 @@ export class DemoStore {
     this.arenaTemplates = new Map(BUILT_IN_ARENA_TEMPLATES.map((template) => [template.id, structuredClone(template)]));
     const v2Attempts = (state.arenaAttempts ?? []).filter((attempt) => attempt.privateInstance && attempt.instanceCommitment);
     this.arenaAttempts = new Map(v2Attempts.map((attempt) => [attempt.id, structuredClone(attempt)]));
+    this.autopilotAgents = new Set((state.autopilotAgents ?? []).map((address) => address.toLowerCase()));
     this.ensureAgent(DEMO_ADDRESSES.newbie, 'Agent Newbie');
     this.ensureAgent(DEMO_ADDRESSES.veteran, 'Agent Veteran');
     this.ensureAgent(DEMO_ADDRESSES.proofAgent, 'PACT Proof Agent');

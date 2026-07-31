@@ -4,6 +4,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { createApp } from './app.js';
 import { DemoStore, type PersistedDemoState } from './store.js';
 import { createStatePersistenceFromEnv } from './postgres-persistence.js';
+import { initializeDatabase } from './migrations.js';
 
 export interface PactServer {
   server: Server;
@@ -13,7 +14,8 @@ export interface PactServer {
 export function createPactServer(store?: DemoStore): PactServer {
   const persistence = store ? null : createStatePersistenceFromEnv<PersistedDemoState>();
   const activeStore = store ?? new DemoStore(persistence ?? undefined);
-  const server = createHttpServer(createApp(activeStore));
+  const app = createApp(activeStore);
+  const server = createHttpServer(app);
   const sockets = new WebSocketServer({ noServer: true });
   const pathPattern = /^\/api\/streams\/([^/]+)\/live$/;
 
@@ -52,6 +54,7 @@ export function createPactServer(store?: DemoStore): PactServer {
     close: () => new Promise<void>((resolve, reject) => {
       const closePersistence = () => Promise.resolve(persistence?.close?.()).then(() => undefined);
       clearInterval(ticker);
+      app.locals.arenaAutopilot?.stop?.();
       for (const socket of sockets.clients) socket.terminate();
       sockets.close();
       if (!server.listening) {
@@ -70,6 +73,7 @@ const isEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(proces
 if (isEntrypoint) {
   const port = Number(process.env.PORT ?? 8080);
   const host = process.env.HOST ?? '0.0.0.0';
+  await initializeDatabase();
   const runtime = createPactServer();
   runtime.server.listen(port, host, () => {
     console.log(`PACT API running at http://${host}:${port}`);

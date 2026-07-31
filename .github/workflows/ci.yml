@@ -1,0 +1,28 @@
+name: PACT verification
+
+on:
+  push:
+    branches: ["main", "public-release", "codex/**"]
+  pull_request:
+
+concurrency:
+  group: pact-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check:submission
+      - name: Verify production images build
+        run: |
+          docker build -f deploy/Dockerfile.api -t pact-api-ci .
+          docker build -f deploy/Dockerfile.web -t pact-web-ci .
+          docker build -f Dockerfile.indexer -t pact-indexer-ci .

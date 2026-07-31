@@ -9,6 +9,14 @@ function ensureWorkOrderColumn() {
   workOrderColumnReady ??= query(`
     ALTER TABLE tasks ADD COLUMN IF NOT EXISTS work_order JSONB NOT NULL DEFAULT '{}'::jsonb;
     ALTER TABLE tasks ADD COLUMN IF NOT EXISTS preferred_agent_address VARCHAR(42);
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS funding_tx_hash VARCHAR(66);
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS assignment_tx_hash VARCHAR(66);
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS collateral_tx_hash VARCHAR(66);
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS stream_start_tx_hash VARCHAR(66);
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS completion_tx_hash VARCHAR(66);
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS settlement_tx_hash VARCHAR(66);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_chain_task_id ON tasks(chain_task_id) WHERE chain_task_id IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_funding_tx_hash ON tasks(funding_tx_hash) WHERE funding_tx_hash IS NOT NULL;
   `)
     .then(() => undefined)
     .catch((error) => {
@@ -19,19 +27,26 @@ function ensureWorkOrderColumn() {
 }
 
 export class TaskRepository {
-  async create(task: Omit<MarketplaceTask, 'id' | 'createdAt' | 'chainTaskId'>): Promise<MarketplaceTask> {
+  async create(
+    task: Omit<MarketplaceTask, 'id' | 'createdAt' | 'chainTaskId' | 'fundingTransactionHash' | 'assignmentTransactionHash' | 'collateralTransactionHash' | 'streamStartTransactionHash' | 'completionTransactionHash' | 'settlementTransactionHash'>,
+    chain?: {
+      chainTaskId: string;
+      fundingTransactionHash: string;
+    },
+  ): Promise<MarketplaceTask> {
     await ensureWorkOrderColumn();
     const id = randomUUID();
     const createdAt = Math.floor(Date.now() / 1000);
 
     await query(`
       INSERT INTO tasks (
-        id, title, description, success_criteria, creator_address, agent_address,
+        id, chain_task_id, funding_tx_hash, title, description, success_criteria, creator_address, agent_address,
         total_amount, estimated_duration_seconds, stream_rate_per_second, status,
         collateral_locked, accrued_amount, withdrawn_amount, created_at, started_at, completed_at, template_id, terms, work_order, preferred_agent_address
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
     `, [
-      id, task.title, task.description, task.successCriteria, task.creatorAddress, task.agentAddress,
+      id, chain?.chainTaskId ?? null, chain?.fundingTransactionHash ?? null,
+      task.title, task.description, task.successCriteria, task.creatorAddress, task.agentAddress,
       task.totalAmount, task.estimatedDurationSeconds, task.streamRatePerSecond, task.status,
       task.collateralLocked, task.accruedAmount, task.withdrawnAmount, createdAt, task.startedAt, task.completedAt,
       task.templateId || null,
@@ -42,7 +57,13 @@ export class TaskRepository {
 
     return {
       id,
-      chainTaskId: null,
+      chainTaskId: chain?.chainTaskId ?? null,
+      fundingTransactionHash: chain?.fundingTransactionHash ?? null,
+      assignmentTransactionHash: null,
+      collateralTransactionHash: null,
+      streamStartTransactionHash: null,
+      completionTransactionHash: null,
+      settlementTransactionHash: null,
       ...task,
       createdAt
     };
@@ -64,6 +85,18 @@ export class TaskRepository {
     return res.rows.map(this.mapRowToTask);
   }
 
+  async findByChainTaskId(chainTaskId: string): Promise<MarketplaceTask | null> {
+    await ensureWorkOrderColumn();
+    const res = await query('SELECT * FROM tasks WHERE chain_task_id = $1', [chainTaskId]);
+    return res.rows.length ? this.mapRowToTask(res.rows[0]) : null;
+  }
+
+  async findByFundingTransactionHash(transactionHash: string): Promise<MarketplaceTask | null> {
+    await ensureWorkOrderColumn();
+    const res = await query('SELECT * FROM tasks WHERE funding_tx_hash = $1', [transactionHash.toLowerCase()]);
+    return res.rows.length ? this.mapRowToTask(res.rows[0]) : null;
+  }
+
   async update(id: string, updates: Partial<MarketplaceTask>): Promise<MarketplaceTask | null> {
     await ensureWorkOrderColumn();
     const current = await this.findById(id);
@@ -77,8 +110,10 @@ export class TaskRepository {
         agent_address = $5, total_amount = $6, estimated_duration_seconds = $7,
         stream_rate_per_second = $8, status = $9, collateral_locked = $10,
         accrued_amount = $11, withdrawn_amount = $12, started_at = $13,
-        completed_at = $14, template_id = $15, terms = $16, work_order = $17, preferred_agent_address = $18
-      WHERE id = $19
+        completed_at = $14, template_id = $15, terms = $16, work_order = $17, preferred_agent_address = $18,
+        funding_tx_hash = $19, assignment_tx_hash = $20, collateral_tx_hash = $21,
+        stream_start_tx_hash = $22, completion_tx_hash = $23, settlement_tx_hash = $24
+      WHERE id = $25
     `, [
       updated.chainTaskId, updated.title, updated.description, updated.successCriteria,
       updated.agentAddress, updated.totalAmount, updated.estimatedDurationSeconds,
@@ -87,6 +122,12 @@ export class TaskRepository {
       updated.completedAt, updated.templateId || null, updated.terms ? JSON.stringify(updated.terms) : null,
       updated.workOrder ? JSON.stringify(updated.workOrder) : '{}',
       updated.preferredAgentAddress ?? null,
+      updated.fundingTransactionHash ?? null,
+      updated.assignmentTransactionHash ?? null,
+      updated.collateralTransactionHash ?? null,
+      updated.streamStartTransactionHash ?? null,
+      updated.completionTransactionHash ?? null,
+      updated.settlementTransactionHash ?? null,
       id
     ]);
 
@@ -101,6 +142,12 @@ export class TaskRepository {
     return {
       id: row.id,
       chainTaskId: row.chain_task_id,
+      fundingTransactionHash: row.funding_tx_hash ?? null,
+      assignmentTransactionHash: row.assignment_tx_hash ?? null,
+      collateralTransactionHash: row.collateral_tx_hash ?? null,
+      streamStartTransactionHash: row.stream_start_tx_hash ?? null,
+      completionTransactionHash: row.completion_tx_hash ?? null,
+      settlementTransactionHash: row.settlement_tx_hash ?? null,
       title: row.title,
       description: row.description,
       successCriteria: row.success_criteria,

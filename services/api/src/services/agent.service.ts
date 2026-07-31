@@ -22,7 +22,12 @@ export class AgentService {
       platformPoints: agent.platformPoints ?? 0,
       lastUpdated: agent.lastUpdated,
       terms,
-      capabilityManifest: agent.capabilityManifest as AgentCapabilityManifest
+      capabilityManifest: agent.capabilityManifest as AgentCapabilityManifest,
+      wallet: {
+        provider: agent.walletProvider,
+        accountType: agent.walletAccountType,
+        controllerAddress: agent.controllerAddress,
+      }
     };
   }
 }

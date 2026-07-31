@@ -6,7 +6,9 @@
   "workspaces": [
     "shared",
     "contracts",
-    "services/api"
+    "services/api",
+    "services/indexer",
+    "frontend"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
@@ -16,7 +18,9 @@
     "demo:seed": "npm run demo:seed -w @pact/api",
     "demo:run": "npm run demo:run -w @pact/api",
     "contracts:compile": "npm run build -w @pact/contracts",
-    "check": "npm run build && npm test"
+    "check": "npm run build && npm test",
+    "check:submission": "npm run check && npm run check:locales",
+    "check:locales": "node scripts/check-locales.mjs"
   },
   "engines": {
     "node": ">=22"

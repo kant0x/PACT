@@ -1,0 +1,289 @@
+/*
+ * PACT intro — full-screen WebGL "dive in" overlay.
+ * Shown once per visitor (gated via localStorage). Near-black stage with a
+ * rust-hot accent, editorial mono type. All colours come from the token layer.
+ */
+
+.intro-root {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--pact-dark);
+  color: var(--cream);
+  overflow: hidden;
+  font-family: var(--font-mono);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The scroll driver: a tall element that gives us scroll distance to map onto
+   the WebGL scene. The canvas is fixed; this just provides travel. */
+.intro-root__scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+.intro-root__scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.intro-root__spacer {
+  width: 1px;
+  /* 4 viewport heights of scroll travel */
+  height: 400vh;
+  pointer-events: none;
+}
+
+/* Fixed WebGL canvas fills the viewport behind the copy. */
+.intro-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
+}
+
+/* Vignette + film grain over the canvas for depth. */
+.intro-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 90% at 50% 42%, transparent 40%, rgba(5, 5, 4, 0.72) 100%);
+  mix-blend-mode: multiply;
+}
+
+/* ---- Overlay copy ----------------------------------------------------- */
+.intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(20px, 4vw, 56px);
+  pointer-events: none;
+}
+
+.intro-overlay__top,
+.intro-overlay__bottom {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-5);
+}
+
+.intro-wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  font-size: clamp(1.4rem, 2.4vw, 2rem);
+  line-height: 1;
+  color: var(--cream);
+}
+
+.intro-tag {
+  font-size: var(--fs-label);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--pact-cream-2);
+}
+
+/* Centre headline — the "SCROLL TO DIVE IN" analogue. */
+.intro-center {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  text-align: center;
+  pointer-events: none;
+  width: min(92vw, 900px);
+}
+.intro-center__lead {
+  font-size: var(--fs-label);
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--rust-hot);
+  margin-bottom: var(--sp-4);
+}
+.intro-center__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2.6rem, 8vw, 7rem);
+  line-height: 0.94;
+  letter-spacing: -0.01em;
+  color: var(--cream);
+  margin: 0;
+}
+.intro-center__sub {
+  margin-top: var(--sp-5);
+  font-size: var(--fs-small);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--pact-cream-2);
+}
+
+/* Scroll hint with a bouncing chevron. */
+.intro-hint {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--pact-cream-2);
+  font-size: var(--fs-label);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+.intro-hint__chevron {
+  width: 22px;
+  height: 22px;
+  animation: intro-bounce 1.8s var(--ease-in-out) infinite;
+}
+@keyframes intro-bounce {
+  0%, 100% { transform: translateY(0); opacity: 0.5; }
+  50% { transform: translateY(8px); opacity: 1; }
+}
+
+/* ---- Progress rail ---------------------------------------------------- */
+.intro-progress {
+  position: fixed;
+  left: clamp(20px, 4vw, 56px);
+  bottom: clamp(20px, 4vw, 56px);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  pointer-events: none;
+}
+.intro-progress__track {
+  width: clamp(120px, 22vw, 280px);
+  height: 2px;
+  background: var(--pact-line-dark);
+  position: relative;
+  overflow: hidden;
+}
+.intro-progress__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  background: var(--rust-hot);
+  transition: width 120ms linear;
+}
+.intro-progress__pct {
+  font-size: var(--fs-label);
+  letter-spacing: 0.2em;
+  color: var(--pact-cream-2);
+  font-variant-numeric: tabular-nums;
+  min-width: 3.2ch;
+}
+
+/* ---- Skip / enter buttons -------------------------------------------- */
+.intro-skip {
+  pointer-events: auto;
+  appearance: none;
+  border: 1px solid var(--pact-line-dark);
+  background: transparent;
+  color: var(--pact-cream-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  padding: 10px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+.intro-skip:hover {
+  color: var(--pact-dark);
+  background: var(--cream);
+  border-color: var(--cream);
+}
+
+.intro-enter {
+  pointer-events: auto;
+  position: fixed;
+  left: 50%;
+  bottom: clamp(64px, 12vh, 140px);
+  transform: translateX(-50%);
+  z-index: 3;
+  appearance: none;
+  border: 1px solid var(--rust-hot);
+  background: var(--rust-hot);
+  color: var(--pact-dark);
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  padding: 14px 32px;
+  border-radius: 999px;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--dur) var(--ease-out),
+    transform var(--dur) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+.intro-enter--ready {
+  opacity: 1;
+  visibility: visible;
+}
+.intro-enter:hover {
+  background: var(--cream);
+  border-color: var(--cream);
+}
+
+/* ---- Exit transition (fade the whole overlay into the site) ---------- */
+.intro-root {
+  opacity: 1;
+  transition: opacity 620ms var(--ease-out);
+}
+.intro-root--leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---- Reduced-motion / no-WebGL static fallback ----------------------- */
+.intro-fallback {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-5);
+  text-align: center;
+  padding: var(--page-pad);
+  background:
+    radial-gradient(140% 120% at 50% 30%, #1a140f 0%, var(--pact-dark) 70%);
+}
+.intro-fallback__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2.4rem, 7vw, 5.5rem);
+  line-height: 0.96;
+  color: var(--cream);
+  margin: 0;
+}
+.intro-fallback__lead {
+  font-size: var(--fs-label);
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--rust-hot);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-hint__chevron {
+    animation: none;
+  }
+  .intro-root {
+    transition: none;
+  }
+}

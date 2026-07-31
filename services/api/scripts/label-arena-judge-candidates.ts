@@ -19,7 +19,7 @@ if (!apiKey) throw new Error('OPENAI_API_KEY is required to create teacher-label
 const repoRoot = resolve(import.meta.dirname, '../../..');
 const inputPath = resolve(repoRoot, process.env.ARENA_JUDGE_UNLABELED_FILE ?? 'training/arena-judge/unlabeled.jsonl');
 const outputPath = resolve(repoRoot, process.env.ARENA_JUDGE_TEACHER_OUTPUT ?? 'training/arena-judge/candidates.teacher.jsonl');
-const teacherModel = process.env.ARENA_JUDGE_TEACHER_MODEL ?? 'gpt-5.6-terra';
+const teacherModel = process.env.ARENA_JUDGE_TEACHER_MODEL ?? 'gpt-4o-mini';
 const rows = (await readFile(inputPath, 'utf8')).split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line) as Candidate);
 const client = new OpenAI({ apiKey, timeout: 30_000, maxRetries: 1 });
 const labelled = [];
