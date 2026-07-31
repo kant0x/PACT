@@ -9,7 +9,6 @@ PACT-1/
 .tmp_pptx_check_*/
 .tmp_submission_deck/
 Dockerfile.web
-deploy/web-entrypoint.sh
 dist/
 artifacts/
 coverage/
