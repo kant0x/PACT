@@ -24,6 +24,7 @@ for (const filePath of sourceFiles) {
 }
 
 let failed = false;
+console.log(`en: ${keys.size} static UI keys use source-text fallback`);
 for (const locale of ['ru', 'es']) {
   const document = JSON.parse(fs.readFileSync(path.join(localeRoot, `${locale}.json`), 'utf8'));
   const missing = [...keys].filter((key) => !Object.prototype.hasOwnProperty.call(document.strings, key));

@@ -17,7 +17,22 @@ afterEach(async () => {
 describe('PACT demo API', () => {
   it('reports health and an empty demo dashboard', async () => {
     const response = await request(createApp(new DemoStore())).get('/api/health').expect(200);
-    expect(response.body).toMatchObject({ status: 'ok', service: 'pact-api', mode: 'demo' });
+    expect(response.body).toMatchObject({
+      status: 'ok',
+      service: 'pact-api',
+      mode: 'local',
+      persistence: 'memory',
+      readiness: {
+        productionReady: false,
+        data: 'ephemeral'
+      },
+      boundaries: {
+        judge: 'verdict-only',
+        settlement: 'separate collateral policy',
+        reputation: 'updates after accepted work or finalized dispute',
+        offchainFallback: 'cancelTaskAfterTimeout'
+      }
+    });
 
     const dashboard = await request(createApp(new DemoStore())).get('/api/dashboard').expect(200);
     expect(dashboard.body.mode).toBe('demo');
@@ -66,6 +81,7 @@ describe('PACT demo API', () => {
     }).expect(201);
     expect(created.body).toMatchObject({ agentAddress, displayName: 'Customer Research Agent', score: 80 });
     expect(created.body.capabilityManifest).toMatchObject({ executionMode: 'EXTERNAL_RUNTIME', maxConcurrentTasks: 1 });
+    expect(created.body.automation).toMatchObject({ agentAddress: agentAddress.toLowerCase(), status: 'DISABLED' });
     const agents = await request(app).get('/api/agents').expect(200);
     expect(agents.body).toEqual(expect.arrayContaining([
       expect.objectContaining({ agentAddress, displayName: 'Customer Research Agent' })
@@ -377,6 +393,21 @@ describe('PACT demo API', () => {
     expect(leaderboard.body.find((row: { agentAddress: string }) => row.agentAddress.toLowerCase() === DEMO_ADDRESSES.newbie.toLowerCase())).toMatchObject({ platformPoints: result.body.pointsAwarded });
     const afterSubmit = await request(app).get(`/api/arena/templates?agentAddress=${DEMO_ADDRESSES.newbie}`).expect(200);
     expect(afterSubmit.body.find((item: { id: string }) => item.id === template.id)).toMatchObject({ completedToday: true, inProgressToday: false, availableToday: false });
+    const publicAfterSubmit = await request(app).get('/api/arena/templates').expect(200);
+    expect(publicAfterSubmit.body.find((item: { id: string }) => item.id === template.id)).toMatchObject({
+      completionLimit: 500,
+      completedRuns: 1,
+      remainingRuns: 499,
+      completedToday: false,
+      inProgressToday: false,
+      availableToday: true
+    });
+    const otherAgentAfterSubmit = await request(app).get(`/api/arena/templates?agentAddress=${DEMO_ADDRESSES.veteran}`).expect(200);
+    expect(otherAgentAfterSubmit.body.find((item: { id: string }) => item.id === template.id)).toMatchObject({
+      completedRuns: 1,
+      completedToday: false,
+      availableToday: true
+    });
     await request(app).post(`/api/arena/templates/${template.id}/start`).send({ agentAddress: DEMO_ADDRESSES.newbie }).expect(409);
     await request(app).post(`/api/arena/attempts/${challenge.body.attemptId}/submit`).send({
       attemptToken: 'wrong', agentAddress: DEMO_ADDRESSES.newbie, submission: { kind: 'GROUNDED_QA', answer: '0', citation: { recordId: target.recordId, field: 'amount' }, reasoning: 'wrong token test' }
@@ -392,10 +423,12 @@ describe('PACT demo API', () => {
       'CODE_REPAIR',
       'TOOL_WORKFLOW'
     ]));
-    for (const template of templates.body as Array<{ rewardPoints: number; expectedMinutes: number; variantCount: number; description: string }>) {
+    for (const template of templates.body as Array<{ rewardPoints: number; expectedMinutes: number; variantCount: number; completionLimit: number; completedRuns: number; description: string }>) {
       expect(template.rewardPoints).toBeGreaterThanOrEqual(50);
       expect(template.expectedMinutes).toBeGreaterThanOrEqual(12);
       expect(template.variantCount).toBeGreaterThanOrEqual(5);
+      expect(template.completionLimit).toBe(500);
+      expect(template.completedRuns).toBeGreaterThanOrEqual(0);
       expect(template.description.toLowerCase()).toMatch(/hidden|hostile|receipt|derived|edge|reconcile|audit|forged|canonical|boundary/);
     }
   });
@@ -430,11 +463,19 @@ describe('PACT demo API', () => {
     const previousMode = process.env.PACT_MODE;
     const previousDemoEndpoints = process.env.PACT_ENABLE_DEMO_ENDPOINTS;
     const previousGeneratorSecret = process.env.PACT_ARENA_GENERATOR_SECRET;
+    const previousAuthToken = process.env.PACT_AUTH_TOKEN;
+    const previousSessionSecret = process.env.PACT_SESSION_SECRET;
+    const previousDatabaseUrl = process.env.PACT_DATABASE_URL;
+    const previousAuthDomain = process.env.PACT_AUTH_DOMAIN;
     try {
       process.env.NODE_ENV = 'production';
       process.env.PACT_MODE = 'demo';
       process.env.PACT_ENABLE_DEMO_ENDPOINTS = 'true';
       process.env.PACT_ARENA_GENERATOR_SECRET = 'test-only-public-demo-generator-secret';
+      process.env.PACT_AUTH_TOKEN = 'test-only-operator-token';
+      process.env.PACT_SESSION_SECRET = 'test-session-secret-with-more-than-thirty-two-characters';
+      process.env.PACT_DATABASE_URL = 'postgres://pact:pact@localhost:5432/pact_test';
+      process.env.PACT_AUTH_DOMAIN = 'pact-protocol.pages.dev';
       const account = privateKeyToAccount('0x0000000000000000000000000000000000000000000000000000000000000002');
       const store = new DemoStore();
       store.registerAgent({ agentAddress: account.address, displayName: 'Runtime-only Arena Agent' });
@@ -464,6 +505,14 @@ describe('PACT demo API', () => {
       else process.env.PACT_ENABLE_DEMO_ENDPOINTS = previousDemoEndpoints;
       if (previousGeneratorSecret === undefined) delete process.env.PACT_ARENA_GENERATOR_SECRET;
       else process.env.PACT_ARENA_GENERATOR_SECRET = previousGeneratorSecret;
+      if (previousAuthToken === undefined) delete process.env.PACT_AUTH_TOKEN;
+      else process.env.PACT_AUTH_TOKEN = previousAuthToken;
+      if (previousSessionSecret === undefined) delete process.env.PACT_SESSION_SECRET;
+      else process.env.PACT_SESSION_SECRET = previousSessionSecret;
+      if (previousDatabaseUrl === undefined) delete process.env.PACT_DATABASE_URL;
+      else process.env.PACT_DATABASE_URL = previousDatabaseUrl;
+      if (previousAuthDomain === undefined) delete process.env.PACT_AUTH_DOMAIN;
+      else process.env.PACT_AUTH_DOMAIN = previousAuthDomain;
     }
   });
 

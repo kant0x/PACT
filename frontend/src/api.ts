@@ -1,0 +1,265 @@
+import {
+  AgentDeliverable,
+  AgentCapabilityManifest,
+  ArenaLeaderboardEntry,
+  ArenaTemplate,
+  DashboardSnapshot,
+  Dispute,
+  DisputeVerdict,
+  MarketplaceTask,
+  DEFAULT_TASK_DURATION_SECONDS,
+  type WorkOrderSpec,
+  normalizeWorkOrderSpec,
+} from '@pact/shared';
+import { isArcMode, runtimeConfig } from './runtime';
+
+const configuredBase = (runtimeConfig.apiUrl ?? 'http://localhost:4100').replace(/\/$/, '');
+const SESSION_KEY = `pact.wallet-session:${configuredBase}`;
+
+export const API_BASE = configuredBase;
+
+export class PactApiError extends Error {
+  code: string;
+  status: number;
+
+  constructor(message: string, code = 'REQUEST_FAILED', status = 500) {
+    super(message);
+    this.name = 'PactApiError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const sessionToken = typeof window === 'undefined' ? null : window.sessionStorage.getItem(SESSION_KEY);
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    headers: {
+      Accept: 'application/json',
+      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      ...((sessionToken ?? runtimeConfig.apiToken) ? { Authorization: `Bearer ${sessionToken ?? runtimeConfig.apiToken}` } : {}),
+      ...init?.headers,
+    },
+  });
+
+  const payload = (await response.json().catch(() => null)) as
+    | { error?: string; code?: string }
+    | T
+    | null;
+
+  if (!response.ok) {
+    const error = payload as { error?: string; code?: string } | null;
+    throw new PactApiError(
+      error?.error ?? `Request failed with status ${response.status}`,
+      error?.code,
+      response.status,
+    );
+  }
+
+  return payload as T;
+}
+
+export interface PublishTaskInput {
+  title: string;
+  description: string;
+  successCriteria: string;
+  creatorAddress: string;
+  /** Optional direct invitation to a registered agent. */
+  preferredAgentAddress?: string | null;
+  totalAmount: string;
+  estimatedDurationSeconds?: number;
+  workOrder: WorkOrderSpec;
+  /** Wallet signature proving the creator approved this exact work order. */
+  signature?: string;
+  /** Confirmed Arc Testnet transaction that funded the open StreamingVault order. */
+  fundingTransactionHash?: `0x${string}`;
+}
+
+interface WalletSession {
+  token: string;
+  address: string;
+  expiresAt: number;
+}
+
+export async function authenticateWallet(
+  address: `0x${string}`,
+  signMessage: (message: string) => Promise<`0x${string}`>,
+): Promise<WalletSession> {
+  const normalized = address.toLowerCase();
+  if (typeof window !== 'undefined') {
+    const saved = window.sessionStorage.getItem(SESSION_KEY);
+    if (saved) {
+      try {
+        const session = JSON.parse(saved) as WalletSession;
+        if (session.address === normalized && session.expiresAt > Math.floor(Date.now() / 1000) + 15) return session;
+      } catch {
+        window.sessionStorage.removeItem(SESSION_KEY);
+      }
+    }
+  }
+
+  const challenge = await request<{ challengeId: string; message: string; expiresAt: number }>('/api/auth/challenge', {
+    method: 'POST',
+    body: JSON.stringify({ address }),
+  });
+  const signature = await signMessage(challenge.message);
+  const session = await request<WalletSession>('/api/auth/verify', {
+    method: 'POST',
+    body: JSON.stringify({ challengeId: challenge.challengeId, address, signature }),
+  });
+  if (typeof window !== 'undefined') window.sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  return session;
+}
+
+export function clearWalletSession(expectedAddress?: string): void {
+  if (typeof window === 'undefined') return;
+  if (!expectedAddress) {
+    window.sessionStorage.removeItem(SESSION_KEY);
+    return;
+  }
+  const saved = window.sessionStorage.getItem(SESSION_KEY);
+  if (!saved) return;
+  try {
+    const session = JSON.parse(saved) as WalletSession;
+    if (session.address !== expectedAddress.toLowerCase()) window.sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    window.sessionStorage.removeItem(SESSION_KEY);
+  }
+}
+
+export function creatorTaskMessage(input: Pick<PublishTaskInput, 'creatorAddress' | 'title' | 'description' | 'successCriteria' | 'totalAmount' | 'estimatedDurationSeconds' | 'preferredAgentAddress' | 'workOrder'>): string {
+  return [
+    'PACT: publish funded task',
+    `creator=${input.creatorAddress.toLowerCase()}`,
+    `title=${input.title.trim()}`,
+    `description=${input.description.trim()}`,
+    `criteria=${input.successCriteria.trim()}`,
+    `amount=${input.totalAmount}`,
+    `duration=${input.estimatedDurationSeconds ?? DEFAULT_TASK_DURATION_SECONDS}`,
+    `preferredAgent=${input.preferredAgentAddress?.toLowerCase() ?? ''}`,
+    `workOrder=${JSON.stringify(normalizeWorkOrderSpec(input.workOrder))}`,
+  ].join('\n');
+}
+
+export interface RegisterAgentInput {
+  agentAddress: string;
+  displayName: string;
+  capabilityManifest?: AgentCapabilityManifest;
+  signature?: string;
+  /** Production-only: ask PACT/Circle to create a dedicated Arc smart-contract account. */
+  provisionWallet?: boolean;
+}
+
+export function agentRegistrationMessage(input: Pick<RegisterAgentInput, 'displayName' | 'capabilityManifest'>): string {
+  // updatedAt is server-assigned metadata, not part of the signed operating
+  // envelope. Excluding it keeps the receipt verifiable after persistence.
+  const manifest = input.capabilityManifest
+    ? Object.fromEntries(Object.entries(input.capabilityManifest).filter(([key]) => key !== 'updatedAt'))
+    : null;
+  return [
+    `Registering on PACT as ${input.displayName.trim()}`,
+    `manifest=${JSON.stringify(manifest)}`,
+  ].join('\n');
+}
+
+export function arenaAttemptMessage(templateId: string, agentAddress: string, dayKey = new Date().toISOString().slice(0, 10)): string {
+  return [
+    'PACT: start Training Ground attempt',
+    `template=${templateId}`,
+    `agent=${agentAddress.toLowerCase()}`,
+    `day=${dayKey}`,
+  ].join('\n');
+}
+
+export interface CreateDisputeInput {
+  taskId: string;
+  reason: string;
+  evidence: string;
+  pauseTransactionHash?: `0x${string}`;
+}
+
+export interface FinalizeHumanReviewInput {
+  verdict: DisputeVerdict;
+  reasoning: string;
+}
+
+export interface TrustModel {
+  rankAuthority: string;
+  rankInputs: string[];
+  arbitrator: 'deterministic' | 'openai' | 'council';
+  arbitratorAuthority: string;
+  safeguards: string[];
+}
+
+export type CircleAgentAction = 'CLAIM_TASK' | 'APPROVE_COLLATERAL' | 'POST_COLLATERAL' | 'WITHDRAW_STREAM' | 'PAUSE_DISPUTE';
+
+export interface CircleTransactionStatus {
+  id: string;
+  state: string;
+  txHash: `0x${string}` | null;
+  blockchain: string;
+  createDate: string;
+  updateDate: string;
+  errorReason: string | null;
+}
+
+export const api = {
+  dashboard: (signal?: AbortSignal) =>
+    request<DashboardSnapshot>(isArcMode ? '/api/dashboard/pg' : '/api/dashboard', { signal }),
+  trustModel: (signal?: AbortSignal) =>
+    request<TrustModel>('/api/trust-model', { signal }),
+  acceptDeliverable: (deliverableId: string, completionTransactionHash?: `0x${string}`) =>
+    request<{ deliverable: AgentDeliverable; task?: MarketplaceTask }>(`${isArcMode ? '/api/deliverables/pg' : '/api/deliverables'}/${encodeURIComponent(deliverableId)}/accept`, {
+      method: 'POST',
+      ...(completionTransactionHash ? { body: JSON.stringify({ completionTransactionHash }) } : {}),
+    }),
+  publishTask: (input: PublishTaskInput) =>
+    request<MarketplaceTask>(isArcMode ? '/api/tasks/pg' : '/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  registerAgent: (input: RegisterAgentInput) =>
+    request<unknown>(isArcMode ? '/api/agents/pg' : '/api/agents', {
+      method: 'POST',
+      body: JSON.stringify(isArcMode
+        ? { address: input.agentAddress, displayName: input.displayName, capabilityManifest: input.capabilityManifest, signature: input.signature, provisionWallet: input.provisionWallet }
+        : input),
+    }),
+  claimTask: (taskId: string, agentAddress: string, assignmentTransactionHash?: `0x${string}`) =>
+    request<MarketplaceTask>(`${isArcMode ? '/api/tasks/pg' : '/api/tasks'}/${encodeURIComponent(taskId)}/claim`, {
+      method: 'POST',
+      body: JSON.stringify({ agentAddress, assignmentTransactionHash }),
+    }),
+  submitCircleAgentAction: (agentAddress: string, taskId: string, action: CircleAgentAction) =>
+    request<{ id: string; state: string; action: CircleAgentAction; taskId: string }>(`/api/agents/pg/${encodeURIComponent(agentAddress)}/circle/actions`, {
+      method: 'POST',
+      body: JSON.stringify({ taskId, action }),
+    }),
+  circleTransaction: (agentAddress: string, transactionId: string) =>
+    request<CircleTransactionStatus>(`/api/agents/pg/${encodeURIComponent(agentAddress)}/circle/transactions/${encodeURIComponent(transactionId)}`),
+  startTask: (taskId: string, collateralTransactionHash: `0x${string}`) =>
+    request<MarketplaceTask>(`/api/tasks/pg/${encodeURIComponent(taskId)}/start`, {
+      method: 'POST',
+      body: JSON.stringify({ collateralTransactionHash }),
+    }),
+  cancelTask: (taskId: string, cancellationTransactionHash: `0x${string}`) =>
+    request<MarketplaceTask>(`/api/tasks/pg/${encodeURIComponent(taskId)}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ cancellationTransactionHash }),
+    }),
+  arenaTemplates: (agentAddress?: string, signal?: AbortSignal) =>
+    request<ArenaTemplate[]>(`/api/arena/templates${agentAddress ? `?agentAddress=${encodeURIComponent(agentAddress)}` : ''}`, { signal }),
+  arenaLeaderboard: (signal?: AbortSignal) =>
+    request<ArenaLeaderboardEntry[]>('/api/arena/leaderboard', { signal }),
+  createDispute: (input: CreateDisputeInput) =>
+    request<Dispute>(isArcMode ? `/api/tasks/pg/${encodeURIComponent(input.taskId)}/dispute` : '/api/disputes', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  finalizeHumanReview: (id: string, input: FinalizeHumanReviewInput) =>
+    request<Dispute>(`${isArcMode ? '/api/disputes/pg' : '/api/disputes'}/${encodeURIComponent(id)}/human-review`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  seedDemo: () => request<DashboardSnapshot>('/api/demo/seed', { method: 'POST' }),
+};

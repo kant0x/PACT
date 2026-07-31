@@ -1,0 +1,137 @@
+/*
+ * PACT design tokens — single source of truth.
+ * One source of truth for the public site and private dApp.
+ * Components consume semantic aliases; raw values belong here only.
+ */
+
+:root {
+  /* ---- Surfaces -------------------------------------------------------- */
+  --pact-bg: #080808;
+  --pact-surface: #0e0d0c;
+  --pact-surface-warm: #171310;
+  --pact-surface-soft: #251c18;
+
+  /* ---- Ink ------------------------------------------------------------- */
+  --pact-ink: #e4e3e3;
+  --pact-ink-strong: #f5f4f3;
+  --pact-black: #050505;
+
+  /* ---- Muted ----------------------------------------------------------- */
+  --pact-muted: #a39d99;
+  --pact-faint: #716b67;
+
+  /* ---- Accent (rust) --------------------------------------------------- */
+  --pact-rust: #cb673f;
+  --pact-rust-deep: #914425;
+  --pact-rust-hot: #e58a61;
+  --pact-mint: #cb673f;
+
+  /* ---- Lines ----------------------------------------------------------- */
+  --pact-line: rgba(203, 103, 63, 0.16);
+  --pact-line-strong: rgba(203, 103, 63, 0.38);
+  --pact-line-faint: rgba(255, 255, 255, 0.05);
+
+  /* ---- Dark-surface tokens (near-black sections, intro) --------------- */
+  --pact-dark: #050505;
+  --pact-dark-2: #0b0a09;
+  --pact-panel: #0e0d0c;
+  --pact-cream: #f5f4f3;
+  --pact-cream-2: rgba(245, 244, 243, 0.62);
+  --pact-cream-3: rgba(245, 244, 243, 0.4);
+  --pact-line-dark: rgba(203, 103, 63, 0.18);
+  --pact-line-dark-soft: rgba(255, 255, 255, 0.05);
+
+  /* ---- Status --------------------------------------------------------- */
+  --pact-live: #cb673f;
+  --pact-warn: #d6916f;
+  --pact-danger: #b94f32;
+
+  /* ---- Type ------------------------------------------------------------ */
+  --pact-display: "Archivo Narrow", sans-serif;
+  --pact-body: "IBM Plex Sans", sans-serif;
+  --pact-mono: "IBM Plex Mono", monospace;
+
+  /* Fluid editorial type scale */
+  --fs-mega: clamp(4rem, 8vw, 7rem);
+  --fs-hero: clamp(3rem, 6vw, 5rem);
+  --fs-h1: clamp(2.75rem, 5vw, 4.5rem);
+  --fs-h2: clamp(2.25rem, 3.5vw, 3.5rem);
+  --fs-h3: clamp(1.4rem, 2vw, 2rem);
+  --fs-body: clamp(1rem, 1.05vw, 1.125rem);
+  --fs-small: 0.875rem;
+  --fs-label: 0.6875rem;
+
+  /* ---- Spacing --------------------------------------------------------- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+  --sp-9: 96px;
+  --sp-10: 128px;
+
+  --page-pad: clamp(24px, 4vw, 72px);
+  --section-pad: clamp(48px, 6vw, 96px);
+
+  /* ---- Radii ----------------------------------------------------------- */
+  --r-sm: 3px;
+  --r-md: 6px;
+  --r-lg: 10px;
+  --r-xl: 14px;
+
+  /* ---- Shadow ---------------------------------------------------------- */
+  --pact-shadow: 0 24px 70px rgba(0, 0, 0, 0.44);
+  --pact-shadow-lg: 0 42px 120px rgba(0, 0, 0, 0.65);
+
+  /* ---- Motion ---------------------------------------------------------- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 180ms;
+  --dur: 320ms;
+  --dur-slow: 620ms;
+
+  /* ---- Layout ---------------------------------------------------------- */
+  --sidebar-h: 72px;
+  --maxw: 1440px;
+
+  /* ---- Semantic aliases (consumed by base.css / intro.css) ------------ */
+  /* Short, readable names map onto the single --pact-* source of truth. */
+  --bg: var(--pact-bg);
+  --surface: var(--pact-surface);
+  --surface-warm: var(--pact-surface-warm);
+  --surface-soft: var(--pact-surface-soft);
+
+  --ink: var(--pact-ink);
+  --night: var(--pact-dark);
+  --cream: var(--pact-cream);
+
+  --muted: var(--pact-muted);
+  --faint: var(--pact-faint);
+
+  --rust: var(--pact-rust);
+  --rust-deep: var(--pact-rust-deep);
+  --rust-hot: var(--pact-rust-hot);
+  --mint: var(--pact-mint);
+  --mint-ink: var(--pact-rust);
+
+  --line: var(--pact-line);
+  --line-strong: var(--pact-line-strong);
+  --line-faint: var(--pact-line-faint);
+
+  --font-display: var(--pact-display);
+  --font-body: var(--pact-body);
+  --font-mono: var(--pact-mono);
+
+  --fs-display: var(--fs-h1);
+
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
+
+  --shadow: var(--pact-shadow);
+  --shadow-lg: var(--pact-shadow-lg);
+}

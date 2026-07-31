@@ -6,15 +6,20 @@ const required = (name: string, value = process.env[name]) => {
   return value;
 };
 
+const circleClient = () => initiateDeveloperControlledWalletsClient({
+  apiKey: required('CIRCLE_API_KEY'),
+  entitySecret: required('CIRCLE_ENTITY_SECRET')
+});
+
+let runtimeWalletSetId: string | undefined;
+
 async function createArcWallet(accountType: 'EOA' | 'SCA') {
-  const client = initiateDeveloperControlledWalletsClient({
-    apiKey: required('CIRCLE_API_KEY'),
-    entitySecret: required('CIRCLE_ENTITY_SECRET')
-  });
-  let walletSetId = process.env.CIRCLE_WALLET_SET_ID;
+  const client = circleClient();
+  let walletSetId = process.env.CIRCLE_WALLET_SET_ID || runtimeWalletSetId;
   if (!walletSetId) {
     const response = await client.createWalletSet({ name: process.env.CIRCLE_WALLET_SET_NAME ?? 'PACT Agent Wallets' });
     walletSetId = response.data?.walletSet?.id;
+    runtimeWalletSetId = walletSetId;
   }
   if (!walletSetId) throw new Error('Circle did not return a wallet set ID');
   const response = await client.createWallets({
@@ -35,6 +40,36 @@ export function createArcDeveloperWallet() {
 /** Creates the ERC-4337 smart-contract account required by Circle Gas Station. */
 export function createArcSponsoredWallet() {
   return createArcWallet('SCA');
+}
+
+/** Submit an allowlisted Arc contract call from an agent's Circle SCA. */
+export async function submitArcContractCall(input: {
+  walletId: string;
+  contractAddress: string;
+  callData: `0x${string}`;
+  refId: string;
+}) {
+  if (!/^[0-9a-fA-F-]{36}$/.test(input.walletId)) throw new Error('Circle wallet ID is invalid');
+  if (!/^0x[0-9a-fA-F]{40}$/.test(input.contractAddress)) throw new Error('Contract address is invalid');
+  if (!/^0x(?:[0-9a-fA-F]{2})+$/.test(input.callData)) throw new Error('Contract calldata is invalid');
+  const response = await circleClient().createContractExecutionTransaction({
+    walletId: input.walletId,
+    contractAddress: input.contractAddress,
+    callData: input.callData,
+    refId: input.refId.slice(0, 255),
+    fee: { type: 'level', config: { feeLevel: 'MEDIUM' } },
+  });
+  const transaction = response.data;
+  if (!transaction?.id) throw new Error('Circle did not return a transaction ID');
+  return transaction;
+}
+
+export async function getCircleTransaction(id: string) {
+  if (!/^[0-9a-fA-F-]{36}$/.test(id)) throw new Error('Circle transaction ID is invalid');
+  const response = await circleClient().getTransaction({ id });
+  const transaction = response.data?.transaction;
+  if (!transaction) throw new Error('Circle transaction was not found');
+  return transaction;
 }
 
 export function createArcGatewayClient() {

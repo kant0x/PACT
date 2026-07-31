@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { AbiCoder, BrowserProvider, ContractFactory, Wallet, keccak256, parseUnits, toUtf8Bytes } from "ethers";
+import { AbiCoder, BrowserProvider, ContractFactory, Wallet, ZeroAddress, keccak256, parseUnits, toUtf8Bytes } from "ethers";
 import ganache from "ganache";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -160,6 +160,67 @@ describe("PACT contracts", () => {
     expect(totalAmount).toBe(parseUnits("100", 6));
   });
 
+  it("funds an open order, assigns the claiming agent, and completes it", async () => {
+    const totalAmount = parseUnits("120", 6);
+    await (await usdc.connect(creator).approve(await vault.getAddress(), totalAmount)).wait();
+    await (await vault.connect(creator).createOpenTask(totalAmount, ONE_USDC, ZeroAddress)).wait();
+
+    const open = await vault.tasks(1);
+    expect(open.creator).toBe(await creator.getAddress());
+    expect(open.agent).toBe("0x0000000000000000000000000000000000000000");
+    expect(open.requiredCollateral).toBe(0n);
+    expect(open.collateralDeadline).toBe(0n);
+    expect(open.status).toBe(1n);
+
+    await expect(
+      vault.connect(underwriter).underwriteCollateral(1, parseUnits("1", 6)),
+    ).rejects.toThrow();
+    await (await vault.connect(agent).claimOpenTask(1)).wait();
+    const assigned = await vault.tasks(1);
+    expect(assigned.agent).toBe(await agent.getAddress());
+    expect(assigned.requiredCollateral).toBe(parseUnits("60", 6));
+    expect(assigned.collateralDeadline).toBeGreaterThan(0n);
+    await expect((async () => {
+      const duplicate = await vault.connect(intruder).claimOpenTask(1);
+      await duplicate.wait();
+    })()).rejects.toThrow();
+
+    await postCollateral();
+    expect((await vault.tasks(1)).status).toBe(3n);
+    await (await vault.connect(creator).completeTask(1)).wait();
+
+    const completed = await vault.tasks(1);
+    expect(completed.status).toBe(5n);
+    expect(await usdc.balanceOf(await vault.getAddress())).toBe(0n);
+  });
+
+  it("enforces an invited agent on-chain", async () => {
+    const totalAmount = parseUnits("40", 6);
+    const invitedAgent = await agent.getAddress();
+    await (await usdc.connect(creator).approve(await vault.getAddress(), totalAmount)).wait();
+    await (await vault.connect(creator).createOpenTask(totalAmount, ONE_USDC, invitedAgent)).wait();
+
+    expect(await vault.preferredAgents(1)).toBe(invitedAgent);
+    await expect(vault.connect(intruder).claimOpenTask(1)).rejects.toThrow();
+    await (await vault.connect(agent).claimOpenTask(1)).wait();
+    expect((await vault.tasks(1)).agent).toBe(invitedAgent);
+  });
+
+  it("lets the creator cancel an unclaimed funded order", async () => {
+    const totalAmount = parseUnits("75", 6);
+    await (await usdc.connect(creator).approve(await vault.getAddress(), totalAmount)).wait();
+    await (await vault.connect(creator).createOpenTask(totalAmount, ONE_USDC, ZeroAddress)).wait();
+    expect(await usdc.balanceOf(await creator.getAddress())).toBe(parseUnits("925", 6));
+
+    await expect(vault.connect(intruder).cancelOpenTask(1)).rejects.toThrow();
+    await (await vault.connect(creator).cancelOpenTask(1)).wait();
+
+    const cancelled = await vault.tasks(1);
+    expect(cancelled.status).toBe(7n);
+    expect(await usdc.balanceOf(await creator.getAddress())).toBe(parseUnits("1000", 6));
+    expect(await usdc.balanceOf(await vault.getAddress())).toBe(0n);
+  });
+
   it("rejects unauthorized lifecycle calls and duplicate reputation outcomes", async () => {
     await expect(
       registry.connect(intruder).recordTaskOutcome(await agent.getAddress(), 9_001, true, 1),
@@ -179,6 +240,12 @@ describe("PACT contracts", () => {
     await expect(vault.connect(intruder).startStream(1, ONE_USDC)).rejects.toThrow();
     await (await vault.connect(creator).startStream(1, ONE_USDC)).wait();
     await expect(vault.connect(intruder).pauseStream(1)).rejects.toThrow();
+    // Ganache's fallback JS engine can occasionally reuse the gas estimate from
+    // the immediately preceding reverted call on Windows. An explicit ceiling
+    // keeps this authorization test deterministic without changing execution.
+    await (await vault.connect(creator).pauseStream(1, { gasLimit: 1_000_000 })).wait();
+    await expect(vault.connect(intruder).resumeStream(1)).rejects.toThrow();
+    await (await vault.connect(creator).resumeStream(1, { gasLimit: 1_000_000 })).wait();
     await expect(vault.connect(intruder).completeTask(1)).rejects.toThrow();
     await expect(vault.connect(intruder).slashCollateral(1, 100)).rejects.toThrow();
   });
@@ -215,6 +282,7 @@ describe("PACT contracts", () => {
         77,
         false,
         parseUnits("5", 6),
+        { gasLimit: 300_000 },
       )
     ).wait();
     const [, updatedTotal] = await protocol.readHistory(await agent.getAddress(), 1, 1);
@@ -362,6 +430,23 @@ describe("PACT contracts", () => {
     await expect(
       module.connect(intruder).settle(1, 50, keccak256(toUtf8Bytes("intruder"))),
     ).rejects.toThrow();
+  });
+
+  it("lets either participant freeze a dispute and resumes a no-fault decision", async () => {
+    const module = await deploy("DisputeModule", owner, [await owner.getAddress()]);
+    await (await module.setVault(await vault.getAddress())).wait();
+    await (await vault.setDisputeModule(await module.getAddress())).wait();
+
+    await createTask("100", 50);
+    await postCollateral();
+    await (await vault.connect(creator).startStream(1, ONE_USDC)).wait();
+    await (await vault.connect(agent).pauseForDispute(1)).wait();
+    expect((await vault.tasks(1)).status).toBe(4n);
+
+    const decisionHash = keccak256(toUtf8Bytes("pact-no-fault-decision"));
+    await (await module.settle(1, 0, decisionHash)).wait();
+    expect((await vault.tasks(1)).status).toBe(3n);
+    expect(await module.executedDecisions(decisionHash)).toBe(true);
   });
 
   it("awards non-transferable platform points once per training attempt", async () => {

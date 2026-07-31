@@ -38,7 +38,7 @@ def run_training(config_path: Path, allow_small_dataset: bool = False, resume: s
     import torch
     from datasets import load_dataset
     from peft import LoraConfig, prepare_model_for_kbit_training
-    from transformers import AutoModelForImageTextToText, AutoProcessor, BitsAndBytesConfig
+    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
     from trl import SFTConfig, SFTTrainer
 
     if not torch.cuda.is_available():
@@ -54,8 +54,10 @@ def run_training(config_path: Path, allow_small_dataset: bool = False, resume: s
         bnb_4bit_use_double_quant=bool(model_cfg["double_quant"]),
         bnb_4bit_compute_dtype=dtype,
     )
-    processor = AutoProcessor.from_pretrained(model_cfg["id"], trust_remote_code=model_cfg["trust_remote_code"])
-    model = AutoModelForImageTextToText.from_pretrained(
+    tokenizer = AutoTokenizer.from_pretrained(model_cfg["id"], trust_remote_code=model_cfg["trust_remote_code"])
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    model = AutoModelForCausalLM.from_pretrained(
         model_cfg["id"],
         quantization_config=quantization,
         device_map="auto",
@@ -103,12 +105,12 @@ def run_training(config_path: Path, allow_small_dataset: bool = False, resume: s
         train_dataset=dataset["train"],
         eval_dataset=dataset["eval"],
         peft_config=adapter,
-        processing_class=processor,
+        processing_class=tokenizer,
     )
     trainer.train(resume_from_checkpoint=resume)
     output_dir = Path(train_cfg["output_dir"])
     trainer.save_model(output_dir / "adapter")
-    processor.save_pretrained(output_dir / "adapter")
+    tokenizer.save_pretrained(output_dir / "adapter")
     metrics = trainer.evaluate()
     release = {
         "schemaVersion": 1,

@@ -9,13 +9,16 @@ const { Pool } = pg;
 // adapters are enabled, supply DATABASE_URL through the deployment secret
 // manager (or standard PG* variables) instead of relying on checked-in demo
 // credentials.
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl = process.env.PACT_DATABASE_URL ?? process.env.DATABASE_URL;
 
 export const pool = new Pool({
   ...(databaseUrl ? { connectionString: databaseUrl } : {}),
+  ssl: process.env.PACT_DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
+  statement_timeout: Number(process.env.PACT_DATABASE_STATEMENT_TIMEOUT_MS ?? 15_000),
+  application_name: 'pact-api',
 });
 
 pool.on('error', (err) => {

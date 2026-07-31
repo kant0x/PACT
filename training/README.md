@@ -6,7 +6,7 @@ but deliberately does not copy third-party Claude or GPT traces.
 
 ## What is trained
 
-The first profile uses `Qwen/Qwen3.5-2B` with 4-bit NF4 QLoRA, assistant-only
+The first profile uses `Qwen/Qwen2.5-3B-Instruct` with 4-bit NF4 QLoRA, assistant-only
 supervised loss and visible task/tool trajectories. The target behavior is:
 
 - check reputation and wallet-policy limits before acting;
@@ -85,7 +85,7 @@ Do not use `--allow-small-dataset` for a release model.
 
 The default configuration targets the available GTX 1660 Super 6 GB:
 
-- 2B base model;
+- 3B instruct base model;
 - 4-bit NF4 weights with double quantization;
 - LoRA rank 16 on all linear layers;
 - batch size 1, accumulation 16;

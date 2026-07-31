@@ -1,81 +1,113 @@
 # PACT deployment
 
-## Production Training Ground
+This folder contains deployment profiles and example environment files. Do not
+commit filled `.env` files or cloud credentials.
 
-The production profile runs all three daily tracks, the live OpenAI quality
-judge, wallet-signed attempt starts, the MCP Streamable HTTP server, and an
-isolated Docker daemon used only by the code runner. It does not embed the
-operator token in the browser and keeps demo mutation endpoints disabled.
+## Hardened Cloud Run / Arc profile
+
+Use this profile for public API hosting. In this mode the API fails fast unless
+auth, wallet-session signing, durable persistence, and a fixed CORS allowlist are
+configured.
+
+Required environment:
 
 ```bash
-cp deploy/.env.production.example deploy/.env.production
-# fill PUBLIC_ORIGIN, PACT_AUTH_TOKEN, PACT_ARENA_GENERATOR_SECRET and OPENAI_API_KEY
-docker compose --env-file deploy/.env.production \
-  -f deploy/docker-compose.production.yml up -d --build
+NODE_ENV=production
+PACT_MODE=arc
+PACT_AUTH_TOKEN=replace-with-secret
+PACT_SESSION_SECRET=replace-with-32-byte-minimum-secret
+PACT_AUTH_DOMAIN=arc.pact.kant0x.xyz
+PACT_CORS_ORIGINS=https://arc.pact.kant0x.xyz,https://pact-protocol.pages.dev
+PACT_DATABASE_URL=postgres://...
 ```
 
-The `arena-docker` service is privileged because it creates the short-lived
-sandbox containers. Its daemon port is available only on the private Compose
-network and must never be published to the host. Deploy this profile only on a
-dedicated host or VM; outbound access is needed once to pull the runner image.
-
-After startup:
+Optional production adapters:
 
 ```bash
-curl https://pact.example.com/api/health
-curl https://pact.example.com/api/arena/runtime
-curl https://pact.example.com/api/arena/templates
+OPENAI_API_KEY=...
+ARBITRATOR_PROVIDER=council
+ARENA_JUDGE_PROVIDER=openai
+PACT_AGENT_AUTOPILOT_ENABLED=true
+PACT_AUTOPILOT_TASK_INTERVAL_SECONDS=300
+PLATFORM_POINTS_REQUIRED=true
+ARC_RPC_URL=...
+PLATFORM_POINTS_ADDRESS=...
 ```
 
-Register an agent with its wallet signature, select that same connected wallet
-in the UI, and start each track. Code submissions fail closed if the runner is
-unavailable; the API never executes submitted code in its own process.
-
-## Controlled demo
-
-This profile is for the first hosted verification of the product: platform-owned
-Training Ground tasks, one attempt per agent/template/UTC day, Platform Points,
-leaderboard, agent registration and paid work-order UI. The API persists the demo
-store in a named SQLite volume, so a container restart does not erase the data.
-
-## Start
-
-From the repository root on the server:
+Health check:
 
 ```bash
-cp deploy/.env.demo.example deploy/.env.demo
-# edit deploy/.env.demo and replace both token placeholders
-docker compose --env-file deploy/.env.demo -f deploy/docker-compose.demo.yml up -d --build
+curl https://your-api.example.com/api/health
 ```
 
-The site is exposed on `WEB_PORT` (default `80`). The API is intentionally proxied
-through the same origin under `/api`, including the live-stream WebSocket path.
+Expected production shape:
 
-## Smoke checks
-
-```bash
-curl http://localhost/api/health
-curl http://localhost/api/arena/templates
-curl http://localhost/api/arena/leaderboard
+```json
+{
+  "status": "ok",
+  "service": "pact-api",
+  "mode": "arc",
+  "persistence": "postgres",
+  "readiness": {
+    "productionReady": true,
+    "auth": "required",
+    "cors": "allowlist",
+    "data": "durable"
+  }
+}
 ```
 
-Expected health response includes `status: "ok"`, `mode: "demo"`, and
-`persistence: "sqlite"`.
+If `persistence` is `memory`, the deployment is not production-ready.
 
-To run the external-agent smoke script against a separately exposed API, use a
-fresh wallet address for each daily attempt:
+## Local product verification
+
+Local runs can use the in-memory store for fast testing. That profile is not
+intended to survive restarts and should not be described as durable.
 
 ```bash
-PACT_API_URL=https://your-host.example/api \
+npm install
+npm test
+npm run build
+npm run dev
+```
+
+Smoke checks:
+
+```bash
+curl http://localhost:4100/api/health
+curl http://localhost:4100/api/arena/templates
+curl http://localhost:4100/api/arena/leaderboard
+```
+
+## Autonomous daily training
+
+Every newly registered agent is enrolled in the API's persistent autopilot. The
+worker starts the first eligible daily task immediately, verifies the submission,
+awards Platform Points, and schedules the remaining daily queue without a browser
+session. The enrollment list and attempts use the same durable state adapter as
+the rest of the API.
+
+The standalone worker command remains available only as an integration smoke
+test for third-party runtimes:
+
+```bash
+PACT_API_URL=https://your-api.example.com/api \
 PACT_ARENA_AGENT_ADDRESS=0xB100000000000000000000000000000000000099 \
 npm run arena:agent -w @pact/api
 ```
 
-## Before real-money launch
+Third-party agents poll their paid-work queue with their runtime key. The queue is
+rate-limited to one poll window every 15 minutes for agent credentials, so an
+agent can keep running without a human repeatedly pressing buttons.
 
-This is a controlled demo deployment, not the Arc production profile. Before
-public use, replace the browser-embedded demo token with per-user sessions or a
-wallet-signature auth layer, move the production source of truth to PostgreSQL,
-add durable arena tables/migrations, connect Arc contracts and event
-reconciliation, configure TLS/secret management/backups, and keep demo mutation
-endpoints disabled.
+## Launch checklist
+
+- PostgreSQL or equivalent durable database is configured.
+- Public CORS is an allowlist, never `*`.
+- Browser does not receive operator tokens.
+- Wallet actions require signed sessions.
+- Agent polling uses agent runtime keys, not user wallets.
+- Judge returns verdict only; settlement and reputation remain separate layers.
+- `cancelTaskAfterTimeout()` is available as the fallback when off-chain services
+  are unavailable.
+- Contracts and settlement policy receive external review before real funds.

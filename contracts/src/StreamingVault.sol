@@ -7,6 +7,17 @@ interface IERC20 {
 }
 
 interface IReputationRegistry {
+    function getAgentHistory(address agent)
+        external
+        view
+        returns (
+            uint256 completedTasks,
+            uint256 failedTasks,
+            uint256 totalVolume,
+            uint256 localScore,
+            uint256 lastActivityTimestamp
+        );
+
     function recordTaskOutcome(
         address agent,
         uint256 taskId,
@@ -57,8 +68,11 @@ contract StreamingVault {
     address public owner;
     address public disputeModule;
     uint256 public nextTaskId = 1;
-    mapping(address => bool) public authorizedOperators;
     mapping(uint256 => Task) public tasks;
+    /// @notice Optional agent wallet reserved by the creator for an open order.
+    /// @dev Zero address means any agent may claim. Kept outside Task so the
+    ///      existing public task tuple remains backwards-compatible.
+    mapping(uint256 => address) public preferredAgents;
     mapping(uint256 => mapping(address => uint256)) public underwrittenCollateral;
     mapping(uint256 => address[]) private taskUnderwriters;
 
@@ -76,13 +90,18 @@ contract StreamingVault {
     uint256 private locked = 1;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event AuthorizedOperatorUpdated(address indexed operator, bool authorized);
     event DisputeModuleUpdated(address indexed previousModule, address indexed newModule);
     event TaskCreated(
         uint256 indexed taskId,
         address indexed creator,
         address indexed agent,
         uint256 totalAmount,
+        uint256 requiredCollateral,
+        uint256 collateralDeadline
+    );
+    event TaskAssigned(
+        uint256 indexed taskId,
+        address indexed agent,
         uint256 requiredCollateral,
         uint256 collateralDeadline
     );
@@ -103,6 +122,7 @@ contract StreamingVault {
     event StreamStarted(uint256 indexed taskId, uint256 ratePerSecond, uint256 timestamp);
     event StreamWithdrawn(uint256 indexed taskId, address indexed agent, uint256 amount);
     event StreamPaused(uint256 indexed taskId, uint256 accruedAmount, uint256 timestamp);
+    event StreamResumed(uint256 indexed taskId, uint256 timestamp);
     event TaskCompleted(uint256 indexed taskId, uint256 paidToAgent, uint256 collateralReturned);
     event CollateralSlashed(
         uint256 indexed taskId,
@@ -125,6 +145,9 @@ contract StreamingVault {
     error TransferFailed();
     error Reentrancy();
     error TooManyUnderwriters();
+    error AgentNotAssigned();
+    error AgentAlreadyAssigned();
+    error NotPreferredAgent();
 
     constructor(
         address usdcAddress,
@@ -160,9 +183,9 @@ contract StreamingVault {
         locked = 1;
     }
 
-    modifier onlyCreatorOrOperator(uint256 taskId) {
+    modifier onlyCreator(uint256 taskId) {
         Task storage task = tasks[taskId];
-        if (msg.sender != task.creator && !authorizedOperators[msg.sender]) revert Unauthorized();
+        if (msg.sender != task.creator) revert Unauthorized();
         _;
     }
 
@@ -170,12 +193,6 @@ contract StreamingVault {
         if (newOwner == address(0)) revert ZeroAddress();
         emit OwnershipTransferred(owner, newOwner);
         owner = newOwner;
-    }
-
-    function setAuthorizedOperator(address operator, bool authorized) external onlyOwner {
-        if (operator == address(0)) revert ZeroAddress();
-        authorizedOperators[operator] = authorized;
-        emit AuthorizedOperatorUpdated(operator, authorized);
     }
 
     function setDisputeModule(address newModule) external onlyOwner {
@@ -304,12 +321,101 @@ contract StreamingVault {
         emit TaskCreated(taskId, msg.sender, agent, totalAmount, collateral, deadline);
     }
 
+    /// @notice Funds a public work order before an agent has claimed it.
+    /// @dev The creator can cancel while the order is unassigned. Once an agent is
+    ///      assigned, the normal collateral timeout and settlement lifecycle apply.
+    function createOpenTask(uint256 totalAmount, uint256 ratePerSecond, address preferredAgent)
+        external
+        nonReentrant
+        returns (uint256 taskId)
+    {
+        if (totalAmount == 0 || ratePerSecond == 0) revert InvalidAmount();
+
+        taskId = nextTaskId++;
+        tasks[taskId] = Task({
+            creator: msg.sender,
+            agent: address(0),
+            totalAmount: totalAmount,
+            requiredCollateral: 0,
+            collateralLocked: 0,
+            ratePerSecond: ratePerSecond,
+            accruedAmount: 0,
+            withdrawnAmount: 0,
+            collateralDeadline: 0,
+            lastAccrualTimestamp: 0,
+            status: TaskStatus.OPEN,
+            agentCollateral: 0,
+            totalUnderwritten: 0,
+            agentPayoutPaid: 0
+        });
+        preferredAgents[taskId] = preferredAgent;
+
+        _safeTransferFrom(msg.sender, address(this), totalAmount);
+        emit TaskCreated(taskId, msg.sender, address(0), totalAmount, 0, 0);
+    }
+
+    /// @notice Claims a public work order with the caller's own wallet.
+    /// @dev Collateral is derived from the public on-chain reputation record, so
+    ///      neither the agent nor a platform server can lower it while claiming.
+    function claimOpenTask(uint256 taskId) external {
+        Task storage task = tasks[taskId];
+        if (task.status != TaskStatus.OPEN) revert InvalidState(task.status);
+        if (task.agent != address(0)) revert AgentAlreadyAssigned();
+        address preferredAgent = preferredAgents[taskId];
+        if (preferredAgent != address(0) && preferredAgent != msg.sender) revert NotPreferredAgent();
+
+        uint256 requiredCollateralPct = requiredCollateralPctForAgent(msg.sender);
+        uint64 deadline = uint64(block.timestamp + collateralTimeout);
+        task.agent = msg.sender;
+        task.requiredCollateral = _percentageCeil(task.totalAmount, requiredCollateralPct);
+        task.collateralDeadline = deadline;
+        emit TaskAssigned(taskId, msg.sender, task.requiredCollateral, deadline);
+    }
+
+    /// @notice Assigns a known agent to a private/direct work order.
+    /// @dev Only the creator may make this decision; PACT has no global operator
+    ///      that can impersonate either participant.
+    function assignAgent(
+        uint256 taskId,
+        address agent,
+        uint256 requiredCollateralPct
+    )
+        external
+        onlyCreator(taskId)
+    {
+        Task storage task = tasks[taskId];
+        if (task.status != TaskStatus.OPEN) revert InvalidState(task.status);
+        if (task.agent != address(0)) revert AgentAlreadyAssigned();
+        if (agent == address(0)) revert ZeroAddress();
+        if (requiredCollateralPct > 100) revert InvalidPercentage();
+
+        uint64 deadline = uint64(block.timestamp + collateralTimeout);
+        task.agent = agent;
+        task.requiredCollateral = _percentageCeil(task.totalAmount, requiredCollateralPct);
+        task.collateralDeadline = deadline;
+        emit TaskAssigned(taskId, agent, task.requiredCollateral, deadline);
+    }
+
+    /// @notice Cancels and refunds an open order that no agent has claimed.
+    function cancelOpenTask(uint256 taskId) external nonReentrant {
+        Task storage task = tasks[taskId];
+        if (msg.sender != task.creator) revert Unauthorized();
+        if (task.status != TaskStatus.OPEN) revert InvalidState(task.status);
+        if (task.agent != address(0)) revert AgentAlreadyAssigned();
+
+        uint256 refund = task.totalAmount;
+        task.status = TaskStatus.CANCELLED;
+        _safeTransfer(task.creator, refund);
+        emit TaskCancelled(taskId, refund);
+    }
+
     /// @notice Commits third-party collateral before the agent starts the task.
     /// @dev The commitment is locked once made. It is returned on timeout, earns a
     ///      proportional stream fee on success, and shares collateral loss on slash.
     function underwriteCollateral(uint256 taskId, uint256 amount) external nonReentrant {
         Task storage task = tasks[taskId];
         if (task.status != TaskStatus.OPEN) revert InvalidState(task.status);
+        if (task.agent == address(0)) revert AgentNotAssigned();
         if (block.timestamp > task.collateralDeadline) revert CollateralWindowClosed();
         if (amount == 0 || task.totalUnderwritten + amount > task.requiredCollateral) {
             revert InvalidAmount();
@@ -340,11 +446,20 @@ contract StreamingVault {
         task.status = TaskStatus.COLLATERAL_POSTED;
         if (amount != 0) _safeTransferFrom(msg.sender, address(this), amount);
         emit CollateralPosted(taskId, msg.sender, amount);
+
+        // Public work orders contain creator-approved stream terms up front.
+        // Once the claiming agent locks collateral, no privileged relay is
+        // needed to start settlement.
+        if (task.ratePerSecond != 0) {
+            task.lastAccrualTimestamp = uint64(block.timestamp);
+            task.status = TaskStatus.STREAMING;
+            emit StreamStarted(taskId, task.ratePerSecond, block.timestamp);
+        }
     }
 
     function startStream(uint256 taskId, uint256 ratePerSecond)
         external
-        onlyCreatorOrOperator(taskId)
+        onlyCreator(taskId)
     {
         Task storage task = tasks[taskId];
         if (task.status != TaskStatus.COLLATERAL_POSTED) revert InvalidState(task.status);
@@ -374,12 +489,51 @@ contract StreamingVault {
         emit StreamWithdrawn(taskId, task.agent, amount);
     }
 
-    function pauseStream(uint256 taskId) external onlyCreatorOrOperator(taskId) {
+    function pauseStream(uint256 taskId) external onlyCreator(taskId) {
         Task storage task = tasks[taskId];
         if (task.status != TaskStatus.STREAMING) revert InvalidState(task.status);
         uint256 accrued = _checkpoint(task);
         task.status = TaskStatus.PAUSED;
         emit StreamPaused(taskId, accrued, block.timestamp);
+    }
+
+    /// @notice Freezes accrual when either task participant opens a dispute.
+    /// @dev The caller signs this action directly. Only the configured dispute
+    ///      module may resume or settle after the evidence decision.
+    function pauseForDispute(uint256 taskId) external {
+        Task storage task = tasks[taskId];
+        if (msg.sender != task.creator && msg.sender != task.agent) revert Unauthorized();
+        if (task.status != TaskStatus.STREAMING) revert InvalidState(task.status);
+        uint256 accrued = _checkpoint(task);
+        task.status = TaskStatus.PAUSED;
+        emit StreamPaused(taskId, accrued, block.timestamp);
+    }
+
+    function resumeStream(uint256 taskId) external onlyCreator(taskId) {
+        Task storage task = tasks[taskId];
+        if (task.status != TaskStatus.PAUSED) revert InvalidState(task.status);
+        task.lastAccrualTimestamp = uint64(block.timestamp);
+        task.status = TaskStatus.STREAMING;
+        emit StreamResumed(taskId, block.timestamp);
+    }
+
+    function resumeAfterDispute(uint256 taskId) external {
+        if (msg.sender != disputeModule) revert Unauthorized();
+        Task storage task = tasks[taskId];
+        if (task.status != TaskStatus.PAUSED) revert InvalidState(task.status);
+        task.lastAccrualTimestamp = uint64(block.timestamp);
+        task.status = TaskStatus.STREAMING;
+        emit StreamResumed(taskId, block.timestamp);
+    }
+
+    /// @notice Mirrors the published PACT collateral tiers using only canonical
+    ///         reputation data available to every Arc participant.
+    function requiredCollateralPctForAgent(address agent) public view returns (uint256) {
+        (, , , uint256 score, ) = reputationRegistry.getAgentHistory(agent);
+        if (score >= 701) return 0;
+        if (score >= 401) return 10;
+        if (score >= 101) return 25;
+        return 50;
     }
 
     function completeTask(uint256 taskId) external nonReentrant {
@@ -445,6 +599,7 @@ contract StreamingVault {
         Task storage task = tasks[taskId];
         if (msg.sender != task.creator) revert Unauthorized();
         if (task.status != TaskStatus.OPEN) revert InvalidState(task.status);
+        if (task.agent == address(0)) revert AgentNotAssigned();
         if (block.timestamp <= task.collateralDeadline) revert CancellationNotAvailable();
 
         uint256 refund = task.totalAmount;

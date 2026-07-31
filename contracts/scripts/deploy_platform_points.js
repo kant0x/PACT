@@ -5,7 +5,11 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
-const envFile = process.env.PACT_ENV_FILE || path.join(root, '.env');
+const workspaceRoot = path.resolve(root, '..');
+const envFile = process.env.PACT_ENV_FILE
+  || (fs.existsSync(path.join(workspaceRoot, 'env.txt'))
+    ? path.join(workspaceRoot, 'env.txt')
+    : path.join(root, '.env'));
 if (fs.existsSync(envFile) && typeof process.loadEnvFile === 'function') process.loadEnvFile(envFile);
 
 const rpcUrl = process.env.PLATFORM_POINTS_RPC_URL || process.env.ARC_RPC_URL || 'https://rpc.testnet.arc.network';
