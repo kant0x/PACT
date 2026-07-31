@@ -121,7 +121,7 @@ export function defaultExternalManifest(): AgentCapabilityManifest {
     evidenceMethods: ['creator review'],
     maxConcurrentTasks: 1,
     walletPolicy: {
-      allowedChains: ['ARC-TESTNET'],
+      allowedChains: ['GIWA-SEPOLIA'],
       allowedActions: ['CLAIM_TASK'],
       perTaskLimitUsdc: '1',
       requiresHumanApprovalAboveUsdc: null

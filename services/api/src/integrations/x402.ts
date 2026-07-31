@@ -1,8 +1,7 @@
 import { createGatewayMiddleware, type GatewayMiddleware } from '@circle-fin/x402-batching/server';
 
 const EVM_ADDRESS = /^0x[0-9a-fA-F]{40}$/;
-const ARC_TESTNET = 'eip155:5042002';
-const ARC_MAINNET = 'eip155:5042';
+const GIWA_SEPOLIA = 'eip155:91342';
 
 export interface X402RuntimeConfig {
   sellerAddress: string;
@@ -22,8 +21,9 @@ export function createX402RuntimeIntegration(env = process.env): { gateway: Gate
   if (!sellerAddress) return null;
   if (!EVM_ADDRESS.test(sellerAddress)) throw new Error('X402_SELLER_ADDRESS must be a 20-byte 0x-prefixed address');
 
-  const network = (env.X402_NETWORK ?? ARC_TESTNET).trim();
-  const facilitatorUrl = (env.X402_FACILITATOR_URL ?? (network === ARC_MAINNET ? 'https://gateway-api.circle.com' : 'https://gateway-api-testnet.circle.com')).trim();
+  const network = (env.X402_NETWORK ?? GIWA_SEPOLIA).trim();
+  const facilitatorUrl = (env.X402_FACILITATOR_URL ?? '').trim();
+  if (!facilitatorUrl) throw new Error('X402_FACILITATOR_URL is required because GIWA has no bundled facilitator default');
   const price = (env.X402_RUNTIME_PRICE ?? '$0.01').trim();
   if (!/^\$?\d+(?:\.\d{1,6})?$/.test(price)) throw new Error('X402_RUNTIME_PRICE must be a dollar amount such as $0.01');
 

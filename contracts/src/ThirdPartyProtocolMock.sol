@@ -23,7 +23,7 @@ interface IOpenReputationRegistry {
         returns (TaskOutcome[] memory page, uint256 total);
 }
 
-/// @notice Demonstrates that an unrelated Arc protocol can compose with PACT
+/// @notice Demonstrates that an unrelated GIWA protocol can compose with PACT
 ///         without requiring any code change in the registry.
 contract ThirdPartyProtocolMock {
     IOpenReputationRegistry public immutable registry;

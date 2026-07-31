@@ -171,7 +171,7 @@ const defaultCapabilityManifest = (address: string): AgentCapabilityManifest => 
       evidenceMethods: ['audit log hash'],
       maxConcurrentTasks: 100,
       walletPolicy: {
-        allowedChains: ['ARC-TESTNET'],
+        allowedChains: ['GIWA-SEPOLIA'],
         allowedActions: ['CREATE_TASK', 'RESOLVE_DISPUTE', 'CLAIM_TASK'],
         perTaskLimitUsdc: '5000',
         requiresHumanApprovalAboveUsdc: null
@@ -214,7 +214,7 @@ const defaultCapabilityManifest = (address: string): AgentCapabilityManifest => 
       evidenceMethods: ['criteria matrix', 'SHA-256 artifact hash', 'policy receipt'],
       maxConcurrentTasks: 2,
       walletPolicy: {
-        allowedChains: ['ARC-TESTNET'],
+        allowedChains: ['GIWA-SEPOLIA'],
         allowedActions: ['CLAIM_TASK', 'WITHDRAW_STREAM'],
         perTaskLimitUsdc: '500',
         requiresHumanApprovalAboveUsdc: '250'
@@ -253,7 +253,7 @@ const defaultCapabilityManifest = (address: string): AgentCapabilityManifest => 
       {
         id: 'transaction.prepare',
         label: 'Transaction preparation',
-        description: 'Prepares bounded Arc actions; signing remains subject to the wallet policy.',
+        description: 'Prepares bounded GIWA actions; signing remains subject to the wallet policy.',
         inputTypes: ['contract ABI', 'intent', 'spending limit'],
         outputTypes: ['unsigned transaction', 'simulation result'],
         verification: 'SELF_DECLARED'
@@ -276,11 +276,11 @@ const defaultCapabilityManifest = (address: string): AgentCapabilityManifest => 
         verification: 'SELF_DECLARED'
       }
     ],
-    tools: veteran ? ['HTTPS', 'JSON API', 'repository sandbox', 'Arc transaction simulation'] : ['HTTPS', 'document parser'],
+    tools: veteran ? ['HTTPS', 'JSON API', 'repository sandbox', 'GIWA transaction simulation'] : ['HTTPS', 'document parser'],
     evidenceMethods: veteran ? ['source manifest', 'test receipt', 'SHA-256 artifact hash', 'transaction simulation'] : ['source manifest', 'SHA-256 artifact hash'],
     maxConcurrentTasks: veteran ? 4 : 1,
     walletPolicy: {
-      allowedChains: ['ARC-TESTNET'],
+      allowedChains: ['GIWA-SEPOLIA'],
       allowedActions: veteran ? ['CLAIM_TASK', 'WITHDRAW_STREAM', 'PREPARE_TRANSACTION'] : ['CLAIM_TASK', 'WITHDRAW_STREAM'],
       perTaskLimitUsdc: veteran ? '10000' : '500',
       requiresHumanApprovalAboveUsdc: veteran ? '1000' : '100'
@@ -712,7 +712,7 @@ export class DemoStore {
     const passed = criticalChecksPassed && scored.score >= 80;
     const pointsAwarded = passed ? Math.max(1, Math.round(template.rewardPoints * scored.score / 100)) : 0;
     let pointsReceipt: ArenaEvaluationResult['pointsReceipt'] = {
-      mode: services.platformPoints ? 'ARC_TESTNET' : 'OFFCHAIN',
+      mode: services.platformPoints ? 'GIWA_SEPOLIA' : 'OFFCHAIN',
       transactionHash: null,
       contractAddress: null,
       chainId: null,
@@ -721,7 +721,7 @@ export class DemoStore {
     if (pointsAwarded > 0) {
       if (services.platformPoints) {
         // The on-chain receipt is obtained before the local score is updated.
-        // If Arc rejects the award, the attempt remains STARTED and can be
+        // If GIWA rejects the award, the attempt remains STARTED and can be
         // retried without recording a false local success.
         pointsReceipt = await services.platformPoints.award(attempt.agentAddress, pointsAwarded, attempt.id);
       }
@@ -1423,8 +1423,8 @@ export class DemoStore {
         workOrder: workOrderForTemplate('RESEARCH_BRIEF')
       },
       {
-        title: 'Validate Arc deployment readiness',
-        description: 'Inspect the contract deployment package, environment requirements, and operational handoff for Arc Testnet.',
+        title: 'Validate GIWA deployment readiness',
+        description: 'Inspect the contract deployment package, environment requirements, and operational handoff for GIWA Sepolia.',
         successCriteria: 'Return a deployment checklist, contract/test receipts, unresolved blockers, rollback steps, and artifact hashes.',
         creatorAddress: DEMO_ADDRESSES.creator,
         totalAmount: '1200',
@@ -1450,7 +1450,7 @@ export class DemoStore {
         workOrder: workOrderForTemplate('SECURITY_REVIEW')
       },
       {
-        title: 'Write the Arc Testnet operator runbook',
+        title: 'Write the GIWA Sepolia operator runbook',
         description: 'Turn the deployment handoff into a step-by-step operator document covering wallets, contract addresses, writer authorization, funding, and rollback.',
         successCriteria: 'Return ordered commands, required environment variables, preflight checks, transaction receipt slots, rollback steps, and owner sign-off gates.',
         creatorAddress: DEMO_ADDRESSES.creator,
@@ -1485,9 +1485,9 @@ export class DemoStore {
     this.reset();
     const veteran = this.seedVeteran(8);
     const newbieTask = this.createTask({
-      title: 'Newbie verification task',
-      description: 'Call a deterministic verification API.',
-      successCriteria: 'Return the expected proof.',
+      title: 'Newbie research brief',
+      description: 'Compare the supplied sources and summarize the verified facts.',
+      successCriteria: 'Return a source-backed report with the expected proof.',
       creatorAddress: DEMO_ADDRESSES.creator,
       totalAmount: '500',
       estimatedDurationSeconds: 120

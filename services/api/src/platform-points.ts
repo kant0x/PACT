@@ -20,7 +20,7 @@ const PLATFORM_POINTS_ABI = parseAbi([
 ]);
 
 export interface PlatformPointsReceipt {
-  mode: 'OFFCHAIN' | 'ARC_TESTNET';
+  mode: 'OFFCHAIN' | 'GIWA_SEPOLIA';
   transactionHash: string | null;
   contractAddress: string | null;
   chainId: number | null;
@@ -33,14 +33,14 @@ export interface PlatformPointsService {
   getPoints(agentAddress: string): Promise<number>;
 }
 
-const arcChain = (chainId: number) => ({
+const giwaChain = (chainId: number, rpcUrl: string) => ({
   id: chainId,
-  name: chainId === 5_042_002 ? 'Arc Testnet' : 'PACT EVM network',
-  nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
-  rpcUrls: { default: { http: [process.env.PLATFORM_POINTS_RPC_URL || process.env.ARC_RPC_URL || 'https://rpc.testnet.arc.network'] } }
+  name: chainId === 91_342 ? 'GIWA Sepolia' : 'PACT EVM network',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrls: { default: { http: [rpcUrl] } }
 } as const);
 
-class ArcPlatformPointsService implements PlatformPointsService {
+class GiwaPlatformPointsService implements PlatformPointsService {
   private readonly account;
   private readonly walletClient;
   private readonly publicClient;
@@ -52,14 +52,14 @@ class ArcPlatformPointsService implements PlatformPointsService {
     privateKey: Hex
   ) {
     this.account = privateKeyToAccount(privateKey);
-    const chain = arcChain(chainId);
+    const chain = giwaChain(chainId, rpcUrl);
     this.walletClient = createWalletClient({ account: this.account, chain, transport: http(rpcUrl) });
     this.publicClient = this.walletClient.extend(publicActions);
   }
 
   describe() {
     return {
-      mode: 'ARC_TESTNET',
+      mode: 'GIWA_SEPOLIA',
       contractAddress: this.contractAddress,
       chainId: this.chainId,
       awarderAddress: this.account.address,
@@ -89,7 +89,7 @@ class ArcPlatformPointsService implements PlatformPointsService {
     });
 
     return {
-      mode: 'ARC_TESTNET',
+      mode: 'GIWA_SEPOLIA',
       transactionHash: hash,
       contractAddress: this.contractAddress,
       chainId: this.chainId,
@@ -111,20 +111,20 @@ class ArcPlatformPointsService implements PlatformPointsService {
 
 export function createPlatformPointsFromEnv(env: NodeJS.ProcessEnv = process.env): PlatformPointsService | null {
   const contractAddress = env.PLATFORM_POINTS_ADDRESS?.trim();
-  const privateKey = (env.PLATFORM_POINTS_AWARDER_PRIVATE_KEY || env.DEPLOYER_PRIVATE_KEY || '').trim();
+  const privateKey = (env.PLATFORM_POINTS_AWARDER_PRIVATE_KEY || env.GIWA_DEPLOYER_PRIVATE_KEY || '').trim();
   if (!contractAddress && !privateKey) return null;
   if (!contractAddress || !privateKey) {
-    throw new Error('PLATFORM_POINTS_ADDRESS and PLATFORM_POINTS_AWARDER_PRIVATE_KEY (or DEPLOYER_PRIVATE_KEY) are both required for Arc points');
+    throw new Error('PLATFORM_POINTS_ADDRESS and PLATFORM_POINTS_AWARDER_PRIVATE_KEY (or GIWA_DEPLOYER_PRIVATE_KEY) are both required for GIWA points');
   }
   if (!ADDRESS.test(contractAddress)) throw new Error('PLATFORM_POINTS_ADDRESS must be a valid EVM address');
   if (!PRIVATE_KEY.test(privateKey)) throw new Error('PLATFORM_POINTS_AWARDER_PRIVATE_KEY must be a 32-byte hex private key');
-  const chainId = Number(env.PLATFORM_POINTS_CHAIN_ID || env.ARC_CHAIN_ID || '5042002');
+  const chainId = Number(env.PLATFORM_POINTS_CHAIN_ID || env.GIWA_CHAIN_ID || '91342');
   if (!Number.isSafeInteger(chainId) || chainId <= 0) throw new Error('PLATFORM_POINTS_CHAIN_ID must be a positive integer');
-  const rpcUrl = env.PLATFORM_POINTS_RPC_URL || env.ARC_RPC_URL || 'https://rpc.testnet.arc.network';
+  const rpcUrl = env.PLATFORM_POINTS_RPC_URL || env.GIWA_RPC_URL || env.GIWA_SEPOLIA_RPC_URL || 'https://sepolia-rpc.giwa.io';
   const account = privateKeyToAccount(privateKey as Hex);
   const configuredAwarder = env.PLATFORM_POINTS_AWARDER_ADDRESS?.trim();
   if (configuredAwarder && (!ADDRESS.test(configuredAwarder) || configuredAwarder.toLowerCase() !== account.address.toLowerCase())) {
     throw new Error('PLATFORM_POINTS_AWARDER_ADDRESS must match the configured scorer private key');
   }
-  return new ArcPlatformPointsService(contractAddress as Address, chainId, rpcUrl, privateKey as Hex);
+  return new GiwaPlatformPointsService(contractAddress as Address, chainId, rpcUrl, privateKey as Hex);
 }

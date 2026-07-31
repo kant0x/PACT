@@ -326,15 +326,15 @@ describe('PACT demo API', () => {
     const totals = new Map<string, number>();
     const app = createApp(store, {
       platformPoints: {
-        describe: () => ({ mode: 'ARC_TESTNET', contractAddress: '0x0000000000000000000000000000000000000001', chainId: 5042002 }),
+        describe: () => ({ mode: 'GIWA_SEPOLIA', contractAddress: '0x0000000000000000000000000000000000000001', chainId: 91342 }),
         award: async (agentAddress, points, attemptId) => {
           awards.push({ agentAddress, points, attemptId });
           totals.set(agentAddress.toLowerCase(), (totals.get(agentAddress.toLowerCase()) ?? 0) + points);
           return {
-            mode: 'ARC_TESTNET' as const,
+            mode: 'GIWA_SEPOLIA' as const,
             transactionHash: '0x' + 'a'.repeat(64),
             contractAddress: '0x0000000000000000000000000000000000000001',
-            chainId: 5042002,
+            chainId: 91342,
             agentTotal: points
           };
         },
@@ -370,7 +370,7 @@ describe('PACT demo API', () => {
     }).expect(200);
     expect(result.body).toMatchObject({ status: 'PASSED', pointsAwarded: expect.any(Number), trainingConsent: true });
     expect(result.body.pointsAwarded).toBeGreaterThan(0);
-    expect(result.body.pointsReceipt).toMatchObject({ mode: 'ARC_TESTNET', transactionHash: expect.stringMatching(/^0x[a-f0-9]{64}$/), chainId: 5042002 });
+    expect(result.body.pointsReceipt).toMatchObject({ mode: 'GIWA_SEPOLIA', transactionHash: expect.stringMatching(/^0x[a-f0-9]{64}$/), chainId: 91342 });
     expect(awards).toHaveLength(1);
     expect(awards[0]).toMatchObject({ agentAddress: DEMO_ADDRESSES.newbie, attemptId: challenge.body.attemptId });
     const leaderboard = await request(app).get('/api/arena/leaderboard').expect(200);

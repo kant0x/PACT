@@ -1,4 +1,20 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: pact
+      POSTGRES_USER: pact
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in deploy/.env.production}
+    volumes:
+      - pact-postgres:/var/lib/postgresql/data
+      - ../services/api/src/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pact -d pact"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
   arena-docker:
     image: docker:27-dind
     privileged: true
@@ -25,8 +41,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4100
-      PACT_MODE: demo
-      PACT_DB_PATH: /app/data/pact.sqlite
+      PACT_MODE: giwa
+      DATABASE_URL: postgresql://pact:${POSTGRES_PASSWORD}@postgres:5432/pact
       PACT_CORS_ORIGINS: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN in deploy/.env.production}
       PACT_ENABLE_DEMO_ENDPOINTS: "false"
       PACT_REQUIRE_AGENT_SIGNATURES: "true"
@@ -36,10 +52,10 @@ services:
       ARBITRATOR_FALLBACK: disabled
       DOCKER_HOST: tcp://arena-docker:2375
     depends_on:
+      postgres:
+        condition: service_healthy
       arena-docker:
         condition: service_healthy
-    volumes:
-      - pact-data:/app/data
     networks:
       - default
       - runner
@@ -59,10 +75,25 @@ services:
       - api
     restart: unless-stopped
 
+  indexer:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    command: ["node", "services/indexer/dist/index.js"]
+    env_file:
+      - ${PACT_ENV_FILE:-.env.production}
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://pact:${POSTGRES_PASSWORD}@postgres:5432/pact
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
 networks:
   runner:
     driver: bridge
 
 volumes:
-  pact-data:
+  pact-postgres:
   arena-docker-data:

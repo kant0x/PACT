@@ -5,10 +5,8 @@ config(); // Load environment variables from .env
 
 const { Pool } = pg;
 
-// The hosted demo uses SQLite and does not need PostgreSQL. When the repository
-// adapters are enabled, supply DATABASE_URL through the deployment secret
-// manager (or standard PG* variables) instead of relying on checked-in demo
-// credentials.
+// Durable state uses PostgreSQL. Supply DATABASE_URL through the deployment
+// secret manager instead of relying on checked-in developer credentials.
 const databaseUrl = process.env.DATABASE_URL;
 
 export const pool = new Pool({

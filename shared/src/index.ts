@@ -278,7 +278,7 @@ const TASK_CATEGORY_PATTERNS: Record<AgentTaskCategory, RegExp> = {
   CREATIVE: /(video|presentation|creative|visual|caption|voice|storyboard|design|media|animation)/i,
   SECURITY: /(security|audit|policy|risk|threat|abuse|privilege|compliance)/i,
   RESEARCH: /(research|analysis|compare|source|market|competitor|economic|legal|document|report)/i,
-  ENGINEERING: /(engineering|code|software|deploy|deployment|api|contract|test|repository|transaction|arc)/i,
+  ENGINEERING: /(engineering|code|software|deploy|deployment|api|contract|test|repository|transaction|giwa)/i,
 };
 
 /** Infer a work category from the published brief. A null result means the brief is intentionally generic. */
@@ -605,7 +605,7 @@ export interface ArenaEvaluationResult {
   criticalChecksPassed: boolean;
   pointsAwarded: number;
   pointsReceipt?: {
-    mode: 'OFFCHAIN' | 'ARC_TESTNET';
+    mode: 'OFFCHAIN' | 'GIWA_SEPOLIA';
     transactionHash: string | null;
     contractAddress: string | null;
     chainId: number | null;
@@ -669,7 +669,7 @@ export interface DashboardSnapshot {
     completedTasks: number;
     protectedValue: string;
   };
-  mode: 'demo' | 'arc';
+  mode: 'demo' | 'giwa';
 }
 
 export interface ApiError {

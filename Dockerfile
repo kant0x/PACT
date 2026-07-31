@@ -5,14 +5,19 @@ COPY package*.json ./
 COPY shared/package.json shared/package-lock.json* ./shared/
 COPY contracts/package.json contracts/package-lock.json* ./contracts/
 COPY services/api/package.json services/api/package-lock.json* ./services/api/
+COPY services/indexer/package.json ./services/indexer/
+COPY giwa/package.json ./giwa/
 RUN npm ci
 
 COPY shared ./shared
 COPY contracts ./contracts
 COPY services/api ./services/api
+COPY services/indexer ./services/indexer
+COPY giwa ./giwa
 COPY tsconfig.base.json ./tsconfig.base.json
 RUN npm run build -w @pact/shared
 RUN npm run build -w @pact/api
+RUN npm run build -w @pact/indexer
 RUN npm prune --omit=dev
 
 FROM node:24-bookworm-slim AS runtime
@@ -34,10 +39,12 @@ COPY --from=build /app/package*.json ./
 COPY --from=build /app/shared/package.json ./shared/package.json
 COPY --from=build /app/contracts/package.json ./contracts/package.json
 COPY --from=build /app/services/api/package.json ./services/api/package.json
+COPY --from=build /app/services/indexer/package.json ./services/indexer/package.json
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/services/api/node_modules ./services/api/node_modules
 COPY --from=build /app/shared/dist ./shared/dist
 COPY --from=build /app/services/api/dist ./services/api/dist
+COPY --from=build /app/services/indexer/dist ./services/indexer/dist
 
 RUN mkdir -p /app/data
 EXPOSE 8080

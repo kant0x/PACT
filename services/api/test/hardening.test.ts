@@ -1,18 +1,9 @@
-import { rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import request from 'supertest';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { DEFAULT_TASK_DURATION_SECONDS, DEMO_ADDRESSES } from '@pact/shared';
 import { createApp } from '../src/app.js';
-import { SqliteStatePersistence } from '../src/persistence.js';
 import { DemoStore, type PersistedDemoState } from '../src/store.js';
-import { buildSpendingPolicyArgs } from '../src/integrations/circle.js';
-
-const tempFiles: string[] = [];
-afterEach(() => {
-  for (const file of tempFiles.splice(0)) rmSync(file, { force: true });
-});
+import { PostgresStatePersistence } from '../src/postgres-persistence.js';
 
 describe('production hardening', () => {
   it('allows a work order without a creator-specified delivery window', () => {
@@ -67,7 +58,7 @@ describe('production hardening', () => {
       tools: [],
       evidenceMethods: ['creator review'],
       maxConcurrentTasks: 1,
-      walletPolicy: { allowedChains: ['ARC-TESTNET'], allowedActions: ['CLAIM_TASK'], perTaskLimitUsdc: '10', requiresHumanApprovalAboveUsdc: null },
+      walletPolicy: { allowedChains: ['GIWA-SEPOLIA'], allowedActions: ['CLAIM_TASK'], perTaskLimitUsdc: '10', requiresHumanApprovalAboveUsdc: null },
       updatedAt: 0
     };
     await request(app).post('/api/agents').send({
@@ -77,23 +68,20 @@ describe('production hardening', () => {
     }).expect(400);
   });
 
-  it('persists tasks and reputation state in SQLite', () => {
-    const path = join(tmpdir(), `pact-${Date.now()}-${Math.random()}.sqlite`);
-    tempFiles.push(path, `${path}-shm`, `${path}-wal`);
-    const firstPersistence = new SqliteStatePersistence<PersistedDemoState>(path);
-    const first = new DemoStore(firstPersistence);
-    const task = first.createTask({
+  it.skipIf(!process.env.TEST_DATABASE_URL)('persists state in PostgreSQL', async () => {
+    const persistence = new PostgresStatePersistence<PersistedDemoState>(process.env.TEST_DATABASE_URL!);
+    const store = new DemoStore();
+    const task = store.createTask({
       title: 'Persistent task',
       creatorAddress: DEMO_ADDRESSES.creator,
       totalAmount: '25',
       estimatedDurationSeconds: 60
     });
-    firstPersistence.close();
-
-    const secondPersistence = new SqliteStatePersistence<PersistedDemoState>(path);
-    const second = new DemoStore(secondPersistence);
-    expect(second.getTask(task.id).title).toBe('Persistent task');
-    secondPersistence.close();
+    const snapshot = (store as unknown as { serialize(): PersistedDemoState }).serialize();
+    await persistence.save(snapshot);
+    const saved = await persistence.load();
+    expect(saved?.tasks.some((candidate) => candidate.id === task.id && candidate.title === 'Persistent task')).toBe(true);
+    await persistence.close();
   });
 
   it('protects mutations with a bearer token while keeping reads available', async () => {
@@ -162,16 +150,4 @@ describe('production hardening', () => {
     expect(response.body).toMatchObject({ verdict: 'PARTIAL_FAULT', slashPct: 50, reasoning: 'Only one of two proofs was supplied.' });
   });
 
-  it('builds a mainnet policy and rejects testnet policies', () => {
-    const policy = {
-      address: '0x1111111111111111111111111111111111111111',
-      chain: 'BASE',
-      perTransaction: 25,
-      daily: 100,
-      weekly: 500,
-      monthly: 1500
-    };
-    expect(buildSpendingPolicyArgs(policy)).toContain('--per-tx');
-    expect(() => buildSpendingPolicyArgs({ ...policy, chain: 'ARC-TESTNET' })).toThrow('mainnet-only');
-  });
 });

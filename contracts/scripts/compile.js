@@ -17,7 +17,7 @@ const input = {
   language: "Solidity",
   sources,
   settings: {
-    // Arc is EVM-compatible, while the local Ganache runner does not yet
+    // GIWA is EVM-compatible, while the local Ganache runner does not yet
     // implement every opcode emitted for newer hard forks by recent solc.
     evmVersion: "shanghai",
     viaIR: true,

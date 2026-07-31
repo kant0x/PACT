@@ -1,10 +1,11 @@
-# PACT contracts
+# PACT contracts on GIWA
 
-Standalone Solidity workspace for the Provable Agent Contract & Trust MVP.
+This workspace contains the complete PACT protocol contract suite for GIWA
+Sepolia: settlement token, streaming escrow, dispute settlement, commercial
+reputation, Training Ground points, and the GIWA agent receipt registry.
 
-Amounts are ERC-20 base units. `MockUSDC` uses six decimals, like USDC. A task
-creator approves and deposits the full payment in `createTask`; the assigned
-agent separately approves and posts the calculated collateral.
+Amounts use ERC-20 base units. The included `MockUSDC` has six decimals and is
+strictly a testnet asset; it is not real USDC.
 
 ```bash
 npm install
@@ -12,74 +13,35 @@ npm run build
 npm test
 ```
 
-## Arc Testnet deployment
+## GIWA Sepolia deployment
 
-The deployment script creates the PACT-controlled `DisputeModule` (unless an
-external module address is explicitly supplied), then `ReputationRegistry` and
-`StreamingVault` with the live Arc Testnet USDC address and a collateral timeout.
-It authorizes the vault as a registry writer and writes the resulting addresses
-and transaction hashes to `deployments.json`.
+GIWA Sepolia uses chain ID `91342` and ETH for gas. The public RPC is
+rate-limited, so production-like deployments should set a dedicated provider
+URL.
 
-The repository includes an ignored `contracts/.env` template. Fill it on the
-deployment machine only (never commit real secrets):
+Create `contracts/.env` locally:
 
-```bash
-ARC_RPC_URL=https://rpc.testnet.arc.network
-EXPECTED_CHAIN_ID=5042002
-DEPLOYER_PRIVATE_KEY=0x...
-ARC_USDC_ADDRESS=0x3600000000000000000000000000000000000000
-# Optional: use an already deployed compatible module. If empty, the script
-# deploys PACT's controlled testnet DisputeModule automatically.
-DISPUTE_MODULE_ADDRESS=
-COLLATERAL_TIMEOUT_SECONDS=86400
-# Optional: an operator wallet allowed to call vault operator-only paths.
-AUTHORIZED_OPERATOR_ADDRESS=0x...
-# Optional: separate awarder for the non-transferable Training Ground points.
+```dotenv
+GIWA_RPC_URL=https://sepolia-rpc.giwa.io
+GIWA_DEPLOYER_PRIVATE_KEY=0x...
+GIWA_OPERATOR_ADDRESS=0x...
 PLATFORM_POINTS_AWARDER_ADDRESS=0x...
+COLLATERAL_TIMEOUT_SECONDS=86400
+
+# Optional. When empty, deployment creates test-only MockUSDC.
+GIWA_SETTLEMENT_TOKEN_ADDRESS=
 ```
 
-Then run:
+Fund the deployer with GIWA Sepolia test ETH, then run:
 
 ```bash
-npm run deploy:testnet -w @pact/contracts
+npm run deploy:giwa -w @pact/contracts
 ```
 
-The script loads `contracts/.env` automatically. To use another file, set
-`PACT_ENV_FILE=/absolute/path/to/file` before running the command.
+The script verifies chain ID and contract code, configures all cross-contract
+permissions, and writes `contracts/deployments.giwa-sepolia.json`. Copy its
+addresses into the API environment. Never commit private keys.
 
-The script stops before deployment when the chain ID, required addresses or
-USDC contract code do not match. The PACT-controlled module is an operator relay:
-the off-chain Judge decides the verdict, while this contract applies the final
-slash policy once and rejects replayed decision receipts. For real funds, use a
-separately controlled operator or multisig instead of the deployer wallet.
-After deployment, copy the recorded `ReputationRegistry` and
-`StreamingVault` addresses into the API's Arc environment and verify the
-transaction receipts before enabling real-money routes.
-
-`StreamingVault` must be added to `ReputationRegistry` as an authorized writer
-after deployment. Its constructor also receives the trusted dispute-module
-address and the collateral-posting timeout in seconds.
-
-The deployment also creates `PlatformPoints`, a non-transferable Arc Testnet
-ledger for Training Ground rewards. It has no USDC value and is separate from
-commercial Trust Score. The deployment wallet (or
-`PLATFORM_POINTS_AWARDER_ADDRESS`) is allowlisted as the scorer. Copy the
-recorded `contracts.PlatformPoints` address into the API environment as
-`PLATFORM_POINTS_ADDRESS`, and use the scorer key as
-`PLATFORM_POINTS_AWARDER_PRIVATE_KEY`.
-
-If the Vault, Registry and DisputeModule are already deployed, deploy only the
-points ledger without replacing those contracts:
-
-```powershell
-npm run deploy:points:testnet -w @pact/contracts
-```
-
-The Registry also supports third-party protocol writers, public paginated outcome
-history, and EIP-712 external attestations from owner-approved attestors. Task IDs
-are namespaced by writer, so two protocols may safely use the same numeric ID.
-
-Before the agent posts collateral, up to 16 independent underwriters may fund the
-shortfall with `underwriteCollateral`. They receive principal plus a proportional
-share of the 2% stream fee on success, receive a timeout refund, and share slashing
-losses proportionally.
+GIWA mainnet is not available yet. Before a real-value launch, replace the test
+token with an audited settlement asset, use multisig ownership, obtain an
+independent contract audit, and configure a production RPC provider.

@@ -1,93 +1,37 @@
-# PACT API
+# PACT API for GIWA
 
-Local demo-mode backend for the PACT dashboard. It persists state in SQLite and does not require Arc or Circle credentials.
-
-From the repository root:
+The API supports an in-memory local demo and a production GIWA profile backed
+by PostgreSQL. SQLite is not used.
 
 ```powershell
 npm install
 npm run dev -w @pact/api
 ```
 
-The API listens on `http://localhost:4100`. Check it with `GET /api/health`. Reset and launch the comparison demo with:
+The API listens on `http://localhost:4100`; readiness is available at
+`GET /api/health`. Build and test with:
 
 ```powershell
-npm run demo:run
-```
-
-The command uses `PACT_API_URL` when set, otherwise `http://localhost:4100`. Tests and production build:
-
-```powershell
-npm test -w @pact/api
 npm run build -w @pact/api
-npm start -w @pact/api
+npm test -w @pact/api
 ```
 
-The live stream socket is `ws://localhost:4100/api/streams/:taskId/live`. Trust roles and arbitration safeguards are exposed at `GET /api/trust-model`.
+## PostgreSQL
 
-## Arc Testnet Platform Points
+Set `DATABASE_URL` (or `PACT_DATABASE_URL`) to enable durable state. In its
+absence, the API intentionally uses memory and reports `persistence: "memory"`.
+Docker Compose supplies PostgreSQL automatically.
 
-Training Ground rewards can be recorded on Arc Testnet as non-transferable
-points. Deploy `PlatformPoints` with `npm run deploy:points:testnet -w @pact/contracts`,
-then copy `contracts.deployments.PlatformPoints` into the server environment:
+## GIWA Sepolia
 
-```powershell
-PLATFORM_POINTS_ADDRESS=0x...
-PLATFORM_POINTS_AWARDER_PRIVATE_KEY=0x...
-PLATFORM_POINTS_CHAIN_ID=5042002
-PLATFORM_POINTS_RPC_URL=https://rpc.testnet.arc.network
-PLATFORM_POINTS_REQUIRED=true
-```
+Set `PACT_MODE=giwa`, `GIWA_CHAIN_ID=91342`, a production-grade `GIWA_RPC_URL`,
+and the addresses emitted by `npm run deploy:giwa -w @pact/contracts`.
+Training Ground points additionally require `PLATFORM_POINTS_ADDRESS` and the
+private key of an authorized awarder. The key must stay server-side.
 
-The scorer key must be authorized by the contract deployment. A passed daily
-attempt waits for `awardPoints` to be mined before the local leaderboard is
-updated; the API returns the transaction hash in `pointsReceipt`. Failed
-attempts create no points transaction. These points are not USDC and do not
-change commercial Trust Score.
+GIWA agents provide their own EVM wallet and prove ownership with an EIP-191
+signature. Automatic third-party wallet provisioning and gas sponsorship are
+not enabled because no supported GIWA provider is bundled.
 
-## Split-decision human review
-
-In council mode a valid 1/1/1 split is stored as `NEEDS_HUMAN_REVIEW`. It does not
-change collateral, outcome, or reputation. With `PACT_AUTH_TOKEN` configured, an
-authorized operator can finalize it once:
-
-```powershell
-Invoke-RestMethod -Method Post `
-  -Uri http://localhost:4100/api/disputes/<id>/human-review `
-  -Headers @{ Authorization = "Bearer $env:PACT_AUTH_TOKEN" } `
-  -ContentType application/json `
-  -Body '{"verdict":"PARTIAL_FAULT","reasoning":"Reviewed council split against signed evidence."}'
-```
-
-`PACT_HUMAN_REVIEWER_ID` identifies the reviewer in the receipt and is read only
-from server configuration. The client cannot choose or override it. A second
-finalization attempt returns `409 DISPUTE_ALREADY_FINALIZED`.
-
-## Circle Gas Station / Paymaster
-
-Circle Gas Station sponsors gas automatically for an ERC-4337 SCA wallet when its Console policy matches the transaction. PACT adds a fail-closed guard because Circle's maximum-spend policy does not apply to the first SCA transaction. The guard allows exactly one first outbound call per allowlisted wallet, only on `ARC-TESTNET`, only to the deployed `StreamingVault`, and only for `createTask` or `postCollateral` within the configured USDC cap.
-
-Create an SCA wallet:
-
-```powershell
-npm run circle:paymaster -w @pact/api -- create-wallet
-```
-
-Then configure the Circle Console Gas Station policy and set all `CIRCLE_PAYMASTER_*` values from `.env.example`. `CIRCLE_PAYMASTER_ALLOWED_WALLET_IDS` accepts comma-separated Circle wallet UUIDs; `CIRCLE_PAYMASTER_ALLOWED_CONTRACTS` accepts comma-separated EVM addresses. Both `CIRCLE_PAYMASTER_ENABLED=true` and `CIRCLE_GAS_STATION_POLICY_CONFIRMED=true` are required. Missing credentials, policy confirmation, allowlists, or addresses stop execution before Circle is called.
-
-Sponsor the wallet's first task operation:
-
-```powershell
-npm run circle:paymaster -w @pact/api -- create-task `
-  --wallet-id <circle-wallet-uuid> `
-  --agent <agent-address> `
-  --amount-usdc 25 `
-  --collateral-pct 25
-
-npm run circle:paymaster -w @pact/api -- post-collateral `
-  --wallet-id <circle-wallet-uuid> `
-  --task-id 1 `
-  --amount-usdc 5
-```
-
-The local SQLite ledger atomically reserves sponsorship before submission, so concurrent calls cannot consume it twice. A Circle error keeps the slot blocked as `FAILED_CLOSED`; use the printed/stored idempotency key to reconcile the request with Circle before any manual retry. `amount-usdc` on `post-collateral` is a local policy declaration and must be obtained from the onchain task immediately before execution; the contract remains the final authority for the actual collateral amount.
+Optional x402 metering requires both `X402_SELLER_ADDRESS` and an explicitly
+configured `X402_FACILITATOR_URL`; there is no implicit facilitator fallback.

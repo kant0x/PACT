@@ -1,0 +1,21 @@
+{
+  "name": "@pact/giwa",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "PACT agent identity and reputation registry for GIWA Sepolia",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:giwa": "hardhat ignition deploy ignition/modules/PACTGiwaRegistry.ts --network giwaSepolia",
+    "verify:giwa": "hardhat verify --network giwaSepolia"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox-viem": "^5.0.2",
+    "@nomicfoundation/hardhat-verify": "^3.0.7",
+    "dotenv": "^17.2.3",
+    "hardhat": "^3.0.15",
+    "typescript": "^5.9.3",
+    "viem": "^2.38.5"
+  }
+}

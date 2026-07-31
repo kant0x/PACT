@@ -6,6 +6,7 @@ Dockerfile.web
 deploy/web-entrypoint.sh
 dist/
 artifacts/
+cache/
 coverage/
 .env
 *.log

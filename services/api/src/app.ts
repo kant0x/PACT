@@ -9,7 +9,6 @@ import { SCORE } from './config.js';
 import { createArbitratorFromEnv, DeterministicArbitrator, type Arbitrator } from './arbitration.js';
 import { authGuard, hasValidBearerToken, parseCorsOrigins } from './security.js';
 import { AgentRuntime, DeterministicAgentProvider, OpenAIAgentProvider, type AgentModelProvider } from './agent-runtime.js';
-import { createArcDeveloperWallet } from './integrations/circle.js';
 import { verifyMessage } from 'viem';
 import { defaultExternalManifest, validateCapabilityManifest } from './capability-validation.js';
 import { defaultWorkOrderForTask, validateWorkOrderSpec } from './work-order-validation.js';
@@ -71,7 +70,7 @@ export interface AppOptions {
 export function createApp(store: DemoStore = demoStore, options: AppOptions = {}) {
   const app = express();
   const openaiKey = process.env.OPENAI_API_KEY;
-  const controlledDemoMode = process.env.PACT_MODE !== 'arc'
+  const controlledDemoMode = process.env.PACT_MODE !== 'giwa'
     || process.env.NODE_ENV === 'demo'
     || process.env.PACT_ENABLE_DEMO_ENDPOINTS === 'true';
   const deterministicProvidersAllowed = process.env.NODE_ENV !== 'production'
@@ -105,8 +104,8 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
       return null;
     }
   })();
-  if (!controlledDemoMode && process.env.PACT_MODE === 'arc' && process.env.PLATFORM_POINTS_REQUIRED === 'true' && !platformPoints) {
-    throw new Error('PLATFORM_POINTS_REQUIRED=true but no Arc PlatformPoints adapter is configured');
+  if (!controlledDemoMode && process.env.PACT_MODE === 'giwa' && process.env.PLATFORM_POINTS_REQUIRED === 'true' && !platformPoints) {
+    throw new Error('PLATFORM_POINTS_REQUIRED=true but no GIWA PlatformPoints adapter is configured');
   }
   const x402Integration = (() => {
     try {
@@ -139,11 +138,11 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
   // protected unless an operator deliberately opts into the legacy bypass.
   const creatorSignatureRequired = !controlledDemoMode && (process.env.NODE_ENV === 'production'
     || (process.env.NODE_ENV !== 'test' && process.env.PACT_ALLOW_UNSIGNED_TASKS !== 'true'));
-  // Demo mode keeps the local showcase frictionless. Arc/production registration
+  // Demo mode keeps the local showcase frictionless. GIWA/production registration
   // must still prove wallet ownership over the exact capability JSON that is
   // persisted; a bearer token alone is not an agent identity proof.
   const agentSignatureRequired = !controlledDemoMode && (process.env.NODE_ENV === 'production'
-    || process.env.PACT_MODE === 'arc'
+    || process.env.PACT_MODE === 'giwa'
     || (process.env.NODE_ENV !== 'test' && process.env.PACT_REQUIRE_AGENT_SIGNATURES === 'true'));
   // A public demo is still a public API. Never let a browser claim an arena
   // attempt merely by naming a registered agent address. The only unsigned
@@ -226,7 +225,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
   const health = (_request: Request, response: Response) => response.json({
     status: 'ok',
     service: 'pact-api',
-    mode: process.env.PACT_MODE === 'arc' ? 'arc' : 'demo',
+    mode: process.env.PACT_MODE === 'giwa' ? 'giwa' : 'demo',
     persistence: (process.env.PACT_DATABASE_URL ?? process.env.DATABASE_URL) ? 'postgres' : 'memory',
     timestamp: new Date().toISOString()
   });
@@ -292,7 +291,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
         return;
       }
 
-      // Arc is authoritative when the points adapter is enabled. The local
+      // GIWA is authoritative when the points adapter is enabled. The local
       // attempt statistics remain useful, but the displayed point total is
       // read from the contract so a restart cannot erase the leaderboard.
       const rows = await Promise.all(localRows.map(async (row) => ({
@@ -303,7 +302,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
       response.json(rows.map((row, index) => ({ ...row, rank: index + 1 })));
     } catch (error) {
       if (process.env.PLATFORM_POINTS_REQUIRED === 'true') {
-        next(new ApiProblem(503, 'PLATFORM_POINTS_UNAVAILABLE', 'Arc Platform Points could not be read; leaderboard is fail-closed'));
+        next(new ApiProblem(503, 'PLATFORM_POINTS_UNAVAILABLE', 'GIWA Platform Points could not be read; leaderboard is fail-closed'));
         return;
       }
       response.json(store.arenaLeaderboard());
@@ -315,7 +314,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
     codeRunner: arenaCodeRunner.describe(),
     platformPoints: platformPoints?.describe() ?? {
       mode: 'OFFCHAIN',
-      reason: 'Configure PLATFORM_POINTS_ADDRESS and PLATFORM_POINTS_AWARDER_PRIVATE_KEY to record points on Arc Testnet'
+      reason: 'Configure PLATFORM_POINTS_ADDRESS and PLATFORM_POINTS_AWARDER_PRIVATE_KEY to record points on GIWA Sepolia'
     },
     toolTransport: 'MCP Streamable HTTP',
     startAuthentication: arenaSignatureRequired ? 'EIP-191 wallet signature' : 'development bypass'
@@ -456,7 +455,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
           completedTasks: completedTasksCount,
           protectedValue: money(protectedValue)
         },
-        mode: 'arc'
+        mode: 'giwa'
       };
 
       response.json(canReadSensitive(request) ? dashboard : { ...dashboard, disputes: disputes.map(redactDispute) });
@@ -506,9 +505,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
       let finalAddress = text(address).trim();
 
       if (provisionWallet === true) {
-        const provisioned = await createArcDeveloperWallet();
-        finalAddress = provisioned.wallet.address;
-        if (!finalAddress) throw new ApiProblem(502, 'CIRCLE_WALLET_ADDRESS_MISSING', 'Circle did not return an Arc wallet address');
+        throw new ApiProblem(400, 'EXTERNAL_WALLET_REQUIRED', 'GIWA agents must provide and sign with their own EVM wallet');
       } else {
         if (!ETHEREUM_ADDRESS.test(finalAddress)) throw new ApiProblem(400, 'INVALID_AGENT_ADDRESS', 'address must be a 20-byte hex address');
 
@@ -528,7 +525,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
         }
       }
 
-      if (!ETHEREUM_ADDRESS.test(finalAddress)) throw new ApiProblem(502, 'INVALID_PROVISIONED_ADDRESS', 'Circle did not return a valid agent wallet address');
+      if (!ETHEREUM_ADDRESS.test(finalAddress)) throw new ApiProblem(400, 'INVALID_AGENT_ADDRESS', 'A valid GIWA agent wallet address is required');
 
       const agent = {
         agentAddress: finalAddress.toLowerCase(),
@@ -762,7 +759,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
 
   // PostgreSQL streaming lifecycle. The contract-backed vault remains the
   // source of truth in production; these routes persist the same state while
-  // the Arc adapter is being used in local/dev deployments.
+  // the GIWA adapter is being used in local/dev deployments.
   app.post('/api/streams/pg/:id/withdraw', async (request, response, next) => {
     try {
       const { taskRepository } = await import('./repositories/task.repository.js');

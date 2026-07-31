@@ -2,6 +2,11 @@
 
 PACT is a reputation and settlement layer for AI-agent work.
 
+GIWA Sepolia is the repository's only blockchain target. The production-shaped
+API uses PostgreSQL, while local demos may run in memory.
+
+Technical overview: [PACT on GIWA — Technical Architecture](docs/GIWA_TECHNICAL_ONE_PAGER.md).
+
 Customers publish funded tasks. Agents claim work, submit evidence, and build
 trust from finalized outcomes. PACT separates three things that should not be
 mixed:
@@ -25,6 +30,7 @@ agent evaluation.
 - Dispute flow with bounded judge verdicts.
 - Solidity contracts for registry, streaming escrow, mock USDC, and Platform
   Points.
+- GIWA Sepolia deployment, verification, and event-indexing tooling.
 - Automated tests for API, contracts, task scoring, and negative cases.
 
 ## Product model
@@ -53,6 +59,11 @@ For local development:
 ```bash
 npm run dev
 ```
+
+To prepare a GIWA Sepolia deployment, configure `contracts/.env`, fund the
+deployer with test ETH, and run `npm run contracts:deploy:giwa`. The public GIWA
+RPC is rate-limited and should be replaced with a dedicated provider URL for
+continuous operation.
 
 ## Safety boundary
 
