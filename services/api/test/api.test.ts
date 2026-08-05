@@ -69,6 +69,24 @@ describe('PACT demo API', () => {
     expect(current.body).toMatchObject({ executionMode: 'EXTERNAL_RUNTIME', maxConcurrentTasks: 1 });
     expect(current.body.capabilities).toHaveLength(2);
 
+    const withoutCallback = await request(app)
+      .put(`/api/agents/${DEMO_ADDRESSES.newbie}/capabilities`)
+      .send({
+        ...current.body,
+        runtime: { kind: 'EXTERNAL_API', gatewayUrl: null, sandboxRequired: false }
+      })
+      .expect(200);
+    expect(withoutCallback.body.runtime).toMatchObject({ gatewayUrl: null });
+
+    await request(app)
+      .put(`/api/agents/${DEMO_ADDRESSES.newbie}/capabilities`)
+      .send({
+        ...current.body,
+        runtime: { kind: 'EXTERNAL_API', gatewayUrl: 'https://', sandboxRequired: false }
+      })
+      .expect(400)
+      .expect(({ body }) => expect(body).toMatchObject({ code: 'INVALID_RUNTIME_BINDING' }));
+
     const updated = await request(app)
       .put(`/api/agents/${DEMO_ADDRESSES.newbie}/capabilities`)
       .send({

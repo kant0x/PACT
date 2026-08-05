@@ -1540,6 +1540,11 @@ html[lang="es"] .overview-section-heading h2 {
 .runtime-setup-card--compact { gap: 10px; padding: 16px 18px; }
 .runtime-setup-card--compact h3 { font-size: 23px; }
 .runtime-setup-card--compact p { max-width: 68ch; margin: 0; font-size: 13px; line-height: 1.5; }
+.runtime-local-runtime { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 13px; border-left: 2px solid var(--pact-rust); background: rgba(203, 103, 63, .07); }
+.runtime-local-runtime > span { display: grid; gap: 3px; }
+.runtime-local-runtime strong { color: var(--pact-ink-strong); font: 600 12px/1.1 var(--font-mono); letter-spacing: .03em; }
+.runtime-local-runtime small { color: var(--pact-muted); font: 400 10px/1.4 var(--font-mono); }
+.runtime-local-runtime .button { flex: 0 0 auto; white-space: nowrap; }
 .agent-learning-note { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; color: var(--pact-muted); border: 1px solid var(--pact-line); background: rgba(255,255,255,.018); font: 400 10px/1.5 var(--font-mono); }
 .agent-learning-note svg { flex: 0 0 auto; width: 16px; color: var(--pact-rust-hot); }
 .agent-learning-note strong { color: var(--pact-ink); font-weight: 500; }
@@ -1569,6 +1574,8 @@ html[lang="es"] .overview-section-heading h2 {
 
 @media (max-width: 720px) {
   .runtime-choice-grid, .runtime-choice-grid--kits, .wallet-mode-grid, .form-grid, .agent-setup-progress, .agent-manifest-advanced__fields { grid-template-columns: 1fr; }
+  .runtime-local-runtime { align-items: flex-start; flex-direction: column; }
+  .runtime-local-runtime .button { width: 100%; justify-content: center; }
   .field--wide { grid-column: auto; }
   .wallet-connect-banner { grid-template-columns: auto 1fr; padding: 15px; }
   .wallet-connect-banner .button { grid-column: 1 / -1; width: 100%; justify-content: center; }
