@@ -984,7 +984,7 @@ html[lang="es"] .overview-section-heading h2 {
 }
 .pact-contact-scene--hero .pact-contact-scene__hand { opacity: .82; object-fit: contain; object-position: center; }
 .pact-contact-scene--hero .pact-contact-scene__hand--machine { transform: translate(4%, -2%) scale(1.14); }
-.pact-contact-scene--hero .pact-contact-scene__hand--human { transform: translate(-4%, 41%) scale(1.14); }
+.pact-contact-scene--hero .pact-contact-scene__hand--human { transform: translate(4%, 43%) scale(1.14); }
 .pact-contact-scene__content {
   position: relative;
   z-index: 7;
@@ -1883,9 +1883,9 @@ p, li, dd, .public-faq__answer { font-family: var(--font-body); }
 /* A restrained living handoff: preserve the composition and only shift the reach a few pixels. */
 .pact-contact-scene--hero {
   --machine-hand-rest: translate(4%, -2%) scale(1.14);
-  --machine-hand-reach: translate(4.7%, -1.4%) scale(1.14);
-  --human-hand-rest: translate(-4%, 41%) scale(1.14);
-  --human-hand-reach: translate(-4.7%, 40.3%) scale(1.14);
+  --machine-hand-reach: translate(3.4%, -2.6%) scale(1.14);
+  --human-hand-rest: translate(4%, 43%) scale(1.14);
+  --human-hand-reach: translate(4.6%, 43.7%) scale(1.14);
 }
 
 .pact-contact-scene--hero .pact-contact-scene__hand--machine {
@@ -1909,9 +1909,9 @@ p, li, dd, .public-faq__answer { font-family: var(--font-body); }
 @media (max-width: 680px) {
   .pact-contact-scene--hero {
     --machine-hand-rest: translate(-10%, 13%) scale(1.12);
-    --machine-hand-reach: translate(-9.3%, 13.7%) scale(1.12);
+    --machine-hand-reach: translate(-10.7%, 12.3%) scale(1.12);
     --human-hand-rest: translate(10%, 50%) scale(1.12);
-    --human-hand-reach: translate(9.3%, 49.3%) scale(1.12);
+    --human-hand-reach: translate(10.7%, 50.7%) scale(1.12);
   }
 }
 
