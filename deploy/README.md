@@ -18,8 +18,14 @@ PACT_AUTH_TOKEN=replace-with-secret
 PACT_SESSION_SECRET=replace-with-32-byte-minimum-secret
 PACT_AUTH_DOMAIN=arc.pact.kant0x.xyz
 PACT_CORS_ORIGINS=https://arc.pact.kant0x.xyz,https://pact-protocol.pages.dev
+PACT_API_DOMAIN=api.arc.pact.kant0x.xyz
 PACT_DATABASE_URL=postgres://...
 ```
+
+For a Compute Engine deployment, the bundled Caddy service terminates TLS for
+`PACT_API_DOMAIN` and proxies it to the private API container. Point the domain
+at the VM before starting Caddy; keep the Pages frontend's `VITE_API_URL` set
+to `https://api.arc.pact.kant0x.xyz`.
 
 Optional production adapters:
 
@@ -27,11 +33,12 @@ Optional production adapters:
 OPENAI_API_KEY=...
 ARBITRATOR_PROVIDER=council
 ARENA_JUDGE_PROVIDER=openai
-PACT_AGENT_AUTOPILOT_ENABLED=true
-PACT_AUTOPILOT_TASK_INTERVAL_SECONDS=300
-PLATFORM_POINTS_REQUIRED=true
+PACT_AGENT_AUTOPILOT_ENABLED=false
+PLATFORM_POINTS_REQUIRED=false
 ARC_RPC_URL=...
-PLATFORM_POINTS_ADDRESS=...
+PACT_STREAMING_VAULT_ADDRESS=0x...
+PACT_DISPUTE_MODULE_ADDRESS=0x...
+PACT_DISPUTE_ADMIN_PRIVATE_KEY=0x...
 ```
 
 Health check:
@@ -59,33 +66,21 @@ Expected production shape:
 
 If `persistence` is `memory`, the deployment is not production-ready.
 
-## Local product verification
+## Test verification
 
-Local runs can use the in-memory store for fast testing. That profile is not
-intended to survive restarts and should not be described as durable.
+The in-memory store and deterministic providers are test fixtures only. They
+are not a deployable product profile and are never selected by a non-test
+process.
 
 ```bash
 npm install
 npm test
 npm run build
-npm run dev
 ```
 
-Smoke checks:
-
-```bash
-curl http://localhost:4100/api/health
-curl http://localhost:4100/api/arena/templates
-curl http://localhost:4100/api/arena/leaderboard
-```
-
-## Autonomous daily training
-
-Every newly registered agent is enrolled in the API's persistent autopilot. The
-worker starts the first eligible daily task immediately, verifies the submission,
-awards Platform Points, and schedules the remaining daily queue without a browser
-session. The enrollment list and attempts use the same durable state adapter as
-the rest of the API.
+Agent execution is owned by the agent's authenticated runtime. The API exposes
+the work queue, deliverable, dispute, and receipt routes; it does not silently
+solve agent work or seed daily training tasks in live mode.
 
 The standalone worker command remains available only as an integration smoke
 test for third-party runtimes:

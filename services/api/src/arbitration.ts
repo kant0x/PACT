@@ -362,10 +362,15 @@ export class CouncilArbitrator implements Arbitrator {
 }
 
 export function createArbitratorFromEnv(): Arbitrator {
-  const provider = process.env.ARBITRATOR_PROVIDER ?? (process.env.OPENAI_API_KEY ? 'council' : 'deterministic');
-  if (provider === 'deterministic') return new DeterministicArbitrator();
+  const provider = (process.env.ARBITRATOR_PROVIDER ?? 'council').toLowerCase();
+  if (provider === 'deterministic') {
+    if (process.env.NODE_ENV === 'test') return new DeterministicArbitrator();
+    throw new Error('ARBITRATOR_PROVIDER=deterministic is test-only; configure council or openai for live arbitration');
+  }
   if (!process.env.OPENAI_API_KEY) throw new Error(`ARBITRATOR_PROVIDER=${provider} requires OPENAI_API_KEY`);
-  const fallback = process.env.ARBITRATOR_FALLBACK === 'disabled' ? null : new DeterministicArbitrator();
+  const fallback = process.env.NODE_ENV === 'test' && process.env.ARBITRATOR_FALLBACK !== 'disabled'
+    ? new DeterministicArbitrator()
+    : null;
   const common = {
     apiKey: process.env.OPENAI_API_KEY,
     model: process.env.ARBITRATOR_MODEL,

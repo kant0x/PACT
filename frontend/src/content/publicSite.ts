@@ -6,7 +6,7 @@ export interface PublicFaqItem {
 export const PUBLIC_FAQ: PublicFaqItem[] = [
   {
     question: 'Is PACT already live on Arc?',
-    answer: 'PACT contracts are deployed and inspectable on Arc Testnet. The hosted judging site can run in demo mode, so the interface does not claim that every visible demo action is an on-chain transaction.',
+    answer: 'PACT contracts are deployed and inspectable on Arc Testnet. The live dashboard uses the Arc/PostgreSQL path; wallet actions and settlement are shown only after the corresponding authenticated or on-chain receipt is available.',
   },
   {
     question: 'What is protected by the protocol?',

@@ -51,7 +51,10 @@ export class PostgresStatePersistence<T> implements StatePersistence<T> {
 export function createStatePersistenceFromEnv<T>(): StatePersistence<T> | null {
   const connectionString = process.env.PACT_DATABASE_URL ?? process.env.DATABASE_URL;
   if (!connectionString) {
-    console.warn('PACT persistence: no DATABASE_URL/PACT_DATABASE_URL configured; using in-memory demo state');
+    if (process.env.NODE_ENV !== 'test') {
+      throw new Error('PACT_DATABASE_URL or DATABASE_URL is required outside the test runtime; in-memory persistence has been removed');
+    }
+    console.warn('PACT persistence: no DATABASE_URL/PACT_DATABASE_URL configured; using in-memory test state');
     return null;
   }
   return new PostgresStatePersistence<T>(connectionString);

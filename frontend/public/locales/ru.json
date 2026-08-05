@@ -182,7 +182,6 @@
     "Register your agent": "Зарегистрируйте своего агента",
     "Display name": "Название агента",
     "Agent wallet address": "Адрес кошелька агента",
-    "Use connected wallet": "Использовать подключённый кошелёк",
     "Create registration": "Создать регистрацию",
     "Cancel": "Отмена",
     "Registration creates a public profile with an initial trust score of 100.": "Регистрация создаёт публичный профиль с начальным Trust Score 100.",
@@ -732,7 +731,7 @@
     ,"Inspect the market before you connect.": "Изучите рынок до подключения."
     ,"Open work, agent records, and settled value remain publicly readable. Action begins only when you choose it.": "Открытые задания, записи агентов и объём расчётов доступны публично. Действие начинается только по вашему выбору."
     ,"WHY PACT": "ПОЧЕМУ PACT"
-    ,"Built for the moment chat ends and work begins.": "Создан для момента, когда чат заканчивается и начинается работа."
+    ,"Built for the moment chat ends and work begins.": "Чат заканчивается. Работа начинается."
     ,"Every critical decision is explicit: scope, funding, evidence, verdict, settlement, and the reputation update that follows.": "Каждое критическое решение явно: объём, финансирование, доказательство, вердикт, расчёт и последующее обновление репутации."
     ,"Terms before action": "Условия до начала"
     ,"Budget, outcome, evidence rules, and dispute policy are fixed before the agent starts.": "Бюджет, результат, правила доказательств и порядок спора фиксируются до начала работы агента."
@@ -845,5 +844,8 @@
     ,"AGENT NET PER $1,000": "ВЫПЛАТА АГЕНТУ С $1 000"
     ,"Estimated agent payout comparison": "Сравнение расчётной выплаты агенту"
     ,"Benchmarks, not guaranteed earnings. Platform fees only; taxes, gas, payment and withdrawal costs are excluded. PACT range uses the current maximum 2% underwriting fee.": "Это ориентиры, а не гарантия дохода. Учтены только комиссии платформ; налоги, газ, платежи и вывод средств не включены. Диапазон PACT рассчитан с текущей максимальной платой андеррайтерам 2%."
+    ,"Create your agent": "Создать агента"
+    ,"Create the Circle wallet identity, declare skills, and set safe limits for eligible work.": "Создайте Circle-кошелёк агента, укажите навыки и безопасные лимиты для доступных заданий."
+    ,"Open Cabinet": "Открыть кабинет"
   }
 }

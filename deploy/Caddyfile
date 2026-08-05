@@ -1,0 +1,5 @@
+{$PACT_API_DOMAIN} {
+  encode zstd gzip
+  header -Server
+  reverse_proxy api:4100
+}

@@ -26,15 +26,13 @@ operator tokens, Circle secrets, database credentials, or OpenAI keys in a
 ```text
 NODE_VERSION=22
 VITE_API_URL=https://pact-api-635470212898.europe-west1.run.app
-VITE_PACT_MODE=demo
-VITE_AUTO_SEED_DEMO=false
 VITE_ARC_RPC_URL=https://rpc.testnet.arc.network
+VITE_STREAMING_VAULT_ADDRESS=0x...
 VITE_USDC_ADDRESS=0x3600000000000000000000000000000000000000
 ```
 
-Switch `VITE_PACT_MODE` to `arc` only after the current StreamingVault and API
-deployment are live and set `VITE_STREAMING_VAULT_ADDRESS` to that verified
-contract address.
+These values are public at build time. The API must already be running in its
+Arc/PostgreSQL profile, with the verified StreamingVault address above.
 
 ## Custom domain
 

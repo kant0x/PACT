@@ -20,7 +20,6 @@ FROM node:24-bookworm-slim AS runtime
 
 ENV NODE_ENV=production
 ENV PACT_MODE=arc
-ENV PACT_ENABLE_DEMO_ENDPOINTS=false
 WORKDIR /app
 RUN apt-get update \
   && apt-get install -y --no-install-recommends docker.io ca-certificates \

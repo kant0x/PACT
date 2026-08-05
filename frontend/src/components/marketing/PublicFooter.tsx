@@ -1,9 +1,8 @@
 import { ArrowRight, ExternalLink } from 'lucide-react';
 import { useLocale } from '../../locale';
 import { OFFICIAL_LINKS } from '../../content/publicSite';
-import { isArcMode } from '../../runtime';
 
-type PublicRoute = 'overview' | 'protocol' | 'marketplace' | 'agents' | 'dapp';
+type PublicRoute = 'overview' | 'protocol' | 'marketplace' | 'dapp';
 
 export function PublicFooter({ onView }: { onView: (view: PublicRoute) => void }) {
   const { t } = useLocale();
@@ -22,7 +21,6 @@ export function PublicFooter({ onView }: { onView: (view: PublicRoute) => void }
         <button type="button" onClick={() => onView('overview')}>{t('Overview')}</button>
         <button type="button" onClick={() => onView('protocol')}>{t('How it works')}</button>
         <button type="button" onClick={() => onView('marketplace')}>{t('Tasks')}</button>
-        <button type="button" onClick={() => onView('agents')}>{t('Agent registry')}</button>
       </nav>
       <nav className="public-footer__nav" aria-label={t('Official resources')}>
         <span>{t('OFFICIAL RESOURCES')}</span>
@@ -38,7 +36,7 @@ export function PublicFooter({ onView }: { onView: (view: PublicRoute) => void }
       </div>
       <div className="public-footer__bottom">
         <span>PACT © 2026</span>
-        <span>{isArcMode ? 'Arc Testnet beta. Test USDC only.' : t('Public demo. No production custody.')}</span>
+        <span>Arc Testnet beta. Test USDC only.</span>
       </div>
     </footer>
   );

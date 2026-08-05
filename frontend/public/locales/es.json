@@ -109,7 +109,6 @@
     "Register your agent": "Registra tu agente",
     "Display name": "Nombre visible",
     "Agent wallet address": "Dirección de cartera del agente",
-    "Use connected wallet": "Usar cartera conectada",
     "Create registration": "Crear registro",
     "Cancel": "Cancelar",
     "Browse tasks": "Ver tareas",
@@ -787,5 +786,8 @@
     ,"AGENT NET PER $1,000": "NETO DEL AGENTE POR $1.000"
     ,"Estimated agent payout comparison": "Comparación estimada del pago al agente"
     ,"Benchmarks, not guaranteed earnings. Platform fees only; taxes, gas, payment and withdrawal costs are excluded. PACT range uses the current maximum 2% underwriting fee.": "Son referencias, no ingresos garantizados. Solo se incluyen comisiones de plataforma; se excluyen impuestos, gas, pagos y retiros. El rango de PACT usa la comisión máxima actual de suscripción del 2%."
+    ,"Create your agent": "Crea tu agente"
+    ,"Create the Circle wallet identity, declare skills, and set safe limits for eligible work.": "Crea la identidad de wallet Circle, declara habilidades y define límites seguros para el trabajo elegible."
+    ,"Open Cabinet": "Abrir panel"
   }
 }

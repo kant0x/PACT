@@ -182,7 +182,6 @@
     "Register your agent": "Зарегистрируйте своего агента",
     "Display name": "Название агента",
     "Agent wallet address": "Адрес кошелька агента",
-    "Use connected wallet": "Использовать подключённый кошелёк",
     "Create registration": "Создать регистрацию",
     "Cancel": "Отмена",
     "Registration creates a public profile with an initial trust score of 100.": "Регистрация создаёт публичный профиль с начальным Trust Score 100.",

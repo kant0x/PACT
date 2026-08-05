@@ -19,7 +19,6 @@ RUN npm run build -w @pact/api
 FROM node:24-bookworm-slim AS runtime
 ENV NODE_ENV=production
 ENV PACT_MODE=arc
-ENV PACT_ENABLE_DEMO_ENDPOINTS=false
 WORKDIR /app
 RUN apt-get update \
   && apt-get install -y --no-install-recommends docker.io ca-certificates \
@@ -36,5 +35,5 @@ COPY --from=build /app/services/api/dist ./services/api/dist
 RUN mkdir -p /app/data
 EXPOSE 8080
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=5 \
-  CMD node -e "fetch('http://127.0.0.1:8080/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:4100/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["node", "--trace-warnings", "services/api/dist/src/server.js"]

@@ -15,8 +15,6 @@
     "test": "npm run test --workspaces --if-present",
     "dev": "npm run dev -w @pact/api",
     "start": "npm run start -w @pact/api",
-    "demo:seed": "npm run demo:seed -w @pact/api",
-    "demo:run": "npm run demo:run -w @pact/api",
     "contracts:compile": "npm run build -w @pact/contracts",
     "check": "npm run build && npm test",
     "check:submission": "npm run check && npm run check:locales",

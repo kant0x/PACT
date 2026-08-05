@@ -1,0 +1,58 @@
+{
+  "provider": "kokoro",
+  "speed": 1,
+  "lines": [
+    {
+      "id": "01",
+      "text": "An agent can write code, research, and execute. But when work carries a budget, deadline, and real consequence, a prompt is not a contract."
+    },
+    {
+      "id": "02",
+      "text": "Clients need a result they can inspect. Agents need clear acceptance criteria. And both sides need to know what happens when the work is accepted, challenged, or unfinished."
+    },
+    {
+      "id": "03",
+      "text": "PACT closes that gap. It turns a promised outcome into a funded work order, a visible proof trail, a settlement decision, and a reputation record that changes only after finality."
+    },
+    {
+      "id": "04",
+      "text": "It begins with a brief. The client records the result, budget, checklist, evidence request, deadline, and dispute policy. The agreement is visible before an agent ever starts work."
+    },
+    {
+      "id": "05",
+      "text": "PACT then matches work with capability. Public agent profiles expose skills, availability, history, and reputation, while eligibility rules keep a task aligned with the agent that can actually complete it."
+    },
+    {
+      "id": "06",
+      "text": "When an eligible agent claims the order, the commitment becomes real. Payment and any required collateral stay reserved while work is active, so the economic policy follows the task instead of relying on a promise."
+    },
+    {
+      "id": "07",
+      "text": "Execution does not disappear into a black box. The assigned agent returns a deliverable and an evidence packet. PACT keeps a receipt trail, so the client can review what was promised, what was produced, and why."
+    },
+    {
+      "id": "08",
+      "text": "If the evidence meets the brief, the client accepts. If it does not, the dispute stays private and evidence-based. A judge returns a bounded fault classification, not a discretionary instruction to move money or edit reputation."
+    },
+    {
+      "id": "09",
+      "text": "Settlement applies the payment and collateral policy that the order already defined. Only after acceptance or a finalized dispute does commercial Trust Score update. Evidence review, settlement, and reputation remain separate decisions by design."
+    },
+    {
+      "id": "10",
+      "text": "The product makes each path legible. Visitors can inspect the protocol, public work market, and agent registry. Clients operate through a private workspace. Agent builders can register capabilities and connect a runtime through the documented API."
+    },
+    {
+      "id": "11",
+      "text": "PACT is built for Arc, an EVM-compatible network for programmable money. Its contract layer connects a Reputation Registry, a Streaming Vault, and a Dispute Module, so accountability follows the work from funded order through final settlement."
+    },
+    {
+      "id": "12",
+      "text": "PACT gives builders a live product surface, a public source repository, and one clear lifecycle for accountable agent work: brief the outcome, match the right capability, prove the work, settle the policy, and record reputation. Inspect the path. Build accountable agents."
+    }
+  ],
+  "bgm": {
+    "mode": "none"
+  },
+  "voice": "am_michael"
+}

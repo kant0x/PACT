@@ -1,6 +1,9 @@
 # PACT API
 
-Local demo-mode backend for the PACT dashboard. It persists state in SQLite and does not require Arc or Circle credentials.
+Arc-backed API for the PACT dashboard. The live runtime requires PostgreSQL,
+Arc settlement configuration, signed wallet sessions, and an external model
+provider. In-memory state, deterministic providers, and demo mutation routes
+are available only inside the test runtime.
 
 From the repository root:
 
@@ -9,13 +12,19 @@ npm install
 npm run dev -w @pact/api
 ```
 
-The API listens on `http://localhost:4100`. Check it with `GET /api/health`. Reset and launch the comparison demo with:
+Configure the server values from the repository `.env.example` before starting.
+At minimum, live startup needs `PACT_MODE=arc`, `OPENAI_API_KEY`,
+`PACT_AUTH_TOKEN`, `PACT_SESSION_SECRET`, `PACT_AUTH_DOMAIN`, a PostgreSQL
+`PACT_DATABASE_URL` or `DATABASE_URL`, `PACT_CORS_ORIGINS`,
+`ARC_RPC_URL`, `PACT_STREAMING_VAULT_ADDRESS`,
+`PACT_DISPUTE_MODULE_ADDRESS`, and `PACT_DISPUTE_ADMIN_PRIVATE_KEY`.
 
-```powershell
-npm run demo:run
-```
+Every agent registered through the production `/api/agents/pg` endpoint receives
+a dedicated Circle Arc smart wallet. The creator's connected wallet is only the
+authenticated controller and cannot be used as the agent settlement wallet.
 
-The command uses `PACT_API_URL` when set, otherwise `http://localhost:4100`. Tests and production build:
+The API listens on `http://localhost:4100` when fronted locally. Check it with
+`GET /api/health`. Tests and production build:
 
 ```powershell
 npm test -w @pact/api
@@ -23,7 +32,10 @@ npm run build -w @pact/api
 npm start -w @pact/api
 ```
 
-The live stream socket is `ws://localhost:4100/api/streams/:taskId/live`. Trust roles and arbitration safeguards are exposed at `GET /api/trust-model`.
+The live stream socket is `ws://localhost:4100/api/streams/:taskId/live`.
+Trust roles and arbitration safeguards are exposed at `GET /api/trust-model`.
+Live data mutations use the `/pg` routes and Arc receipts; legacy in-memory
+routes return `410 DEMO_RUNTIME_REMOVED`.
 
 ## Arc Testnet Platform Points
 
@@ -39,11 +51,10 @@ PLATFORM_POINTS_RPC_URL=https://rpc.testnet.arc.network
 PLATFORM_POINTS_REQUIRED=true
 ```
 
-The scorer key must be authorized by the contract deployment. A passed daily
-attempt waits for `awardPoints` to be mined before the local leaderboard is
-updated; the API returns the transaction hash in `pointsReceipt`. Failed
-attempts create no points transaction. These points are not USDC and do not
-change commercial Trust Score.
+The scorer key must be authorized by the contract deployment. This integration
+is optional for the paid-work runtime and is needed only when Training Ground
+is explicitly enabled. These points are not USDC and do not change commercial
+Trust Score.
 
 ## Split-decision human review
 
@@ -90,4 +101,4 @@ npm run circle:paymaster -w @pact/api -- post-collateral `
   --amount-usdc 5
 ```
 
-The local SQLite ledger atomically reserves sponsorship before submission, so concurrent calls cannot consume it twice. A Circle error keeps the slot blocked as `FAILED_CLOSED`; use the printed/stored idempotency key to reconcile the request with Circle before any manual retry. `amount-usdc` on `post-collateral` is a local policy declaration and must be obtained from the onchain task immediately before execution; the contract remains the final authority for the actual collateral amount.
+The ledger atomically reserves sponsorship before submission, so concurrent calls cannot consume it twice. A Circle error keeps the slot blocked as `FAILED_CLOSED`; use the printed/stored idempotency key to reconcile the request with Circle before any manual retry. `amount-usdc` on `post-collateral` is a local policy declaration and must be obtained from the onchain task immediately before execution; the contract remains the final authority for the actual collateral amount.
