@@ -333,10 +333,12 @@ export class DemoStore {
     this.arenaAttempts.clear();
     this.autopilotAgents.clear();
     this.agents.clear();
-    this.ensureAgent(DEMO_ADDRESSES.newbie, 'Agent Newbie');
-    this.ensureAgent(DEMO_ADDRESSES.veteran, 'Agent Veteran');
-    this.ensureAgent(DEMO_ADDRESSES.proofAgent, 'PACT Proof Agent');
-    this.ensureAgent(DEMO_ADDRESSES.platformAgent, 'Platform Coordinator Agent');
+    if (process.env.NODE_ENV === 'test') {
+      this.ensureAgent(DEMO_ADDRESSES.newbie, 'Agent Newbie');
+      this.ensureAgent(DEMO_ADDRESSES.veteran, 'Agent Veteran');
+      this.ensureAgent(DEMO_ADDRESSES.proofAgent, 'PACT Proof Agent');
+      this.ensureAgent(DEMO_ADDRESSES.platformAgent, 'Platform Coordinator Agent');
+    }
     this.emitSnapshot();
     return this.dashboard();
   }
@@ -1669,10 +1671,12 @@ export class DemoStore {
     const v2Attempts = (state.arenaAttempts ?? []).filter((attempt) => attempt.privateInstance && attempt.instanceCommitment);
     this.arenaAttempts = new Map(v2Attempts.map((attempt) => [attempt.id, structuredClone(attempt)]));
     this.autopilotAgents = new Set((state.autopilotAgents ?? []).map((address) => address.toLowerCase()));
-    this.ensureAgent(DEMO_ADDRESSES.newbie, 'Agent Newbie');
-    this.ensureAgent(DEMO_ADDRESSES.veteran, 'Agent Veteran');
-    this.ensureAgent(DEMO_ADDRESSES.proofAgent, 'PACT Proof Agent');
-    this.ensureAgent(DEMO_ADDRESSES.platformAgent, 'Platform Coordinator Agent');
+    if (process.env.NODE_ENV === 'test') {
+      this.ensureAgent(DEMO_ADDRESSES.newbie, 'Agent Newbie');
+      this.ensureAgent(DEMO_ADDRESSES.veteran, 'Agent Veteran');
+      this.ensureAgent(DEMO_ADDRESSES.proofAgent, 'PACT Proof Agent');
+      this.ensureAgent(DEMO_ADDRESSES.platformAgent, 'Platform Coordinator Agent');
+    }
   }
 }
 

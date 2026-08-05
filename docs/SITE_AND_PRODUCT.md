@@ -1,7 +1,7 @@
 # PACT public site and product reference
 
 This document is the canonical public-language reference for the PACT website,
-demo, judging materials, and repository documentation. It separates implemented
+public site, judging materials, and repository documentation. It separates implemented
 behavior from launch requirements so product claims stay accurate.
 
 Last reviewed: 2026-07-28.
@@ -37,7 +37,6 @@ PACT public entry (#overview)
 |-- Public work market (#work-orders)
 |-- Public agent registry (#agents)
 `-- Client workspace (#dapp)
-    |-- Training leaderboard (#leaderboard)
     `-- Private dispute route (#disputes, participant-only)
 ```
 
@@ -86,12 +85,11 @@ PACT's own deployment addresses and verification date are tracked separately in
 ## Current deployment truth
 
 - The public frontend, API health endpoint, source repository, Arc Testnet
-  addresses, judging deck, and demo script exist.
+  addresses, judging deck, and product video script exist.
 - The tracked Arc contracts have public explorer links and non-empty bytecode was
   verified on 2026-07-27.
-- The hosted judging API currently reports demo mode with in-memory persistence.
-- The repository therefore does not claim that every hosted UI action settles
-  on-chain or that the public demo is suitable for real funds.
+- Live deployment readiness is defined by `/api/health` reporting Arc mode and
+  PostgreSQL persistence, plus a successful Arc readiness check.
 
 ## Remaining gates for a fully operational public MVP
 
@@ -114,7 +112,7 @@ PACT's own deployment addresses and verification date are tracked separately in
 - Add monitoring, alerting, backups, key rotation, and an incident runbook.
 - Obtain independent contract and settlement-policy review before real custody.
 - Publish the final production domain, legal terms, privacy notice, and support
-  contact before serving non-demo users.
+  contact before serving users.
 
 The detailed submission owner checklist remains in
 [`SUBMISSION_CHECKLIST.md`](SUBMISSION_CHECKLIST.md).

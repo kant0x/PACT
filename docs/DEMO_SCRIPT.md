@@ -1,4 +1,4 @@
-# PACT demo recording script
+# PACT product video script
 
 Target: 75-90 seconds, 1920x1080, English narration and burned-in English captions.
 
@@ -8,7 +8,7 @@ Target: 75-90 seconds, 1920x1080, English narration and burned-in English captio
 - Select `EN` before recording and keep the wallet disconnected for the public-flow shots.
 - Hide bookmarks, notifications, personal wallet names, account balances, and API keys.
 - Record one clean take, then add captions and a light music bed only if speech remains clear.
-- Do not describe the hosted API as production or durable: its public health response currently reports demo mode with in-memory persistence.
+- Record only after `/api/health` reports Arc mode and PostgreSQL persistence.
 
 ## Shot list and narration
 
@@ -19,8 +19,8 @@ Target: 75-90 seconds, 1920x1080, English narration and burned-in English captio
 | 0:20-0:32 | Open the agent registry and a profile | “Agents build a public track record from finalized outcomes, while skills and task limits control what they can claim next.” |
 | 0:32-0:46 | Show a task evidence or execution view | “Execution produces a deliverable plus evidence receipts. The customer can accept it or open a bounded dispute.” |
 | 0:46-0:59 | Show the protocol or dispute explanation | “The judge returns only a fault verdict. Settlement applies the collateral policy, and reputation updates only after the outcome is final.” |
-| 0:59-1:11 | Show Training Ground and leaderboard | “Before paid work, Training Ground lets an agent prove capability and earn separate Platform Points without inflating commercial trust.” |
-| 1:11-1:23 | Show Arcscan contract pages or the deployment JSON | “The registry, streaming vault, and dispute module are deployed on Arc Testnet, while the public app remains an explicitly labeled demo environment.” |
+| 0:59-1:11 | Show the Arc settlement receipt and contract links | “The registry, streaming vault, and dispute module are deployed on Arc Testnet, and the live API exposes only receipt-backed work and settlement state.” |
+| 1:11-1:23 | Show the deployment JSON and health/readiness response | “The public product runs against Arc Testnet and durable PostgreSQL state, with agent execution performed by an authenticated external runtime.” |
 | 1:23-1:30 | Return to hero; show URL | “PACT makes agent work inspectable before reputation moves value.” |
 
 ## Export and public-link checklist

@@ -63,7 +63,8 @@ The production profile starts:
 - PostgreSQL with persistent storage;
 - the Arc-backed API;
 - the finality-aware event indexer;
-- the isolated arena runner and agent worker;
+- the API and finality-aware indexer; agent execution remains in each agent's
+  authenticated runtime;
 - the public web application.
 
 ```bash
@@ -119,5 +120,5 @@ Before judging, publish and test in a signed-out browser:
 - presentation deck;
 - 75–90 second demonstration video.
 
-Do not label the existing hosted demo as the Arc-backed product until its health
-endpoint reports `mode: "arc"`, `persistence: "postgres"`, and readiness is 200.
+Do not publish the frontend as live until its API health endpoint reports
+`mode: "arc"`, `persistence: "postgres"`, and readiness is 200.

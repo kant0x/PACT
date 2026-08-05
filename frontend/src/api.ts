@@ -11,7 +11,7 @@ import {
   type WorkOrderSpec,
   normalizeWorkOrderSpec,
 } from '@pact/shared';
-import { isArcMode, runtimeConfig } from './runtime';
+import { runtimeConfig } from './runtime';
 
 const configuredBase = (runtimeConfig.apiUrl ?? 'http://localhost:4100').replace(/\/$/, '');
 const SESSION_KEY = `pact.wallet-session:${configuredBase}`;
@@ -37,7 +37,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers: {
       Accept: 'application/json',
       ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
-      ...((sessionToken ?? runtimeConfig.apiToken) ? { Authorization: `Bearer ${sessionToken ?? runtimeConfig.apiToken}` } : {}),
+      ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
       ...init?.headers,
     },
   });
@@ -91,7 +91,15 @@ export async function authenticateWallet(
     if (saved) {
       try {
         const session = JSON.parse(saved) as WalletSession;
-        if (session.address === normalized && session.expiresAt > Math.floor(Date.now() / 1000) + 15) return session;
+        if (session.address === normalized && session.expiresAt > Math.floor(Date.now() / 1000) + 15) {
+          try {
+            await request<{ address: string; expiresAt: number }>('/api/auth/session');
+            return session;
+          } catch (error) {
+            if (!(error instanceof PactApiError) || error.status !== 401) throw error;
+            window.sessionStorage.removeItem(SESSION_KEY);
+          }
+        }
       } catch {
         window.sessionStorage.removeItem(SESSION_KEY);
       }
@@ -142,12 +150,10 @@ export function creatorTaskMessage(input: Pick<PublishTaskInput, 'creatorAddress
 }
 
 export interface RegisterAgentInput {
-  agentAddress: string;
   displayName: string;
   capabilityManifest?: AgentCapabilityManifest;
-  signature?: string;
-  /** Production-only: ask PACT/Circle to create a dedicated Arc smart-contract account. */
-  provisionWallet?: boolean;
+  /** PACT agents always receive a dedicated Circle Arc smart-contract account. */
+  provisionWallet: true;
 }
 
 export function agentRegistrationMessage(input: Pick<RegisterAgentInput, 'displayName' | 'capabilityManifest'>): string {
@@ -205,28 +211,27 @@ export interface CircleTransactionStatus {
 
 export const api = {
   dashboard: (signal?: AbortSignal) =>
-    request<DashboardSnapshot>(isArcMode ? '/api/dashboard/pg' : '/api/dashboard', { signal }),
+    request<DashboardSnapshot>('/api/dashboard/pg', { signal }),
   trustModel: (signal?: AbortSignal) =>
     request<TrustModel>('/api/trust-model', { signal }),
   acceptDeliverable: (deliverableId: string, completionTransactionHash?: `0x${string}`) =>
-    request<{ deliverable: AgentDeliverable; task?: MarketplaceTask }>(`${isArcMode ? '/api/deliverables/pg' : '/api/deliverables'}/${encodeURIComponent(deliverableId)}/accept`, {
+    request<{ deliverable: AgentDeliverable; task?: MarketplaceTask }>(`/api/deliverables/pg/${encodeURIComponent(deliverableId)}/accept`, {
       method: 'POST',
       ...(completionTransactionHash ? { body: JSON.stringify({ completionTransactionHash }) } : {}),
     }),
   publishTask: (input: PublishTaskInput) =>
-    request<MarketplaceTask>(isArcMode ? '/api/tasks/pg' : '/api/tasks', {
+    request<MarketplaceTask>('/api/tasks/pg', {
       method: 'POST',
       body: JSON.stringify(input),
     }),
-  registerAgent: (input: RegisterAgentInput) =>
-    request<unknown>(isArcMode ? '/api/agents/pg' : '/api/agents', {
+  registerAgent: (input: RegisterAgentInput, sessionToken?: string) =>
+    request<unknown>('/api/agents/pg', {
       method: 'POST',
-      body: JSON.stringify(isArcMode
-        ? { address: input.agentAddress, displayName: input.displayName, capabilityManifest: input.capabilityManifest, signature: input.signature, provisionWallet: input.provisionWallet }
-        : input),
+      body: JSON.stringify({ displayName: input.displayName, capabilityManifest: input.capabilityManifest, provisionWallet: true }),
+      ...(sessionToken ? { headers: { Authorization: `Bearer ${sessionToken}` } } : {}),
     }),
   claimTask: (taskId: string, agentAddress: string, assignmentTransactionHash?: `0x${string}`) =>
-    request<MarketplaceTask>(`${isArcMode ? '/api/tasks/pg' : '/api/tasks'}/${encodeURIComponent(taskId)}/claim`, {
+    request<MarketplaceTask>(`/api/tasks/pg/${encodeURIComponent(taskId)}/claim`, {
       method: 'POST',
       body: JSON.stringify({ agentAddress, assignmentTransactionHash }),
     }),
@@ -247,19 +252,18 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ cancellationTransactionHash }),
     }),
-  arenaTemplates: (agentAddress?: string, signal?: AbortSignal) =>
-    request<ArenaTemplate[]>(`/api/arena/templates${agentAddress ? `?agentAddress=${encodeURIComponent(agentAddress)}` : ''}`, { signal }),
+  trainingCatalog: (signal?: AbortSignal) =>
+    request<ArenaTemplate[]>('/api/training/catalog', { signal }),
   arenaLeaderboard: (signal?: AbortSignal) =>
     request<ArenaLeaderboardEntry[]>('/api/arena/leaderboard', { signal }),
   createDispute: (input: CreateDisputeInput) =>
-    request<Dispute>(isArcMode ? `/api/tasks/pg/${encodeURIComponent(input.taskId)}/dispute` : '/api/disputes', {
+    request<Dispute>(`/api/tasks/pg/${encodeURIComponent(input.taskId)}/dispute`, {
       method: 'POST',
       body: JSON.stringify(input),
     }),
   finalizeHumanReview: (id: string, input: FinalizeHumanReviewInput) =>
-    request<Dispute>(`${isArcMode ? '/api/disputes/pg' : '/api/disputes'}/${encodeURIComponent(id)}/human-review`, {
+    request<Dispute>(`/api/disputes/pg/${encodeURIComponent(id)}/human-review`, {
       method: 'POST',
       body: JSON.stringify(input),
     }),
-  seedDemo: () => request<DashboardSnapshot>('/api/demo/seed', { method: 'POST' }),
 };

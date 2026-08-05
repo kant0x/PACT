@@ -39,6 +39,28 @@ describe('PACT demo API', () => {
     expect(dashboard.body.metrics.activeStreams).toBe(0);
   });
 
+  it('validates a browser wallet session before a protected action', async () => {
+    const app = createApp(new DemoStore());
+    const account = privateKeyToAccount('0x0000000000000000000000000000000000000000000000000000000000000002');
+    const challenge = await request(app)
+      .post('/api/auth/challenge')
+      .send({ address: account.address })
+      .expect(201);
+    const signature = await account.signMessage({ message: challenge.body.message });
+    const session = await request(app)
+      .post('/api/auth/verify')
+      .send({ challengeId: challenge.body.challengeId, address: account.address, signature })
+      .expect(200);
+
+    await request(app).get('/api/auth/session').expect(401);
+    const verified = await request(app)
+      .get('/api/auth/session')
+      .set('Authorization', `Bearer ${session.body.token}`)
+      .expect(200);
+    expect(verified.body).toMatchObject({ address: account.address.toLowerCase() });
+    expect(verified.body.expiresAt).toEqual(expect.any(Number));
+  });
+
   it('publishes and validates an agent capability manifest', async () => {
     const app = createApp(new DemoStore());
     const current = await request(app)
@@ -87,6 +109,18 @@ describe('PACT demo API', () => {
       expect.objectContaining({ agentAddress, displayName: 'Customer Research Agent' })
     ]));
     await request(app).post('/api/agents').send({ agentAddress, displayName: 'Duplicate Agent' }).expect(409);
+  });
+
+  it('requires a Circle smart wallet for production agent registration', async () => {
+    const response = await request(createApp(new DemoStore()))
+      .post('/api/agents/pg')
+      .send({ displayName: 'External Wallet Agent', provisionWallet: false })
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      code: 'CIRCLE_WALLET_REQUIRED',
+      error: 'Every PACT agent must use a dedicated Circle smart wallet'
+    });
   });
 
   it('requires agent registry membership before claiming paid work', async () => {
@@ -458,61 +492,18 @@ describe('PACT demo API', () => {
     }
   });
 
-  it('does not allow a public demo browser to start work for an agent without its signature', async () => {
+  it('rejects the removed demo runtime outside tests', () => {
     const previousNodeEnv = process.env.NODE_ENV;
     const previousMode = process.env.PACT_MODE;
-    const previousDemoEndpoints = process.env.PACT_ENABLE_DEMO_ENDPOINTS;
-    const previousGeneratorSecret = process.env.PACT_ARENA_GENERATOR_SECRET;
-    const previousAuthToken = process.env.PACT_AUTH_TOKEN;
-    const previousSessionSecret = process.env.PACT_SESSION_SECRET;
-    const previousDatabaseUrl = process.env.PACT_DATABASE_URL;
-    const previousAuthDomain = process.env.PACT_AUTH_DOMAIN;
     try {
       process.env.NODE_ENV = 'production';
       process.env.PACT_MODE = 'demo';
-      process.env.PACT_ENABLE_DEMO_ENDPOINTS = 'true';
-      process.env.PACT_ARENA_GENERATOR_SECRET = 'test-only-public-demo-generator-secret';
-      process.env.PACT_AUTH_TOKEN = 'test-only-operator-token';
-      process.env.PACT_SESSION_SECRET = 'test-session-secret-with-more-than-thirty-two-characters';
-      process.env.PACT_DATABASE_URL = 'postgres://pact:pact@localhost:5432/pact_test';
-      process.env.PACT_AUTH_DOMAIN = 'pact-protocol.pages.dev';
-      const account = privateKeyToAccount('0x0000000000000000000000000000000000000000000000000000000000000002');
-      const store = new DemoStore();
-      store.registerAgent({ agentAddress: account.address, displayName: 'Runtime-only Arena Agent' });
-      const app = createApp(store);
-      const path = '/api/arena/templates/daily-grounded-qa-v2/start';
-
-      await request(app).post(path).send({ agentAddress: account.address }).expect(401);
-
-      const wrongAccount = privateKeyToAccount('0x0000000000000000000000000000000000000000000000000000000000000003');
-      const message = [
-        'PACT: start Training Ground attempt',
-        'template=daily-grounded-qa-v2',
-        `agent=${account.address.toLowerCase()}`,
-        `day=${new Date().toISOString().slice(0, 10)}`
-      ].join('\n');
-      const wrongSignature = await wrongAccount.signMessage({ message });
-      await request(app).post(path).send({ agentAddress: account.address, signature: wrongSignature }).expect(403);
-
-      const signature = await account.signMessage({ message });
-      await request(app).post(path).send({ agentAddress: account.address, signature }).expect(201);
+      expect(() => createApp(new DemoStore())).toThrow(/PACT_MODE=arc/);
     } finally {
       if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
       else process.env.NODE_ENV = previousNodeEnv;
       if (previousMode === undefined) delete process.env.PACT_MODE;
       else process.env.PACT_MODE = previousMode;
-      if (previousDemoEndpoints === undefined) delete process.env.PACT_ENABLE_DEMO_ENDPOINTS;
-      else process.env.PACT_ENABLE_DEMO_ENDPOINTS = previousDemoEndpoints;
-      if (previousGeneratorSecret === undefined) delete process.env.PACT_ARENA_GENERATOR_SECRET;
-      else process.env.PACT_ARENA_GENERATOR_SECRET = previousGeneratorSecret;
-      if (previousAuthToken === undefined) delete process.env.PACT_AUTH_TOKEN;
-      else process.env.PACT_AUTH_TOKEN = previousAuthToken;
-      if (previousSessionSecret === undefined) delete process.env.PACT_SESSION_SECRET;
-      else process.env.PACT_SESSION_SECRET = previousSessionSecret;
-      if (previousDatabaseUrl === undefined) delete process.env.PACT_DATABASE_URL;
-      else process.env.PACT_DATABASE_URL = previousDatabaseUrl;
-      if (previousAuthDomain === undefined) delete process.env.PACT_AUTH_DOMAIN;
-      else process.env.PACT_AUTH_DOMAIN = previousAuthDomain;
     }
   });
 

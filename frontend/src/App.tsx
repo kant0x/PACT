@@ -20,7 +20,6 @@ import {
   Scale,
   ShieldCheck,
   SquareArrowOutUpRight,
-  Copy,
   Trophy,
   Users,
   WalletCards,
@@ -38,7 +37,6 @@ import {
 } from 'react';
 import {
   DEFAULT_TASK_DURATION_SECONDS,
-  DEMO_ADDRESSES,
   type DashboardSnapshot,
   type AgentAutomationSnapshot,
   type AgentDeliverable,
@@ -62,7 +60,7 @@ import {
   WORK_ORDER_TEMPLATES,
   normalizeWorkOrderSpec,
 } from '@pact/shared';
-import { API_BASE, PactApiError, agentRegistrationMessage, api, authenticateWallet, clearWalletSession, creatorTaskMessage, type PublishTaskInput, type TrustModel } from './api';
+import { API_BASE, PactApiError, api, authenticateWallet, clearWalletSession, creatorTaskMessage, type PublishTaskInput, type TrustModel } from './api';
 import { useLocale } from './locale';
 import { useAccount, useConnect, useDisconnect, usePublicClient, useSignMessage, useSwitchChain } from 'wagmi';
 import { getWalletClient } from 'wagmi/actions';
@@ -108,12 +106,12 @@ function WalletHeader({
   if (activeIsConnected && activeAddress) {
     return (
       <div className="operator">
-        <span className="operator__avatar">WEB3</span>
-        <span>
-          <strong>{t('Connected')}</strong>
-          <small className="mono">{shortAddress(activeAddress)}</small>
+        <span className="operator__badge" aria-hidden="true"><WalletCards size={15} /></span>
+        <span className="operator__identity">
+          <span className="operator__state"><i /> {t('Connected')}</span>
+          <strong className="mono" title={activeAddress}>{shortAddress(activeAddress)}</strong>
         </span>
-        <button className="button button--small button--outline" onClick={onDisconnect} type="button">
+        <button className="button button--small button--outline operator__disconnect" onClick={onDisconnect} type="button" aria-label="Disconnect wallet">
           {t('Disconnect')}
         </button>
       </div>
@@ -131,16 +129,14 @@ function WalletHeader({
 
 function WalletConnectModal({
   onClose,
-  onSelectDemoWallet,
 }: {
   onClose: () => void;
-  onSelectDemoWallet: (address: string) => void;
 }) {
   const { connect, connectors } = useConnect();
   const { t } = useLocale();
 
   return (
-    <Modal eyebrow={isArcMode ? 'ARC TESTNET WALLET' : 'WEB3 & DEMO AUTH'} title={t('Connect a wallet to PACT')} onClose={onClose} className="modal--wallet">
+    <Modal eyebrow="ARC TESTNET WALLET" title={t('Connect a wallet to PACT')} onClose={onClose} className="modal--wallet">
       <div className="wallet-modal__grid">
         <div className="wallet-modal__section">
           <div className="eyebrow">OPTION 01 / BROWSER EXTENSION</div>
@@ -164,38 +160,10 @@ function WalletConnectModal({
             </div>
           ) : (
             <div className="wallet-modal__note">
-              <span>No Web3 browser extension detected. You can use a 1-click demo test wallet below to publish tasks or register agents.</span>
+              <span>No Web3 browser extension detected. Install a compatible wallet extension to publish tasks or register agents.</span>
             </div>
           )}
         </div>
-
-        {!isArcMode ? <div className="wallet-modal__section">
-          <div className="eyebrow">OPTION 02 / 1-CLICK DEMO WALLET</div>
-          <h3>Test Accounts (Instant Connect)</h3>
-          <p>Select a test wallet to act as a Task Creator (Client) or AI Agent (Worker).</p>
-          <div className="wallet-modal__demo-buttons">
-            <button
-              type="button"
-              className="button button--outline button--block"
-              onClick={() => {
-                onSelectDemoWallet(DEMO_ADDRESSES.creator);
-                onClose();
-              }}
-            >
-              <Users /> Connect Creator Wallet <small>({shortAddress(DEMO_ADDRESSES.creator)})</small>
-            </button>
-            <button
-              type="button"
-              className="button button--outline button--block"
-              onClick={() => {
-                onSelectDemoWallet(DEMO_ADDRESSES.newbie);
-                onClose();
-              }}
-            >
-              <Bot /> Connect AI Agent Wallet <small>({shortAddress(DEMO_ADDRESSES.newbie)})</small>
-            </button>
-          </div>
-        </div> : null}
 
       </div>
     </Modal>
@@ -221,6 +189,83 @@ type View = 'overview' | 'protocol' | 'dapp' | 'marketplace' | 'leaderboard' | '
 type TaskCategory = 'CREATIVE' | 'SECURITY' | 'RESEARCH' | 'ENGINEERING';
 type MarketCategory = 'ALL' | TaskCategory | 'TRAINING';
 
+const AGENT_STARTER_KITS = [
+  {
+    id: 'research',
+    label: 'Research scout',
+    specialty: 'Research & analysis',
+    summary: 'Investigate, compare sources, and return cited findings.',
+    description: 'Autonomous AI agent for source-led research, analysis, and technical verification.',
+    inputTypes: 'task brief, URLs, source documents',
+    outputTypes: 'cited report, structured findings',
+    tools: 'HTTPS, web research, document parser',
+    evidenceMethods: 'source manifest, citations, SHA-256 artifact hash',
+    icon: FileWarning,
+  },
+  {
+    id: 'data',
+    label: 'Data operator',
+    specialty: 'Data & documents',
+    summary: 'Extract, reconcile, and validate structured information.',
+    description: 'Autonomous AI agent for document extraction, data reconciliation, and reproducible analysis.',
+    inputTypes: 'CSV, spreadsheet, PDF, task brief',
+    outputTypes: 'validated table, reconciliation report, JSON',
+    tools: 'document parser, Python sandbox, HTTPS',
+    evidenceMethods: 'source manifest, row-level checks, artifact hash',
+    icon: Gauge,
+  },
+  {
+    id: 'builder',
+    label: 'Code builder',
+    specialty: 'Engineering & code',
+    summary: 'Plan, implement, test, and return an auditable patch.',
+    description: 'Autonomous AI agent for scoped engineering work, code changes, and test-backed delivery.',
+    inputTypes: 'repository URL, issue brief, acceptance criteria',
+    outputTypes: 'patch, test report, implementation notes',
+    tools: 'repository sandbox, test runner, HTTPS',
+    evidenceMethods: 'commit hash, test receipt, artifact hash',
+    icon: Server,
+  },
+  {
+    id: 'security',
+    label: 'Security reviewer',
+    specialty: 'Security & policy',
+    summary: 'Review risk, controls, and evidence without deploying changes.',
+    description: 'Autonomous AI agent for security reviews, policy analysis, and actionable risk reports.',
+    inputTypes: 'policy, configuration, repository URL, task brief',
+    outputTypes: 'risk report, control matrix, remediation plan',
+    tools: 'static analyzer, policy parser, HTTPS',
+    evidenceMethods: 'finding log, source manifest, artifact hash',
+    icon: ShieldCheck,
+  },
+  {
+    id: 'creative',
+    label: 'Creative producer',
+    specialty: 'Creative & media',
+    summary: 'Turn a clear brief into ready-to-review creative assets.',
+    description: 'Autonomous AI agent for editorial planning, creative production, and structured handoff.',
+    inputTypes: 'creative brief, references, brand rules',
+    outputTypes: 'script, storyboard, content pack',
+    tools: 'asset planner, document parser, HTTPS',
+    evidenceMethods: 'source manifest, delivery checklist, artifact hash',
+    icon: Clapperboard,
+  },
+  {
+    id: 'operator',
+    label: 'General operator',
+    specialty: 'Operations & coordination',
+    summary: 'Triage a well-defined brief and coordinate a documented result.',
+    description: 'Autonomous AI agent for task triage, operational analysis, and structured handoff.',
+    inputTypes: 'task brief, URLs, acceptance criteria',
+    outputTypes: 'execution plan, status report, structured findings',
+    tools: 'HTTPS, document parser, sandboxed worker',
+    evidenceMethods: 'execution log, source manifest, artifact hash',
+    icon: Bot,
+  },
+] as const;
+
+type AgentStarterKit = (typeof AGENT_STARTER_KITS)[number];
+
 interface ToastState {
   tone: 'success' | 'error';
   message: string;
@@ -230,14 +275,11 @@ const PUBLIC_NAV_ITEMS: Array<{ id: View; label: string; icon: typeof LayoutDash
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'protocol', label: 'How it works', icon: Bot },
   { id: 'marketplace', label: 'Tasks', icon: Boxes },
-  { id: 'agents', label: 'Agent registry', icon: Users },
 ];
 
 const DAPP_NAV_ITEMS: Array<{ id: View; label: string; icon: typeof LayoutDashboard }> = [
   { id: 'dapp', label: 'Cabinet', icon: LayoutDashboard },
   { id: 'marketplace', label: 'Tasks', icon: Boxes },
-  { id: 'leaderboard', label: 'Training leaderboard', icon: Trophy },
-  { id: 'agents', label: 'Agent registry', icon: Users },
 ];
 
 // Disputes remains routable for an authenticated task participant, but is intentionally
@@ -252,6 +294,7 @@ function viewFromLocation(): View {
   const candidate = window.location.hash.replace(/^#/, '');
   if (candidate === 'streams' || candidate === 'workbench') return 'dapp';
   if (candidate === 'work-orders') return 'marketplace';
+  if (candidate === 'agents') return 'marketplace';
   return VALID_VIEWS.has(candidate as View) ? candidate as View : 'overview';
 }
 
@@ -266,7 +309,7 @@ const taskStatusLabels: Record<TaskStatus, string> = {
   CANCELLED: 'Cancelled',
 };
 
-const MARKET_CATEGORIES: MarketCategory[] = ['ALL', 'CREATIVE', 'SECURITY', 'RESEARCH', 'ENGINEERING', 'TRAINING'];
+const MARKET_CATEGORIES: MarketCategory[] = ['ALL', 'TRAINING', 'CREATIVE', 'SECURITY', 'RESEARCH', 'ENGINEERING'];
 
 function taskCategory(task: MarketplaceTask): TaskCategory {
   return task.workOrder?.category ?? inferTaskCategory(task) ?? 'ENGINEERING';
@@ -383,7 +426,7 @@ function EmptyState({ icon, title, copy }: { icon: ReactNode; title: string; cop
 }
 
 function AgentMark({ agent, size = 'normal' }: { agent: ReputationSnapshot; size?: 'normal' | 'large' }) {
-  const veteran = agent.agentAddress === DEMO_ADDRESSES.veteran;
+  const veteran = agent.score >= 701;
   return (
     <div className={`agent-mark agent-mark--${size} ${veteran ? 'agent-mark--veteran' : ''}`} aria-hidden="true">
       {veteran ? <BadgeCheck /> : <Bot />}
@@ -582,9 +625,7 @@ function PublishModal({
     }
     try {
       const signedForm = { ...form, workOrder };
-      if (isArcMode) {
-        await authenticateWallet(creatorAddress as `0x${string}`, (message) => signMessageAsync({ message }));
-      }
+      await authenticateWallet(creatorAddress as `0x${string}`, (message) => signMessageAsync({ message }));
       const signature = await signMessageAsync({ message: creatorTaskMessage(signedForm) });
       await onPublish({ ...signedForm, signature });
     } catch (error) {
@@ -666,30 +707,20 @@ function RegisterAgentModal({
   onClose,
   onRegister,
   busy,
-  activeAddress,
 }: {
   onClose: () => void;
-  onRegister: (input: { agentAddress: string; displayName: string; capabilityManifest: AgentCapabilityManifest; signature?: string; provisionWallet?: boolean }) => Promise<void>;
+  onRegister: (input: { displayName: string; capabilityManifest: AgentCapabilityManifest; provisionWallet: true }, sessionToken: string) => Promise<void>;
   busy: boolean;
-  activeAddress?: string;
 }) {
-  // OpenClaw remains part of the planned runtime roadmap, but is deliberately
-  // unavailable until its isolated gateway adapter has passed the production
-  // security review. Registration must therefore use a runtime we can verify.
-  const openClawAvailable = false;
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const { t } = useLocale();
-  const arcMode = isArcMode;
   const [setupStep, setSetupStep] = useState<'runtime' | 'profile'>('runtime');
-  const [runtimeKind, setRuntimeKind] = useState<'OPENCLAW_GATEWAY' | 'EXTERNAL_API'>('EXTERNAL_API');
+  const runtimeKind = 'EXTERNAL_API' as const;
   const [gatewayUrl, setGatewayUrl] = useState('');
-  const [sandboxConfirmed, setSandboxConfirmed] = useState(false);
-  const [walletMode, setWalletMode] = useState<'CONNECTED' | 'PROVISION'>(arcMode ? 'PROVISION' : 'CONNECTED');
-  const [copiedCommand, setCopiedCommand] = useState(false);
+  const [starterKitId, setStarterKitId] = useState<AgentStarterKit['id']>(AGENT_STARTER_KITS[0].id);
   const [form, setForm] = useState({
     displayName: '',
-    agentAddress: activeAddress ?? address ?? '',
     specialty: 'Research & analysis',
     description: 'Autonomous AI agent specializing in research, data analysis, and technical verification.',
     inputTypes: 'task brief, URLs, acceptance criteria',
@@ -703,22 +734,33 @@ function RegisterAgentModal({
   });
   const [formError, setFormError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (address && !form.agentAddress) setForm((current) => ({ ...current, agentAddress: address }));
-  }, [address, form.agentAddress]);
-
   const update = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm((current) => ({ ...current, [key]: value }));
   const splitList = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
+  const applyStarterKit = (kit: AgentStarterKit) => {
+    setStarterKitId(kit.id);
+    setForm((current) => ({
+      ...current,
+      specialty: kit.specialty,
+      description: kit.description,
+      inputTypes: kit.inputTypes,
+      outputTypes: kit.outputTypes,
+      tools: kit.tools,
+      evidenceMethods: kit.evidenceMethods,
+    }));
+  };
 
-  const copyInstallCommand = async () => {
-    await navigator.clipboard?.writeText('openclaw onboard --install-daemon');
-    setCopiedCommand(true);
-    window.setTimeout(() => setCopiedCommand(false), 1800);
+  const continueToProfile = () => {
+    const normalizedGatewayUrl = gatewayUrl.trim();
+    if (normalizedGatewayUrl && !/^https?:\/\//i.test(normalizedGatewayUrl)) {
+      setFormError('Enter a full https:// callback URL, or clear this optional field to continue without an external runtime.');
+      return;
+    }
+    setFormError(null);
+    setSetupStep('profile');
   };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    const normalizedAddress = form.agentAddress.trim();
     const name = form.displayName.trim();
     const description = form.description.trim();
     const inputTypes = splitList(form.inputTypes);
@@ -730,20 +772,8 @@ function RegisterAgentModal({
     const perTaskLimitUsdc = form.perTaskLimitUsdc.trim();
     const humanApprovalAboveUsdc = form.humanApprovalAboveUsdc.trim();
     setFormError(null);
-    if (runtimeKind === 'OPENCLAW_GATEWAY' && !openClawAvailable) {
-      setFormError('OpenClaw Gateway is not available yet. Connect an existing API runtime for now.');
-      return;
-    }
-    if (runtimeKind === 'OPENCLAW_GATEWAY' && !sandboxConfirmed) {
-      setFormError('Confirm sandbox mode before connecting an OpenClaw runtime. Non-main sessions must not run with unrestricted host tools.');
-      return;
-    }
     if (normalizedGatewayUrl && !/^https?:\/\//i.test(normalizedGatewayUrl)) {
       setFormError('Gateway URL must begin with https:// or http://, or be left empty for a local runtime.');
-      return;
-    }
-    if (walletMode === 'CONNECTED' && (!address || address.toLowerCase() !== normalizedAddress.toLowerCase())) {
-      setFormError('Connect the wallet that owns this agent address before registering.');
       return;
     }
     if (description.length < 20) {
@@ -786,71 +816,55 @@ function RegisterAgentModal({
       runtime: {
         kind: runtimeKind,
         gatewayUrl: normalizedGatewayUrl,
-        sandboxRequired: runtimeKind === 'OPENCLAW_GATEWAY' ? sandboxConfirmed : false,
+        sandboxRequired: false,
       },
       updatedAt: Math.floor(Date.now() / 1000),
     };
     try {
-      if (isArcMode && address) {
-        await authenticateWallet(address, (message) => signMessageAsync({ message }));
-      }
-      const signature = isArcMode && address && walletMode === 'CONNECTED'
-        ? await signMessageAsync({ message: agentRegistrationMessage({ displayName: name, capabilityManifest }) })
-        : undefined;
-      await onRegister({ agentAddress: normalizedAddress, displayName: name, capabilityManifest, signature, provisionWallet: walletMode === 'PROVISION' });
+      if (!address) throw new Error('Connect the agent owner wallet before registering an agent.');
+      const session = await authenticateWallet(address, (message) => signMessageAsync({ message }));
+      // Use the just-issued session directly. This avoids relying on a later
+      // sessionStorage read between wallet approval and Circle provisioning.
+      await onRegister({ displayName: name, capabilityManifest, provisionWallet: true }, session.token);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Registration was cancelled.');
     }
   };
 
   return (
-    <Modal className="modal--agent-register" eyebrow="Agent setup / autonomous runtime" title={setupStep === 'runtime' ? 'Launch a working agent' : 'Configure the agent'} onClose={onClose}>
+    <Modal className="modal--agent-register" eyebrow="Agent setup / command kits" title={setupStep === 'runtime' ? 'Start with a ready work kit' : 'Configure the agent'} onClose={onClose}>
       {setupStep === 'runtime' ? (
         <div className="agent-setup-flow">
-          <div className="agent-setup-progress"><span className="agent-setup-progress__active">01 Runtime</span><span>02 Profile &amp; limits</span><span>03 Wallet receipt</span></div>
-          <div className="form-note field--wide"><Bot /><span>{t('Creation starts a real platform worker immediately. It takes the first available daily challenge, submits evidence for verification, earns Platform Points, and continues through the daily queue in the background.')}</span></div>
-          <div className="runtime-choice-grid">
-            <button className="runtime-choice runtime-choice--disabled" type="button" disabled aria-disabled="true">
-              <Server /><span><strong>OpenClaw Gateway <em>{t('Coming soon')}</em></strong><small>{t('Self-hosted runtime connection will open after isolation and sandbox policies pass review.')}</small></span><span className="runtime-choice__status">{t('Coming soon')}</span>
-            </button>
-            <button className={runtimeKind === 'EXTERNAL_API' ? 'runtime-choice runtime-choice--active' : 'runtime-choice'} type="button" onClick={() => setRuntimeKind('EXTERNAL_API')}>
-              <Radio /><span><strong>{t('Controlled PACT runtime')}</strong><small>{t('Use the platform runtime now; connect your own worker or fork later through the signed API contract.')}</small></span><BadgeCheck />
-            </button>
+          <div className="agent-setup-progress"><span className="agent-setup-progress__active">01 Command kit</span><span>02 Profile &amp; limits</span><span>03 Circle wallet</span></div>
+          <div className="form-note field--wide"><Bot /><span>Choose a default operating kit. It fills the public capability manifest, so the agent starts ready for the matching tasks instead of requiring a long manual form.</span></div>
+          <div className="runtime-choice-grid runtime-choice-grid--kits" aria-label="Agent command kits">
+            {AGENT_STARTER_KITS.map((kit, index) => {
+              const Icon = kit.icon;
+              const active = starterKitId === kit.id;
+              return <button className={active ? 'runtime-choice runtime-choice--active' : 'runtime-choice'} key={kit.id} type="button" aria-pressed={active} onClick={() => applyStarterKit(kit)}>
+                <span className="runtime-choice__index">0{index + 1}</span><Icon /><span><strong>{kit.label}</strong><small>{kit.summary}</small></span>{active ? <BadgeCheck /> : <ChevronRight />}
+              </button>;
+            })}
           </div>
-          {runtimeKind === 'OPENCLAW_GATEWAY' ? (
-            <section className="runtime-setup-card">
-              <header><div><div className="eyebrow">OPENCLAW / LOCAL-FIRST GATEWAY</div><h3>Prepare the runtime before registration</h3></div><a href="https://github.com/openclaw/openclaw" target="_blank" rel="noreferrer">Read source <SquareArrowOutUpRight /></a></header>
-              <p>Run the Gateway with its own workspace and least-privilege tools. PACT will store only the public capability manifest, wallet address, evidence receipts and work-order outcomes.</p>
-              <div className="runtime-command"><code>openclaw onboard --install-daemon</code><button className="button button--small button--outline" type="button" onClick={() => void copyInstallCommand()}><Copy /> {copiedCommand ? 'Copied' : 'Copy'}</button></div>
-              <label className="field"><span>Public gateway callback URL <small>optional · never stores secrets</small></span><input type="url" value={gatewayUrl} onChange={(event) => setGatewayUrl(event.target.value)} placeholder="https://agent.example.com/pact/callback" /></label>
-              <label className="registration-check"><input type="checkbox" checked={sandboxConfirmed} onChange={(event) => setSandboxConfirmed(event.target.checked)} /><span><strong>Use a sandboxed OpenClaw workspace</strong><small>Allow only task, evidence and approved integration tools. Keep browser, nodes, cron and unrestricted host access off for remote work.</small></span></label>
-            </section>
-          ) : (
-            <section className="runtime-setup-card">
-              <header><div><div className="eyebrow">PACT RUNTIME / SIGNED ONBOARDING</div><h3>{t('Start inside the platform boundary')}</h3></div><KeyRound /></header>
-              <p>{t('The server-side PACT runtime stays online after this window closes: it reads eligible daily tasks, executes the bounded challenge flow, submits evidence, and schedules the next run automatically.')}</p>
-              <label className="field"><span>Public runtime callback URL <small>optional</small></span><input type="url" value={gatewayUrl} onChange={(event) => setGatewayUrl(event.target.value)} placeholder="https://agent.example.com/pact/callback" /></label>
-            </section>
-          )}
-          <div className="form-note form-note--muted field--wide"><ShieldCheck /><span>AI provider choice stays inside your API runtime. PACT's judge remains a separate deterministic/OpenAI/council layer and only returns a fault classification.</span></div>
-          <div className="modal__actions field--wide"><button className="button button--ghost" type="button" onClick={onClose}>Cancel</button><button className="button button--primary" type="button" onClick={() => setSetupStep('profile')}><ArrowRight /> Continue to profile</button></div>
+          <section className="runtime-setup-card runtime-setup-card--compact">
+            <header><div><div className="eyebrow">EXTERNAL API / SIGNED ONBOARDING</div><h3>Connect the runtime when ready</h3></div><KeyRound /></header>
+            <p>PACT can create the agent and its Circle wallet without an external server. Add a callback only when your own worker is online and ready to receive work.</p>
+            <a className="text-link" href="/docs/agent-api.html" rel="noreferrer" target="_blank"><SquareArrowOutUpRight /> Read the runtime API docs</a>
+            <label className="field"><span>External agent callback URL <small>optional · add later</small></span><input type="url" value={gatewayUrl} onChange={(event) => { setGatewayUrl(event.target.value); if (formError) setFormError(null); }} placeholder="https://agent.example.com/pact/callback" /></label>
+            {formError ? <div className="form-error" role="alert"><AlertTriangle /> {formError}</div> : null}
+          </section>
+          <div className="agent-learning-note"><Radio /><span><strong>Execution history is on by default.</strong> PACT records signed task receipts and score changes. It does not train or modify the AI model; your runtime can use its own private memory and learning system.</span></div>
+          <div className="modal__actions field--wide"><button className="button button--ghost" type="button" onClick={onClose}>Cancel</button><button className="button button--primary" type="button" onClick={continueToProfile}><ArrowRight /> Continue to profile</button></div>
         </div>
       ) : (
       <form className="form-grid" onSubmit={submit}>
-        <div className="agent-setup-progress field--wide"><button type="button" onClick={() => setSetupStep('runtime')}><ArrowRight /> Runtime: {runtimeKind === 'OPENCLAW_GATEWAY' ? 'OpenClaw Gateway' : 'External API'}</button><span className="agent-setup-progress__active">02 Profile &amp; limits</span><span>03 Wallet receipt</span></div>
-        <div className="form-note field--wide"><Bot /><span>{arcMode ? 'Signing creates the wallet-bound identity and immediately starts its autonomous daily training queue on Arc Testnet.' : t('Creation immediately starts this agent in the controlled PACT runtime. Daily training runs automatically; paid work still waits for the agent wallet to approve collateral and settlement actions.')}</span></div>
-        <div className="registration-section field--wide"><span>01 / WALLET IDENTITY</span><strong>Give the agent its own settlement identity</strong><small>Keep creator and agent wallets separate. Connect the Arc wallet that will own this agent profile and post its collateral.</small></div>
-        {arcMode ? <div className="wallet-mode-grid field--wide">
-          <label className={walletMode === 'PROVISION' ? 'wallet-mode wallet-mode--active' : 'wallet-mode'}><input type="radio" name="walletMode" checked={walletMode === 'PROVISION'} onChange={() => setWalletMode('PROVISION')} /><span><strong>New Circle smart wallet <em>Recommended</em></strong><small>PACT creates a dedicated Arc SCA for the agent. The connected wallet remains its authenticated controller.</small></span><ShieldCheck /></label>
-          <label className={walletMode === 'CONNECTED' ? 'wallet-mode wallet-mode--active' : 'wallet-mode'}><input type="radio" name="walletMode" checked={walletMode === 'CONNECTED'} onChange={() => setWalletMode('CONNECTED')} /><span><strong>Use connected wallet</strong><small>Use this address directly for the agent profile and every settlement signature.</small></span><KeyRound /></label>
-        </div> : null}
-        <label className="field field--wide">
+        <div className="agent-setup-progress field--wide"><button type="button" onClick={() => setSetupStep('runtime')}><ArrowRight /> Command kit</button><span className="agent-setup-progress__active">02 Profile &amp; limits</span><span>03 Circle wallet</span></div>
+        <div className="form-note field--wide"><Bot /><span>Your connected wallet remains the controller. PACT creates a separate Circle smart wallet for the agent after confirmation.</span></div>
+        <div className="registration-section field--wide"><span>01 / AGENT IDENTITY</span><strong>Name the agent and set its operating envelope</strong><small>The selected work kit already filled the capability manifest. Change only the values you need here.</small></div>
+        <div className="wallet-mode wallet-mode--active field--wide"><span><strong>Circle smart wallet <em>Required</em></strong><small>A dedicated Circle Arc smart-contract account is created for this agent. Your connected wallet remains its authenticated controller.</small></span><ShieldCheck /></div>
+        <label className="field">
           <span>{t('Display name')}</span>
           <input required minLength={2} maxLength={80} value={form.displayName} placeholder="e.g. Atlas Research Agent" onChange={(event) => update('displayName', event.target.value)} />
-        </label>
-        <label className="field field--wide">
-          <span>{walletMode === 'PROVISION' ? 'Circle Arc smart wallet' : 'Agent wallet owned by the runtime'}</span>
-          <input required={walletMode === 'CONNECTED'} disabled={walletMode === 'PROVISION'} pattern="^0x[a-fA-F0-9]{40}$" value={walletMode === 'PROVISION' ? 'Created securely after confirmation' : form.agentAddress} placeholder="0x…" onChange={(event) => update('agentAddress', event.target.value)} />
         </label>
         <label className="field">
           <span>Primary specialty</span>
@@ -860,51 +874,41 @@ function RegisterAgentModal({
             <option>Security &amp; policy</option>
             <option>Data &amp; documents</option>
             <option>Creative &amp; media</option>
+            <option>Operations &amp; coordination</option>
           </select>
         </label>
+        <div className="registration-section field--wide"><span>02 / WORK CONTROLS</span><strong>Choose how much the runtime may take on</strong><small>These limits become part of the signed agent profile. Settlement always stays bounded by the task escrow.</small></div>
         <label className="field">
           <span>Max parallel tasks</span>
           <input min="1" max="32" step="1" type="number" required value={form.maxConcurrentTasks} onChange={(event) => update('maxConcurrentTasks', event.target.value)} />
         </label>
-        <label className="field field--wide">
-          <span>Capability description</span>
-          <textarea required minLength={20} maxLength={500} rows={3} value={form.description} placeholder="What can this agent reliably do, and where does it stop?" onChange={(event) => update('description', event.target.value)} />
-        </label>
-        <div className="registration-section field--wide"><span>02 / Capability manifest</span><strong>Make the agent selectable</strong><small>Use comma-separated values. This is the signed operating envelope used for eligibility and audit.</small></div>
-        <label className="field">
-          <span>Accepted inputs</span>
-          <input required value={form.inputTypes} placeholder="PDF, URLs, task brief" onChange={(event) => update('inputTypes', event.target.value)} />
-        </label>
-        <label className="field">
-          <span>Produced outputs</span>
-          <input required value={form.outputTypes} placeholder="Report, JSON, hash" onChange={(event) => update('outputTypes', event.target.value)} />
-        </label>
-        <label className="field">
-          <span>Tools / integrations</span>
-          <input required value={form.tools} placeholder="HTTPS, Python, repository sandbox" onChange={(event) => update('tools', event.target.value)} />
-        </label>
-        <label className="field">
-          <span>Evidence returned</span>
-          <input required value={form.evidenceMethods} placeholder="Source manifest, test receipt" onChange={(event) => update('evidenceMethods', event.target.value)} />
-        </label>
-        <div className="registration-section field--wide"><span>03 / Settlement envelope</span><strong>Set safe economic limits</strong><small>The wallet policy is an additional cap; it never replaces the StreamingVault escrow.</small></div>
         <label className="field">
           <span>Per-task wallet cap / USDC</span>
           <input min="1" step="1" type="number" required value={form.perTaskLimitUsdc} onChange={(event) => update('perTaskLimitUsdc', event.target.value)} />
         </label>
-        <label className="field">
-          <span>Human approval above / USDC</span>
+        <label className="field field--wide">
+          <span>Human approval above / USDC <small>optional</small></span>
           <input min="1" step="1" type="number" value={form.humanApprovalAboveUsdc} placeholder="Leave empty for none" onChange={(event) => update('humanApprovalAboveUsdc', event.target.value)} />
         </label>
-        <label className="registration-check field--wide"><input type="checkbox" checked={form.allowTransactionPreparation} onChange={(event) => update('allowTransactionPreparation', event.target.checked)} /><span><strong>Allow transaction preparation</strong><small>Only prepares unsigned Arc transactions; signing remains subject to the connected wallet policy.</small></span></label>
-        <div className="form-note form-note--muted field--wide"><ShieldCheck /><span>Runtime binding: <strong>{runtimeKind === 'OPENCLAW_GATEWAY' ? 'OpenClaw Gateway' : 'External API'}</strong>. API expense policy is chosen by the creator for each task, not during agent registration. Secrets never belong in the manifest; only this public binding, capabilities and limits are signed.</span></div>
+        <details className="agent-manifest-advanced field--wide">
+          <summary><span>Advanced manifest</span><small>Edit commands, inputs, evidence, and transaction preparation only if the starter kit needs changing.</small></summary>
+          <div className="agent-manifest-advanced__fields">
+            <label className="field field--wide"><span>Capability description</span><textarea required minLength={20} maxLength={500} rows={3} value={form.description} placeholder="What can this agent reliably do, and where does it stop?" onChange={(event) => update('description', event.target.value)} /></label>
+            <label className="field"><span>Accepted inputs</span><input required value={form.inputTypes} placeholder="PDF, URLs, task brief" onChange={(event) => update('inputTypes', event.target.value)} /></label>
+            <label className="field"><span>Produced outputs</span><input required value={form.outputTypes} placeholder="Report, JSON, hash" onChange={(event) => update('outputTypes', event.target.value)} /></label>
+            <label className="field"><span>Tools / integrations</span><input required value={form.tools} placeholder="HTTPS, Python, repository sandbox" onChange={(event) => update('tools', event.target.value)} /></label>
+            <label className="field"><span>Evidence returned</span><input required value={form.evidenceMethods} placeholder="Source manifest, test receipt" onChange={(event) => update('evidenceMethods', event.target.value)} /></label>
+            <label className="registration-check field--wide"><input type="checkbox" checked={form.allowTransactionPreparation} onChange={(event) => update('allowTransactionPreparation', event.target.checked)} /><span><strong>Allow transaction preparation</strong><small>Only prepares unsigned Arc transactions; signing remains subject to the connected wallet policy.</small></span></label>
+            <div className="form-note form-note--muted field--wide"><ShieldCheck /><span>Runtime binding: <strong>External API</strong>. Secrets never belong in this manifest. Only the public commands, limits, and evidence policy are signed.</span></div>
+          </div>
+        </details>
         {formError ? <div className="form-error field--wide" role="alert"><AlertTriangle /> {formError}</div> : null}
         {address ? <div className="registration-wallet-note field--wide"><WalletCards /><span>Registration is bound to the connected wallet: <strong>{shortAddress(address)}</strong></span></div> : null}
         <div className="modal__actions field--wide">
           <button className="button button--ghost" type="button" onClick={() => setSetupStep('runtime')}>Back</button>
           <button className="button button--primary" type="submit" disabled={busy}>
             {busy ? <RefreshCcw className="spin" /> : <BadgeCheck />}
-            {walletMode === 'PROVISION' ? 'Create wallet & start agent' : 'Sign & start agent'}
+            Create Circle wallet & start agent
           </button>
         </div>
       </form>
@@ -992,9 +996,9 @@ function ArenaAttemptModal({
             {result.checks.map((check) => <span className={check.passed ? 'arena-check arena-check--pass' : 'arena-check arena-check--fail'} key={check.code}><i />{check.code}</span>)}
           </div>
           <div className="arena-judge-receipt"><ShieldCheck /><span><strong>{result.judge.provider}</strong>{result.judge.reasoning}<small>{result.judge.receiptHash.slice(0, 28)}…</small></span></div>
-          <div className="arena-points-receipt"><BadgeCheck /><span><strong>{result.pointsReceipt?.mode === 'ARC_TESTNET' ? 'Arc Testnet points' : 'Local demo points'}</strong>{result.pointsReceipt?.mode === 'ARC_TESTNET' && result.pointsReceipt.transactionHash
+          <div className="arena-points-receipt"><BadgeCheck /><span><strong>{result.pointsReceipt?.mode === 'ARC_TESTNET' ? 'Arc Testnet points' : 'Points receipt unavailable'}</strong>{result.pointsReceipt?.mode === 'ARC_TESTNET' && result.pointsReceipt.transactionHash
             ? <small><a href={`https://testnet.arcscan.app/tx/${result.pointsReceipt.transactionHash}`} target="_blank" rel="noreferrer">View award transaction <SquareArrowOutUpRight /></a>{result.pointsReceipt.agentTotal === null ? null : ` · agent total ${result.pointsReceipt.agentTotal} PTS`}</small>
-            : <small>{result.pointsAwarded > 0 ? 'Award recorded by the configured local demo ledger.' : 'No award transaction: the attempt did not pass.'}</small>}</span></div>
+            : <small>{result.pointsAwarded > 0 ? 'No Arc receipt was returned by the configured points adapter.' : 'No award transaction: the attempt did not pass.'}</small>}</span></div>
           <button className="button button--primary" onClick={onClose} type="button">Return to Training Ground</button>
         </div>
       ) : (
@@ -1296,8 +1300,8 @@ function TaskCard({
             </>
           ) : !agent ? (
             <>
-              <div className="claim-identity claim-identity--warning"><AlertTriangle /><div><strong>Agent not registered</strong><span>Register this wallet in the Agent Registry before claiming paid work.</span></div></div>
-              <button className="button button--outline button--block" type="button" onClick={() => window.location.hash = '#agents'}>Create an agent</button>
+              <div className="claim-identity claim-identity--warning"><AlertTriangle /><div><strong>Agent not registered</strong><span>Create your agent in Cabinet before claiming paid work.</span></div></div>
+              <button className="button button--outline button--block" type="button" onClick={() => window.location.hash = '#dapp'}><LayoutDashboard /> Open Cabinet</button>
             </>
           ) : (
             <>
@@ -1337,7 +1341,7 @@ function DisputeStrip({ dispute }: { dispute: Dispute }) {
 }
 
 const automationStatusLabel = (automation?: AgentAutomationSnapshot) => {
-  if (!automation?.enabled) return 'AUTOPILOT OFF';
+  if (!automation?.enabled) return 'EXTERNAL RUNTIME REQUIRED';
   if (automation.status === 'TRAINING') return 'TRAINING NOW';
   if (automation.status === 'QUEUED') return 'STARTING';
   if (automation.status === 'WAITING_DAILY_RESET') return 'DAILY SET COMPLETE';
@@ -1352,7 +1356,7 @@ function AgentAutopilotStatus({ automation, compact = false }: { automation?: Ag
       <span className="agent-autopilot__signal"><Radio /></span>
       <div>
         <strong>{automationStatusLabel(automation)}</strong>
-        <small>{automation?.currentTaskTitle ?? (active ? `${automation?.completedToday ?? 0}/${automation?.totalDailyTasks ?? 0} daily tasks completed` : 'Platform worker is paused')}</small>
+        <small>{automation?.currentTaskTitle ?? (active ? `${automation?.completedToday ?? 0}/${automation?.totalDailyTasks ?? 0} daily tasks completed` : 'The server does not execute agent work')}</small>
       </div>
       {automation?.lastScore !== null && automation?.lastScore !== undefined ? <b>{automation.lastScore}<small>/100</small></b> : null}
     </div>
@@ -1520,7 +1524,6 @@ function PlatformLeaderboard({
           <p>See which agents are building a verified record in PACT’s daily document challenges. Platform Points are separate from commercial Trust Score.</p>
           <div className="platform-leaderboard-hero__actions">
             <button className="button button--primary" onClick={() => onView('marketplace')} type="button"><Boxes /> {t('Browse tasks')}</button>
-            <button className="button button--outline" onClick={() => onView('agents')} type="button"><Users /> {t('Agent registry')}</button>
           </div>
         </div>
         <div className="platform-leaderboard-hero__stats" aria-label="Training leaderboard summary">
@@ -1546,7 +1549,7 @@ function PlatformLeaderboard({
               </div>
             ))}
           </div>
-        ) : <EmptyState icon={<Trophy />} title="No scored attempts yet" copy="Open a daily challenge to become the first agent on the board." />}
+        ) : <EmptyState icon={<Trophy />} title="No scored attempts yet" copy="No finalized training receipts have been recorded yet." />}
         <footer className="platform-leaderboard-card__note"><ShieldCheck /> Only completed platform challenges count here. Trust Score and settlement outcomes remain separate.</footer>
       </section>
     </div>
@@ -1765,9 +1768,9 @@ function DappDashboard({
           </article>
           <article className="role-launch-card role-launch-card--developer">
             <span className="role-launch-card__number">02 / {t('FOR AGENTS')}</span><Bot />
-            <h3>{t('Bring your agent')}</h3>
-            <p>{t('Configure an agent you own, declare its skills, and set safe limits for eligible work.')}</p>
-            <button className="button button--outline" onClick={onCreateAgent} type="button"><Bot /> {t('Connect an agent')}</button>
+            <h3>{t('Create your agent')}</h3>
+            <p>{t('Create the Circle wallet identity, declare skills, and set safe limits for eligible work.')}</p>
+            <button className="button button--outline" onClick={onCreateAgent} type="button"><Bot /> {t('Create an agent')}</button>
           </article>
         </div>
       </section>
@@ -1777,7 +1780,6 @@ function DappDashboard({
           <section className="dapp-quick-grid reveal">
             <button className="dapp-quick-card" onClick={() => onView('dapp')} type="button"><span><Boxes /></span><strong>{t('My work orders')}</strong><small>{myOrders.length} {t('owned')} · {activeOrders.length} {t('active')}</small><ArrowRight /></button>
             <button className="dapp-quick-card" onClick={() => onView('marketplace')} type="button"><span><Zap /></span><strong>{t('Open task board')}</strong><small>{openOrders.length} {t(openOrders.length === 1 ? 'open order ready for an eligible agent' : 'orders ready for an eligible agent')}</small><ArrowRight /></button>
-            <button className="dapp-quick-card" onClick={() => onView('agents')} type="button"><span><Users /></span><strong>{t('Agent registry')}</strong><small>{snapshot.agents.length} {t(snapshot.agents.length === 1 ? 'public profile' : 'public profiles')}</small><ArrowRight /></button>
           </section>
           <section className="client-orders section-block reveal" aria-labelledby="client-orders-title">
             <header className="panel-heading panel-heading--wide">
@@ -1886,7 +1888,7 @@ function Overview({
         <div className="overview-settlement__route" aria-label={t('PACT settlement flow')}>
           <div className="settlement-route__head">
             <span>{t('SETTLEMENT ROUTE')}</span>
-            <strong><i />{snapshot.mode === 'arc' ? t('ARC TESTNET') : t('DEMO DATA')}</strong>
+            <strong><i />{t('ARC TESTNET')}</strong>
           </div>
           <ol className="settlement-route__steps">
             <li><span><Plus /></span><div><small>01</small><strong>{t('Task posted')}</strong><em>{t('JSON spec locked')}</em></div><b>{t('READY')}</b></li>
@@ -1944,7 +1946,7 @@ function Overview({
             {' · '}
             <a href="https://investors.fiverr.com/news-releases/news-release-details/fiverr-announces-fourth-quarter-and-full-year-2025-results" target="_blank" rel="noreferrer">Fiverr 2025</a>
           </p>
-          <div className="overview-live__columns">
+          <div className="overview-live__columns overview-live__columns--work-only">
             <section className="overview-feed overview-feed--work" aria-labelledby="overview-work-title">
               <header><div><span>{t('OPEN WORK ORDERS')}</span><h3 id="overview-work-title">{t('What agents can take')}</h3></div><button className="text-link" onClick={() => onView('marketplace')} type="button">{t('See all work')} <ArrowRight /></button></header>
               {featuredTasks.length ? <div className="overview-feed__items">{featuredTasks.map((task) => <button className="overview-feed__item" key={task.id} onClick={() => onView('marketplace')} type="button"><span className="overview-feed__tag">{taskCategory(task)}</span><div className="overview-feed__copy"><strong>{task.title}</strong><small>{task.successCriteria || t('Acceptance criteria are defined in the work order.')}</small></div><b>${money(task.totalAmount)} <em>USDC</em></b><ArrowRight className="overview-feed__arrow" aria-hidden="true" /></button>)}</div> : <div className="overview-feed__empty"><Boxes /><span>{t('No open work orders yet.')}</span><button className="text-link" onClick={() => onView('dapp')} type="button">{t('Open the client dashboard')} <ArrowRight /></button></div>}
@@ -2066,7 +2068,7 @@ function AgentProtocol({ onView }: { onView: (view: View) => void }) {
 
       <section className="protocol-simple__builder reveal">
         <div><div className="eyebrow">{t('FOR AGENT BUILDERS')}</div><h2>{t('Bring your runtime.')}<br /><em>{t('Keep control.')}</em></h2><p>{t('Connect through the API, publish a signed profile, read eligible tasks and return evidence. Forks start as new agents with their own wallet and reputation.')}</p></div>
-        <button className="button button--primary" onClick={() => onView('agents')} type="button"><Bot /> {t('View agent registry')}</button>
+        <button className="button button--primary" onClick={() => onView('dapp')} type="button"><LayoutDashboard /> {t('Open Cabinet')}</button>
       </section>
       <PublicFooter onView={onView} />
     </div>
@@ -2082,11 +2084,10 @@ export default function App() {
   const { switchChainAsync } = useSwitchChain();
   const arcPublicClient = usePublicClient({ chainId: 5042002 });
 
-  const [demoWalletAddress, setDemoWalletAddress] = useState<string | null>(null);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
 
-  const activeAddress = connectedAddress ?? (!isArcMode ? demoWalletAddress : null) ?? undefined;
-  const activeIsConnected = Boolean(connectedAddress || (!isArcMode && demoWalletAddress));
+  const activeAddress = connectedAddress;
+  const activeIsConnected = Boolean(connectedAddress);
 
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [templates, setTemplates] = useState<ArenaTemplate[]>([]);
@@ -2096,10 +2097,10 @@ export default function App() {
   const [view, setView] = useState<View>(() => viewFromLocation());
   const [workspaceMode, setWorkspaceMode] = useState(() => ['dapp', 'leaderboard', 'disputes'].includes(viewFromLocation()));
   const [trustModel, setTrustModel] = useState<TrustModel | null>(null);
-  const [selectedAgent, setSelectedAgent] = useState<string>(DEMO_ADDRESSES.newbie);
+  const [selectedAgent, setSelectedAgent] = useState<string>('');
   const [registryProfile, setRegistryProfile] = useState<string | null>(null);
   const [hireAgentAddress, setHireAgentAddress] = useState<string | null>(null);
-  const [marketCategory, setMarketCategory] = useState<MarketCategory>('TRAINING');
+  const [marketCategory, setMarketCategory] = useState<MarketCategory>('ALL');
   const [publishOpen, setPublishOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [disputeTask, setDisputeTask] = useState<MarketplaceTask | null>(null);
@@ -2109,7 +2110,6 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [mobileNav, setMobileNav] = useState(false);
-  const [demoSeedAttempted, setDemoSeedAttempted] = useState(false);
   const [pendingFunding, setPendingFunding] = useState<{ workOrderKey: string; transactionHash: `0x${string}` } | null>(() => {
     try {
       const saved = window.sessionStorage.getItem('pact.pending-funding');
@@ -2125,7 +2125,6 @@ export default function App() {
   const handleDisconnect = useCallback(() => {
     if (isConnected) disconnect();
     clearWalletSession();
-    setDemoWalletAddress(null);
   }, [disconnect, isConnected]);
 
   const requestPublish = useCallback((preferredAgentAddress?: string) => {
@@ -2179,37 +2178,22 @@ export default function App() {
   }, [loadDashboard]);
 
   useEffect(() => {
-    const autoSeedEnabled = import.meta.env.VITE_PACT_MODE !== 'arc' && import.meta.env.VITE_AUTO_SEED_DEMO !== 'false';
-    if (!autoSeedEnabled || demoSeedAttempted || !snapshot || snapshot.mode !== 'demo' || snapshot.tasks.length > 0) return;
-    setDemoSeedAttempted(true);
-    void api.seedDemo().then(setSnapshot).catch(() => undefined);
-  }, [demoSeedAttempted, snapshot]);
+    const controller = new AbortController();
+    void api.trustModel(controller.signal).then(setTrustModel).catch(() => undefined);
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
-    void api.trustModel(controller.signal).then(setTrustModel).catch(() => undefined);
-    void api.arenaLeaderboard(controller.signal).then(setArenaLeaderboard).catch(() => undefined);
+    void api.trainingCatalog(controller.signal)
+      .then(setTemplates)
+      .catch(() => setTemplates([]));
     return () => controller.abort();
   }, []);
 
   useEffect(() => {
     clearWalletSession(connectedAddress);
   }, [connectedAddress]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void api.arenaTemplates(undefined, controller.signal).then(setTemplates).catch(() => undefined);
-    return () => controller.abort();
-  }, []);
-
-  useEffect(() => {
-    if (view !== 'marketplace' || marketCategory !== 'TRAINING') return undefined;
-    const timer = window.setInterval(() => {
-      void api.arenaTemplates().then(setTemplates).catch(() => undefined);
-      void api.arenaLeaderboard().then(setArenaLeaderboard).catch(() => undefined);
-    }, 5_000);
-    return () => window.clearInterval(timer);
-  }, [marketCategory, view]);
 
   useEffect(() => {
     if (!window.location.hash) window.history.replaceState(null, '', '#overview');
@@ -2306,12 +2290,16 @@ export default function App() {
     setView(next);
     if (['dapp', 'leaderboard', 'disputes'].includes(next)) setWorkspaceMode(true);
     if (['overview', 'protocol'].includes(next)) setWorkspaceMode(false);
+    if (next === 'dapp' && !activeIsConnected) {
+      setToast({ tone: 'error', message: 'Connect your wallet to use the PACT workspace and create or control agents.' });
+    }
     setMobileNav(false);
     // Avoid capturing a half-scrolled layout while the new route is rendering.
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   };
 
   const isDappView = workspaceMode;
+  const walletConnectionRequired = view === 'dapp' && !activeIsConnected;
   const visibleNavItems = isDappView ? DAPP_NAV_ITEMS : PUBLIC_NAV_ITEMS;
   const viewTitle = view === 'disputes' ? 'Private disputes' : t(visibleNavItems.find((item) => item.id === view)?.label ?? 'Overview');
 
@@ -2335,7 +2323,7 @@ export default function App() {
           })}
         </nav>
         <div className="sidebar__footer">
-          {isDappView ? <div className="system-state"><span className={error ? 'state-light state-light--error' : 'state-light'} /><div><strong>{error ? 'API degraded' : 'All systems nominal'}</strong><small>{snapshot?.mode === 'arc' ? 'Arc testnet' : 'Demo environment'}</small></div></div> : <div className="system-state"><span className="state-light" /><div><strong>Public entry</strong><small>Read-only until wallet connect</small></div></div>}
+          {isDappView ? <div className="system-state"><span className={error ? 'state-light state-light--error' : 'state-light'} /><div><strong>{error ? 'API degraded' : 'All systems nominal'}</strong><small>Arc testnet</small></div></div> : <div className="system-state"><span className="state-light" /><div><strong>Public entry</strong><small>Read-only until wallet connect</small></div></div>}
           <div className="build-tag mono">PACT / WORKSPACE</div>
         </div>
       </aside> : null}
@@ -2362,7 +2350,6 @@ export default function App() {
             {isDappView ? <button className="icon-button icon-button--top" disabled={busyKey !== null} onClick={() => void loadDashboard()} type="button" aria-label="Refresh dashboard"><RefreshCcw className={loading ? 'spin' : ''} /></button> : null}
             <LanguageSwitcher />
             {!isDappView ? <button className="button button--small button--workspace-entry" onClick={() => changeView('dapp')} type="button"><LayoutDashboard /> <span>{t('Cabinet')}</span></button> : null}
-            {isDappView && view !== 'disputes' && activeIsConnected ? <button className="button button--small button--outline" disabled={busyKey !== null} onClick={requestCreateAgent} type="button"><Bot /> {t('Create agent')}</button> : null}
             {isDappView ? <WalletHeader activeAddress={activeAddress} activeIsConnected={activeIsConnected} onOpenConnectModal={() => setWalletModalOpen(true)} onDisconnect={handleDisconnect} /> : null}
           </div>
         </header>
@@ -2374,6 +2361,20 @@ export default function App() {
               <div><strong>Control API unavailable</strong><span>{error} · Expected at {API_BASE}</span></div>
               <button className="button button--small" onClick={() => void loadDashboard()} type="button">Retry</button>
             </div>
+          ) : null}
+
+          {walletConnectionRequired ? (
+            <section className="wallet-connect-banner" role="status" aria-label="Wallet connection required">
+              <WalletCards aria-hidden="true" />
+              <div>
+                <span>Wallet connection required</span>
+                <strong>Connect your Arc wallet to enter the agent workspace.</strong>
+                <small>Your wallet is the authenticated controller. Every agent receives its own Circle Smart Wallet.</small>
+              </div>
+              <button className="button button--primary" type="button" onClick={() => setWalletModalOpen(true)}>
+                <WalletCards /> Connect wallet
+              </button>
+            </section>
           ) : null}
 
           {loading && !snapshot ? (
@@ -2471,22 +2472,20 @@ export default function App() {
 
               {view === 'marketplace' ? (
                 <div className="view-stack marketplace-page">
-                  <section className="page-intro marketplace-intro reveal">
-                    <div><div className="eyebrow">{trainingView ? 'PACT PLATFORM TASKS / DAILY POINTS' : snapshot.mode === 'demo' ? 'OPEN WORK / VERIFIABLE DELIVERY' : 'FUNDED WORK ORDERS / VERIFIABLE DELIVERY'}</div><h1>{trainingView ? 'Training Ground' : 'Open work orders'}</h1><p>{trainingView ? 'Connected agents monitor this board through the API. They pick up eligible daily challenges, submit evidence, and receive the judge result automatically.' : 'Browse funded tasks that agents can claim. Every order has a clear result, escrow, acceptance criteria, and proof requirements.'}</p></div>
-                    <div className="marketplace-intro__action"><span><strong>{trainingView ? `${dailyTrainingReward} PTS` : `$${compactMoney(openEscrow)}`}</strong><small>{trainingView ? 'DAILY PLATFORM REWARD' : snapshot.mode === 'demo' ? 'PLATFORM DEMO ESCROW' : 'OPEN ESCROW'}</small></span>{trainingView ? <button className="button button--primary" onClick={() => setMarketCategory('ALL')} type="button"><WalletCards /> View paid work</button> : <button className="button button--primary" onClick={() => requestPublish()} type="button"><WalletCards /> {activeIsConnected ? t('Publish a task') : 'Connect to publish'}</button>}<small className="marketplace-intro__gate">{trainingView ? 'Platform Points' : 'Creator wallet required'}</small></div>
+                  <section className={`page-intro marketplace-intro reveal ${trainingView ? 'marketplace-intro--training' : ''}`}>
+                    <div>{trainingView ? <><div className="eyebrow">PACT SYSTEM ASSIGNMENTS / AGENT TRAINING</div><h1>Training Ground</h1><p>Daily PACT challenges for registered agents. Complete them to earn Platform Points and build verified execution history without customer escrow.</p></> : <><div className="eyebrow">FUNDED WORK ORDERS / VERIFIABLE DELIVERY</div><h1>Open work orders</h1><p>Browse funded tasks that agents can claim. Every order has a clear result, escrow, acceptance criteria, and proof requirements.</p></>}</div>
+                    {!trainingView ? <div className="marketplace-intro__action"><span><strong>${compactMoney(openEscrow)}</strong><small>OPEN ESCROW</small></span><button className="button button--primary" onClick={() => requestPublish()} type="button"><WalletCards /> {activeIsConnected ? t('Publish a task') : 'Connect to publish'}</button><small className="marketplace-intro__gate">Creator wallet required</small></div> : null}
                   </section>
                   <section className="market-summary reveal">
-                    <div><span>{t(trainingView ? 'PLATFORM TASKS' : 'OPEN WORK')}</span><strong>{trainingView ? templates.length.toString().padStart(2, '0') : openTasks.length.toString().padStart(2, '0')}</strong></div>
-                    <div><span>{t(trainingView ? 'TOTAL REWARD' : 'AVAILABLE VALUE')}</span><strong>{trainingView ? `${dailyTrainingReward} PTS` : `$${compactMoney(openEscrow)}`}</strong></div>
+                    <div><span>{trainingView ? 'SYSTEM TASKS' : t('OPEN WORK')}</span><strong>{(trainingView ? templates.length : openTasks.length).toString().padStart(2, '0')}</strong></div>
+                    <div><span>{trainingView ? 'DAILY POINTS' : t('AVAILABLE VALUE')}</span><strong>{trainingView ? `${dailyTrainingReward} PTS` : `$${compactMoney(openEscrow)}`}</strong></div>
                     <div><span>{t('REGISTERED AGENTS')}</span><strong>{snapshot.agents.length.toString().padStart(2, '0')}</strong></div>
-                    <div><span>{t('SETTLEMENT')}</span><strong>{trainingView ? 'POINTS' : 'USDC'}</strong></div>
+                    <div><span>{trainingView ? 'REWARD RAIL' : t('SETTLEMENT')}</span><strong>{trainingView ? 'PTS' : 'USDC'}</strong></div>
                   </section>
-                  {trainingView ? <button className="training-leaderboard-link reveal" onClick={() => changeView('leaderboard')} type="button"><span><Trophy /><span><strong>{t('Training leaderboard')}</strong><small>Compare Platform Points and daily passes.</small></span></span><ArrowRight /></button> : null}
                   <section className="market-toolbar reveal">
                     <div className="market-filters" role="group" aria-label="Filter work orders by category">{MARKET_CATEGORIES.map((category) => <button className={marketCategory === category ? 'market-filter market-filter--active' : 'market-filter'} key={category} onClick={() => setMarketCategory(category)} type="button">{category}</button>)}</div>
                     <div className="market-toolbar__agents">
                       <div className="agent-context"><span>CLAIMING AS</span><strong>{activeAddress ? shortAddress(activeAddress) : 'Connect an agent wallet'}</strong></div>
-                      <button className="button button--outline button--small" onClick={() => activeIsConnected ? requestCreateAgent() : connectAgent()} type="button"><Bot /> {activeIsConnected ? 'Create agent' : 'Connect wallet'}</button>
                     </div>
                   </section>
                   {marketCategory === 'TRAINING' ? (
@@ -2589,9 +2588,9 @@ export default function App() {
 
               {view === 'agents' ? (
                 <div className="view-stack agents-page">
-                  <section className="page-intro agents-page__hero reveal"><div><div className="eyebrow">{t('Public agent registry')}</div><h1>{isDappView ? t('Find the right agent for the job.') : t('Registered agents.')}</h1><p>{isDappView ? t('Browse registered agents by skills, availability and settlement terms. Open a profile when you are ready to review the evidence history or send a funded invitation.') : t('View existing agents, their skills, availability, public score and finalized work history. No wallet is required.')}</p>{isDappView ? <div className="agents-page__hero-actions"><button className="button button--primary" onClick={() => activeIsConnected ? requestCreateAgent() : connectAgent()} type="button"><Bot /> {activeIsConnected ? t('Create an agent') : t('Connect wallet')}</button><button className="button button--outline" onClick={() => changeView('marketplace')} type="button"><Boxes /> {t('Browse tasks')}</button></div> : null}</div><div className="agents-page__hero-aside"><div className="registry-seal"><ShieldCheck /><span>PUBLIC REGISTRY<strong>FINALIZED SCORE</strong></span></div><div className="agents-page__hero-stats"><div><strong>{snapshot.agents.length}</strong><span>registered agents</span></div><div><strong>{openTasks.length}</strong><span>open tasks</span></div><div><strong>{snapshot.agents.length ? Math.max(...snapshot.agents.map((agent) => agent.score)) : 0}</strong><span>top score</span></div></div></div></section>
-                  {isDappView ? <div className="registry-entry-note"><span><strong>Looking to hire?</strong> Connect a creator wallet to invite an agent. External runtimes can join directly through API onboarding.</span><button className="text-link" type="button" onClick={() => changeView('protocol')}>How the flow works <ArrowRight /></button></div> : null}
-                  {snapshot.agents.length ? <AgentCatalog agents={snapshot.agents} automation={snapshot.agentAutomation} tasks={snapshot.tasks} selected={registryProfile ?? selectedAgent} onSelect={setSelectedAgent} onViewProfile={setRegistryProfile} onHire={isDappView ? requestHire : undefined} /> : <EmptyState icon={<Users />} title={t('No registered agents')} copy={snapshot.mode === 'arc' ? 'No agent profiles have been registered on Arc yet.' : 'Seed the demo to populate the reputation registry.'} />}
+                  <section className="page-intro agents-page__hero reveal"><div><div className="eyebrow">{t('Public agent registry')}</div><h1>{isDappView ? t('Find the right agent for the job.') : t('Registered agents.')}</h1><p>{isDappView ? t('Browse registered agents by skills, availability and settlement terms. Open a profile when you are ready to review the evidence history or send a funded invitation.') : t('View existing agents, their skills, availability, public score and finalized work history. No wallet is required.')}</p>{isDappView ? <div className="agents-page__hero-actions"><button className="button button--primary" onClick={() => changeView('dapp')} type="button"><LayoutDashboard /> Open Cabinet</button><button className="button button--outline" onClick={() => changeView('marketplace')} type="button"><Boxes /> {t('Browse tasks')}</button></div> : null}</div><div className="agents-page__hero-aside"><div className="registry-seal"><ShieldCheck /><span>PUBLIC REGISTRY<strong>FINALIZED SCORE</strong></span></div><div className="agents-page__hero-stats"><div><strong>{snapshot.agents.length}</strong><span>registered agents</span></div><div><strong>{openTasks.length}</strong><span>open tasks</span></div><div><strong>{snapshot.agents.length ? Math.max(...snapshot.agents.map((agent) => agent.score)) : 0}</strong><span>top score</span></div></div></div></section>
+                  {isDappView ? <div className="registry-entry-note"><span><strong>Looking to hire?</strong> Connect a creator wallet to invite an agent. External runtimes can join directly through API onboarding.</span><a className="text-link" href="/docs/agent-api.html" rel="noreferrer" target="_blank">API onboarding docs <SquareArrowOutUpRight /></a></div> : null}
+                  {snapshot.agents.length ? <AgentCatalog agents={snapshot.agents} automation={snapshot.agentAutomation} tasks={snapshot.tasks} selected={registryProfile ?? selectedAgent} onSelect={setSelectedAgent} onViewProfile={setRegistryProfile} onHire={isDappView ? requestHire : undefined} /> : <EmptyState icon={<Users />} title={t('No registered agents')} copy="No agent profiles have been registered on Arc yet." />}
                   {registryProfile ? (() => { const profileAgent = snapshot.agents.find((agent) => agent.agentAddress === registryProfile); return profileAgent ? <Modal title={profileAgent.displayName} eyebrow="Agent profile" className="agent-profile-modal" onClose={() => setRegistryProfile(null)}><AgentProfile agent={profileAgent} automation={snapshot.agentAutomation?.[profileAgent.agentAddress.toLowerCase()]} tasks={snapshot.tasks} onHire={isDappView ? (address) => { setRegistryProfile(null); requestHire(address); } : undefined} /></Modal> : null; })() : null}
                 </div>
               ) : null}
@@ -2603,7 +2602,7 @@ export default function App() {
                   </div>
                 ) : (
                 <div className="view-stack disputes-page">
-                  <section className="page-intro reveal"><div><div className="eyebrow">{trustModel?.arbitrator === 'council' ? 'Three-role judge council' : 'Deterministic demo arbitration'}</div><h1>Private dispute ledger</h1><p>Only cases involving this wallet are visible. Evidence produces a verdict; only finalized outcomes may update reputation.</p></div><div className="registry-seal registry-seal--orange"><Scale /><span>PRIVATE ACCESS<strong>VERDICT ONLY</strong></span></div></section>
+                  <section className="page-intro reveal"><div><div className="eyebrow">Three-role judge council</div><h1>Private dispute ledger</h1><p>Only cases involving this wallet are visible. Evidence produces a verdict; only finalized outcomes may update reputation.</p></div><div className="registry-seal registry-seal--orange"><Scale /><span>PRIVATE ACCESS<strong>VERDICT ONLY</strong></span></div></section>
                   <DisputeOverview disputes={privateDisputes} />
                   {privateDisputes.length ? (
                     <section className="dispute-list">
@@ -2624,7 +2623,7 @@ export default function App() {
                                 <span>DECISION / {shortHash(dispute.arbitrationReceipt.decisionHash)}</span>
                                 <strong>QUORUM {dispute.arbitrationReceipt.agreeingVotes}/{dispute.arbitrationReceipt.votesReceived}</strong>
                               </footer>
-                            ) : <footer className="decision-receipt decision-receipt--demo"><span>LOCAL DEMO DECISION</span><strong>No council receipt in deterministic mode</strong></footer>}
+                            ) : <footer className="decision-receipt decision-receipt--demo"><span>ARBITRATION RECEIPT UNAVAILABLE</span><strong>Awaiting the live council receipt.</strong></footer>}
                             {dispute.humanReview ? (
                               <footer className="human-review-proof">
                                 <ShieldCheck /><span>HUMAN REVIEW / {dispute.humanReview.reviewerId}</span><strong>{shortHash(dispute.humanReview.decisionHash)}</strong>
@@ -2649,7 +2648,7 @@ export default function App() {
         </div>
       </main>
 
-      {walletModalOpen ? <WalletConnectModal onClose={() => setWalletModalOpen(false)} onSelectDemoWallet={(addr) => { setDemoWalletAddress(addr); setWalletModalOpen(false); }} /> : null}
+      {walletModalOpen ? <WalletConnectModal onClose={() => setWalletModalOpen(false)} /> : null}
       {publishOpen && activeAddress ? <PublishModal preferredAgent={snapshot?.agents.find((agent) => agent.agentAddress.toLowerCase() === hireAgentAddress?.toLowerCase())} creatorAddress={activeAddress} busy={busyKey === 'publish'} onClose={() => { setPublishOpen(false); setHireAgentAddress(null); }} onPublish={async (input) => {
         const succeeded = await perform('publish', hireAgentAddress ? 'Funded invitation published on Arc Testnet.' : 'Funded work order published on Arc Testnet.', async () => {
           if (!isArcMode) return api.publishTask(input);
@@ -2685,7 +2684,7 @@ export default function App() {
           setHireAgentAddress(null);
         }
       }} /> : null}
-      {registerOpen ? <RegisterAgentModal activeAddress={activeAddress} busy={busyKey === 'register'} onClose={() => setRegisterOpen(false)} onRegister={async (input) => { const result = await perform('register', input.provisionWallet ? 'Agent wallet created. Autopilot is starting the first daily task.' : 'Agent created. Autopilot is starting the first daily task.', () => api.registerAgent(input)); if (result) { const provisionedAddress = typeof result === 'object' && result !== null && 'agent' in result && typeof result.agent === 'object' && result.agent !== null && 'agentAddress' in result.agent && typeof result.agent.agentAddress === 'string' ? result.agent.agentAddress : input.agentAddress; setRegisterOpen(false); setSelectedAgent(provisionedAddress); changeView('agents'); } }} /> : null}
+      {registerOpen ? <RegisterAgentModal busy={busyKey === 'register'} onClose={() => setRegisterOpen(false)} onRegister={async (input, sessionToken) => { const result = await perform('register', 'Circle agent wallet created. Connect its runtime to begin work.', () => api.registerAgent(input, sessionToken)); if (result && typeof result === 'object' && 'agent' in result && result.agent && typeof result.agent === 'object' && 'agentAddress' in result.agent && typeof result.agent.agentAddress === 'string') { setRegisterOpen(false); setSelectedAgent(result.agent.agentAddress); changeView('dapp'); } }} /> : null}
       {arenaChallenge && arenaResult ? <AutomatedArenaResultModal
         challenge={arenaChallenge}
         result={arenaResult}

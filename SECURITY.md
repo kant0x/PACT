@@ -20,9 +20,11 @@ funds in its current form.
 - Runtime databases, logs, generated evidence containing user data, deployment
   metadata, or internal model-training exports.
 
-The deterministic local demo requires no external secret. Production secrets
-must be injected by the hosting platform or a secret manager and rotated if
-they are ever exposed. Browser builds must not contain privileged API tokens.
+Tests use deterministic fixtures and do not require external secrets. The live
+runtime fails closed until its PostgreSQL, Arc, authentication, and external
+model configuration is present. Production secrets must be injected by the
+hosting platform or a secret manager and rotated if they are ever exposed.
+Browser builds must not contain privileged API tokens.
 
 ## Trust boundary
 

@@ -1,0 +1,24 @@
+{
+  "network": "Arc Testnet",
+  "chainId": 5042002,
+  "rpcUrl": "https://rpc.testnet.arc.network",
+  "verifiedAt": "2026-07-27",
+  "contracts": {
+    "ReputationRegistry": {
+      "address": "0x6519c710D091E9CC3120bF2527CC7594Ffa0442E",
+      "explorer": "https://testnet.arcscan.app/address/0x6519c710D091E9CC3120bF2527CC7594Ffa0442E"
+    },
+    "StreamingVault": {
+      "address": "0xE71D1BAE0732153b70b17144d1b858DB70856572",
+      "explorer": "https://testnet.arcscan.app/address/0xE71D1BAE0732153b70b17144d1b858DB70856572"
+    },
+    "DisputeModule": {
+      "address": "0x90b2f789a54Ed15deE3a24e81fC6727aA70f20dc",
+      "explorer": "https://testnet.arcscan.app/address/0x90b2f789a54Ed15deE3a24e81fC6727aA70f20dc"
+    }
+  },
+  "notes": [
+    "All three addresses returned non-empty bytecode through eth_getCode on 2026-07-27.",
+    "The hosted web/API demo currently uses off-chain demo state; these addresses are public Arc Testnet evidence, not a claim that every hosted UI action settles on-chain."
+  ]
+}

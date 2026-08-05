@@ -2,23 +2,27 @@
   "network": "Arc Testnet",
   "chainId": 5042002,
   "rpcUrl": "https://rpc.testnet.arc.network",
-  "verifiedAt": "2026-07-27",
+  "verifiedAt": "2026-08-03",
   "contracts": {
     "ReputationRegistry": {
-      "address": "0x6519c710D091E9CC3120bF2527CC7594Ffa0442E",
-      "explorer": "https://testnet.arcscan.app/address/0x6519c710D091E9CC3120bF2527CC7594Ffa0442E"
+      "address": "0x8B0D11907E8d2610aDe160E4D4401572fF62008A",
+      "explorer": "https://testnet.arcscan.app/address/0x8B0D11907E8d2610aDe160E4D4401572fF62008A"
     },
     "StreamingVault": {
-      "address": "0xE71D1BAE0732153b70b17144d1b858DB70856572",
-      "explorer": "https://testnet.arcscan.app/address/0xE71D1BAE0732153b70b17144d1b858DB70856572"
+      "address": "0x6eF50b267ae5A93a1750A8bB84a3F3d58d71Fc48",
+      "explorer": "https://testnet.arcscan.app/address/0x6eF50b267ae5A93a1750A8bB84a3F3d58d71Fc48"
     },
     "DisputeModule": {
-      "address": "0x90b2f789a54Ed15deE3a24e81fC6727aA70f20dc",
-      "explorer": "https://testnet.arcscan.app/address/0x90b2f789a54Ed15deE3a24e81fC6727aA70f20dc"
+      "address": "0x3152e65762C6e6C3992C58DA93CDB6E00777eC07",
+      "explorer": "https://testnet.arcscan.app/address/0x3152e65762C6e6C3992C58DA93CDB6E00777eC07"
+    },
+    "PlatformPoints": {
+      "address": "0xE9FaBC9Ca489B03B06DBa3d9094df6a307229A0E",
+      "explorer": "https://testnet.arcscan.app/address/0xE9FaBC9Ca489B03B06DBa3d9094df6a307229A0E"
     }
   },
   "notes": [
-    "All three addresses returned non-empty bytecode through eth_getCode on 2026-07-27.",
-    "The hosted web/API demo currently uses off-chain demo state; these addresses are public Arc Testnet evidence, not a claim that every hosted UI action settles on-chain."
+    "The current deployment returned non-empty bytecode through eth_getCode on 2026-08-03.",
+    "PlatformPoints: 0xE9FaBC9Ca489B03B06DBa3d9094df6a307229A0E. StreamingVault is authorized as a ReputationRegistry writer, and the DisputeModule is configured to use the current StreamingVault."
   ]
 }

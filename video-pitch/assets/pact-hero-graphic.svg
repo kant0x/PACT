@@ -1,0 +1,91 @@
+<svg width="720" height="620" viewBox="0 0 720 620" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ivory" x1="168" y1="130" x2="528" y2="346" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFDF8"/>
+      <stop offset="0.52" stop-color="#D9D4CE"/>
+      <stop offset="1" stop-color="#807A75"/>
+    </linearGradient>
+    <linearGradient id="ember" x1="126" y1="408" x2="563" y2="224" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B94D2B"/>
+      <stop offset="0.48" stop-color="#F07A49"/>
+      <stop offset="1" stop-color="#9A3C21"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="262" y1="451" x2="544" y2="233" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF9A67"/>
+      <stop offset="1" stop-color="#C4532E"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientTransform="translate(377 315) rotate(90) scale(284 310)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D65E35" stop-opacity="0.16"/>
+      <stop offset="0.58" stop-color="#D65E35" stop-opacity="0.035"/>
+      <stop offset="1" stop-color="#D65E35" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="softShadow" x="55" y="69" width="586" height="492" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#000" flood-opacity="0.82"/>
+    </filter>
+    <filter id="emberGlow" x="68" y="151" width="548" height="412" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+    <filter id="nodeGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <path id="orbitPath" d="M111 340C117 185 246 70 402 82C568 95 656 234 624 391C595 535 449 585 302 548C169 515 105 433 111 340Z"/>
+  </defs>
+
+  <ellipse cx="376" cy="315" rx="313" ry="284" fill="url(#halo)"/>
+
+  <g opacity="0.62">
+    <ellipse cx="372" cy="314" rx="276" ry="249" stroke="#C85A34" stroke-opacity="0.22"/>
+    <ellipse cx="372" cy="314" rx="229" ry="205" stroke="#F0EAE3" stroke-opacity="0.09" stroke-dasharray="3 13"/>
+    <path d="M90 314H139M606 314H655M372 42V91M372 537V586" stroke="#C85A34" stroke-opacity="0.35"/>
+  </g>
+
+  <g opacity="0.16" filter="url(#emberGlow)">
+    <path d="M143 391L276 500L548 229" stroke="#F27445" stroke-width="112" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <path d="M167 260L292 148L443 291L553 193" stroke="#171412" stroke-width="96" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M143 386L276 495L548 224" stroke="#171412" stroke-width="110" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <path d="M143 378L276 487L540 223" stroke="url(#ember)" stroke-width="84" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M167 251L292 139L443 282L553 184" stroke="url(#ivory)" stroke-width="72" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <path d="M279 486L540 223" stroke="url(#edge)" stroke-width="84" stroke-linecap="round"/>
+    <path d="M178 235L293 133L434 267" stroke="#FFFFFF" stroke-opacity="0.42" stroke-width="5" stroke-linecap="round"/>
+    <path d="M157 361L277 457L516 222" stroke="#FFB184" stroke-opacity="0.34" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <g>
+    <circle cx="143" cy="378" r="43" fill="#BC4D2A"/>
+    <circle cx="143" cy="378" r="25" fill="#DC663B"/>
+    <circle cx="143" cy="378" r="8" fill="#FFB184"/>
+    <circle cx="553" cy="184" r="39" fill="#BEB9B4"/>
+    <circle cx="553" cy="184" r="22" fill="#E8E4DF"/>
+    <circle cx="553" cy="184" r="7" fill="#FFFFFF"/>
+  </g>
+
+  <g transform="translate(505 414)" filter="url(#nodeGlow)">
+    <path d="M0 -44L38 -22V22L0 44L-38 22V-22L0 -44Z" fill="#0D0B0A" stroke="#D65E35" stroke-width="2"/>
+    <path d="M-16 1L-5 13L19 -13" stroke="#EF7847" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g fill="#D65E35">
+    <circle r="5" filter="url(#nodeGlow)">
+      <animateMotion dur="13s" repeatCount="indefinite" rotate="auto">
+        <mpath href="#orbitPath"/>
+      </animateMotion>
+    </circle>
+  </g>
+  <g opacity="0.8">
+    <circle cx="110" cy="341" r="4" fill="#D65E35"/>
+    <circle cx="624" cy="391" r="4" fill="#E7E1DB"/>
+    <circle cx="302" cy="548" r="3" fill="#D65E35"/>
+  </g>
+
+  <style>
+    @media (prefers-reduced-motion: reduce) {
+      animateMotion { display: none; }
+    }
+  </style>
+</svg>

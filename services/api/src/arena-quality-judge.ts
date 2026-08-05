@@ -124,11 +124,11 @@ export class OpenAIArenaQualityJudge implements ArenaQualityJudge {
 }
 
 export const createArenaQualityJudgeFromEnv = (): ArenaQualityJudge => {
-  const controlledDemoMode = process.env.PACT_MODE === 'demo'
-    && process.env.PACT_ENABLE_DEMO_ENDPOINTS === 'true';
-  const provider = (process.env.ARENA_JUDGE_PROVIDER
-    ?? (controlledDemoMode || process.env.NODE_ENV !== 'production' ? 'deterministic' : 'openai')).toLowerCase();
-  if (provider === 'deterministic') return new DeterministicArenaQualityJudge();
+  const provider = (process.env.ARENA_JUDGE_PROVIDER ?? 'openai').toLowerCase();
+  if (provider === 'deterministic') {
+    if (process.env.NODE_ENV === 'test') return new DeterministicArenaQualityJudge();
+    throw new Error('ARENA_JUDGE_PROVIDER=deterministic is test-only; configure ARENA_JUDGE_PROVIDER=openai for live grading');
+  }
   if (provider !== 'openai') throw new Error(`Unsupported ARENA_JUDGE_PROVIDER: ${provider}`);
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) throw new Error('OPENAI_API_KEY is required when ARENA_JUDGE_PROVIDER=openai');

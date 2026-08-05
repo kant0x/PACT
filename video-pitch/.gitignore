@@ -1,0 +1,8 @@
+renders/
+snapshots/
+audio_meta.json
+audio_engine_meta.json
+.hyperframes/
+AGENTS.md
+CLAUDE.md
+capture/

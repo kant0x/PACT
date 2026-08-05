@@ -14,23 +14,6 @@ services:
       retries: 20
     restart: unless-stopped
 
-  arena-docker:
-    image: docker:27-dind
-    privileged: true
-    environment:
-      DOCKER_TLS_CERTDIR: ""
-    command: ["--host=tcp://0.0.0.0:2375", "--tls=false"]
-    volumes:
-      - arena-docker-data:/var/lib/docker
-    networks:
-      - runner
-    healthcheck:
-      test: ["CMD", "docker", "info"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-    restart: unless-stopped
-
   api:
     build:
       context: ..
@@ -42,23 +25,15 @@ services:
       PORT: 4100
       PACT_MODE: arc
       PACT_DATABASE_URL: postgres://pact:${POSTGRES_PASSWORD}@postgres:5432/pact
-      PACT_CORS_ORIGINS: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN in deploy/.env.production}
-      PACT_ENABLE_DEMO_ENDPOINTS: "false"
-      PACT_REQUIRE_AGENT_SIGNATURES: "true"
+      PACT_CORS_ORIGINS: ${PACT_CORS_ORIGINS:?Set PACT_CORS_ORIGINS in deploy/.env.production}
       PACT_REQUIRE_ARENA_SIGNATURES: "true"
-      PACT_AGENT_AUTOPILOT_ENABLED: "true"
+      PACT_AGENT_AUTOPILOT_ENABLED: "false"
       ARENA_JUDGE_PROVIDER: openai
       ARBITRATOR_PROVIDER: council
       ARBITRATOR_FALLBACK: disabled
-      DOCKER_HOST: tcp://arena-docker:2375
     depends_on:
       postgres:
         condition: service_healthy
-      arena-docker:
-        condition: service_healthy
-    networks:
-      - default
-      - runner
     restart: unless-stopped
 
   indexer:
@@ -77,31 +52,43 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  caddy:
+    image: caddy:2.8-alpine
+    env_file:
+      - ${PACT_ENV_FILE:-.env.production}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - pact-caddy-data:/data
+      - pact-caddy-config:/config
+    depends_on:
+      - api
+    restart: unless-stopped
+
   web:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.web
       args:
         VITE_API_URL: ""
-        VITE_PACT_MODE: arc
-        VITE_AUTO_SEED_DEMO: "false"
-        VITE_REQUIRE_ARENA_SIGNATURES: "true"
+        VITE_ARC_RPC_URL: ${PACT_ARC_RPC_URL:-https://rpc.testnet.arc.network}
+        VITE_STREAMING_VAULT_ADDRESS: ${PACT_STREAMING_VAULT_ADDRESS:?Set PACT_STREAMING_VAULT_ADDRESS}
+        VITE_USDC_ADDRESS: ${ARC_USDC_ADDRESS:-0x3600000000000000000000000000000000000000}
     environment:
       PACT_WEB_API_URL: ""
-      PACT_WEB_MODE: arc
       PACT_WEB_ARC_RPC_URL: ${PACT_ARC_RPC_URL:-https://rpc.testnet.arc.network}
       PACT_WEB_STREAMING_VAULT_ADDRESS: ${PACT_STREAMING_VAULT_ADDRESS:?Set PACT_STREAMING_VAULT_ADDRESS}
       PACT_WEB_USDC_ADDRESS: ${ARC_USDC_ADDRESS:-0x3600000000000000000000000000000000000000}
     ports:
-      - "${WEB_PORT:-80}:80"
+      - "127.0.0.1:${WEB_PORT:-8080}:80"
     depends_on:
       - api
     restart: unless-stopped
 
-networks:
-  runner:
-    driver: bridge
-
 volumes:
   pact-postgres:
-  arena-docker-data:
+  pact-caddy-data:
+  pact-caddy-config:

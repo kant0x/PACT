@@ -321,7 +321,7 @@ function allowedToolsFor(manifest: AgentCapabilityManifest) {
 export class AgentRuntime {
   private readonly tools = createTools();
 
-  constructor(private readonly provider: AgentModelProvider = new DeterministicAgentProvider(), private readonly demoStore?: DemoStore) {}
+  constructor(private readonly provider: AgentModelProvider, private readonly demoStore?: DemoStore) {}
 
   describe() {
     return {

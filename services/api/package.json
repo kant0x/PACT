@@ -10,8 +10,6 @@
     "start": "node dist/src/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "demo:seed": "tsx scripts/seed.ts",
-    "demo:run": "tsx scripts/run-scenario.ts",
     "arena:agent": "tsx scripts/arena-agent.ts",
     "arena:agent:once": "tsx scripts/arena-agent.ts --once",
     "arena:agent:prod": "node dist/scripts/arena-agent.js",

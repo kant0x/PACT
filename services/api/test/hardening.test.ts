@@ -167,6 +167,46 @@ describe('production hardening', () => {
     }
   });
 
+  it('blocks legacy in-memory and demo routes in Arc mode', async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousMode = process.env.PACT_MODE;
+    const previousDatabaseUrl = process.env.PACT_DATABASE_URL;
+    const previousOpenAiKey = process.env.OPENAI_API_KEY;
+    const previousCorsOrigins = process.env.PACT_CORS_ORIGINS;
+    try {
+      process.env.NODE_ENV = 'production';
+      process.env.PACT_MODE = 'arc';
+      process.env.PACT_DATABASE_URL = 'postgres://pact:pact@localhost:5432/pact_test';
+      process.env.OPENAI_API_KEY = 'test-only-openai-key';
+      process.env.PACT_CORS_ORIGINS = 'https://pact-protocol.pages.dev';
+      const app = createApp(new DemoStore(), {
+        authToken: 'correct-secret',
+        sessionSecret: 'test-session-secret-with-more-than-thirty-two-characters',
+        authAudience: 'pact-protocol.pages.dev',
+        arcSettlement: readyArcSettlement,
+      });
+      await request(app).get('/api/dashboard').expect(410).expect(({ body }) => {
+        expect(body).toMatchObject({ code: 'DEMO_RUNTIME_REMOVED' });
+      });
+      await request(app).get('/api/arena/templates').expect(410);
+      await request(app).get('/api/training/catalog').expect(200).expect(({ body }) => {
+        expect(body).toHaveLength(9);
+        expect(body[0]).toMatchObject({ ownerType: 'PLATFORM', ownerName: 'PACT Platform' });
+      });
+    } finally {
+      if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = previousNodeEnv;
+      if (previousMode === undefined) delete process.env.PACT_MODE;
+      else process.env.PACT_MODE = previousMode;
+      if (previousDatabaseUrl === undefined) delete process.env.PACT_DATABASE_URL;
+      else process.env.PACT_DATABASE_URL = previousDatabaseUrl;
+      if (previousOpenAiKey === undefined) delete process.env.OPENAI_API_KEY;
+      else process.env.OPENAI_API_KEY = previousOpenAiKey;
+      if (previousCorsOrigins === undefined) delete process.env.PACT_CORS_ORIGINS;
+      else process.env.PACT_CORS_ORIGINS = previousCorsOrigins;
+    }
+  });
+
   it('protects mutations with a bearer token while keeping reads available', async () => {
     const app = createApp(new DemoStore(), { authToken: 'correct-secret' });
     await request(app).get('/api/dashboard').expect(200);

@@ -6,9 +6,9 @@ Deadline: Sunday, 2 August 2026, 23:59 in the organizer's stated timezone. Submi
 
 | Item | URL | Verified 2026-07-27 | Owner action |
 | --- | --- | --- | --- |
-| Live demo | https://arc.pact.kant0x.xyz/#overview | Custom domain configured; verify HTTPS and every judge path after the final GitHub deployment |
+| Live frontend | https://arc.pact.kant0x.xyz/#overview | Custom domain configured; verify HTTPS and every live path after the final deployment |
 | Cloudflare fallback | https://pact-protocol.pages.dev | Public fallback URL | Keep available if custom-domain certificate provisioning is delayed |
-| API health | https://pact-api-635470212898.europe-west1.run.app/api/health | Public HTTP 200; currently `mode: demo`, `persistence: memory` | Keep claims aligned with demo status or deploy the hardened Arc/PostgreSQL profile |
+| API health | https://pact-api-635470212898.europe-west1.run.app/api/health | Must be public HTTP 200 with `mode: arc`, `persistence: postgres` | Recheck after the Arc/PostgreSQL deployment |
 | Source repository | https://github.com/kant0x/PACT | Public HTTP 200 | Commit and push the untracked frontend and final docs |
 | Arc deployment evidence | `docs/arc-testnet-deployments.json` | Chain ID 5042002; non-empty bytecode at all three addresses | Keep public and include the explorer links in the submission |
 | Demo video | TBD | Not uploaded | Record from `docs/DEMO_SCRIPT.md`, upload, and test incognito |
@@ -21,7 +21,7 @@ Deadline: Sunday, 2 August 2026, 23:59 in the organizer's stated timezone. Submi
 - [ ] `npm run check:submission`
 - [ ] `frontend/` is tracked by Git.
 - [ ] No `.env`, private key, wallet seed, database, log, generated evidence, or cloud credential is tracked.
-- [ ] Root `README.md` contains the demo, API, Arcscan, and judging-document links.
+- [ ] Root `README.md` contains the frontend, API, Arcscan, and judging-document links.
 - [ ] `docs/SITE_AND_PRODUCT.md` matches the language used by the website, video, and deck.
 - [ ] Public deployment was rebuilt from the same commit linked in the application.
 - [ ] GitHub default branch shows a green or otherwise successful verification run.
@@ -29,7 +29,7 @@ Deadline: Sunday, 2 August 2026, 23:59 in the organizer's stated timezone. Submi
 ## Judge-path smoke test
 
 - [ ] Open every submitted link in a signed-out/incognito window.
-- [ ] Load the overview, protocol, public task market, agent registry, client workspace, and Training Ground.
+- [ ] Load the overview, protocol, public task market, agent registry, and client workspace.
 - [ ] Expand every product-status FAQ item and verify the official external links.
 - [ ] Switch EN → RU → ES → EN and verify the first DApp screen is not mixed-language.
 - [ ] Confirm browser console has no errors on the overview and DApp entry screens.
@@ -40,7 +40,7 @@ Deadline: Sunday, 2 August 2026, 23:59 in the organizer's stated timezone. Submi
 
 ## Claims that are safe today
 
-- Working public demo with marketplace, agent registry, evidence/dispute flows, and Training Ground.
+- Working public Arc/PostgreSQL product with marketplace, agent registry, and evidence/dispute flows.
 - Automated API and Solidity contract coverage.
 - Reputation, arbitration, settlement, and Training Ground points are separate product layers.
 - Public Arc Testnet contract deployments exist and are independently inspectable.
@@ -49,5 +49,5 @@ Deadline: Sunday, 2 August 2026, 23:59 in the organizer's stated timezone. Submi
 ## Claims to avoid until the deployment changes
 
 - “Production-ready,” “audited,” or “safe for real funds.”
-- “The hosted demo is durable” while health reports in-memory persistence.
+- “Production-ready,” “audited,” or “safe for real funds” before independent review.
 - “Every hosted UI action settles on Arc” unless the final deployment and transaction evidence prove that path end-to-end.

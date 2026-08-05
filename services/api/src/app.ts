@@ -104,43 +104,37 @@ export interface AppOptions {
 
 export function createApp(store: DemoStore = demoStore, options: AppOptions = {}) {
   const app = express();
+  const testMode = process.env.NODE_ENV === 'test';
+  if (!testMode && process.env.PACT_MODE !== 'arc') {
+    throw new Error('PACT_MODE=arc is required outside the test runtime; demo mode has been removed');
+  }
   const openaiKey = process.env.OPENAI_API_KEY;
-  const controlledDemoMode = process.env.PACT_MODE !== 'arc'
-    || process.env.NODE_ENV === 'demo'
-    || process.env.PACT_ENABLE_DEMO_ENDPOINTS === 'true';
-  const deterministicProvidersAllowed = process.env.NODE_ENV !== 'production'
-    || controlledDemoMode
-    || process.env.PACT_ALLOW_DETERMINISTIC_PROVIDERS === 'true';
-  if (process.env.NODE_ENV === 'production' && !openaiKey && !deterministicProvidersAllowed) {
-    throw new Error('OPENAI_API_KEY is required in production; set PACT_ALLOW_DETERMINISTIC_PROVIDERS=true only for an explicitly labelled controlled demo');
+  if (!testMode && !openaiKey) {
+    throw new Error('OPENAI_API_KEY is required outside the test runtime; live agent execution and arbitration cannot use a local fallback');
   }
-  if (process.env.NODE_ENV === 'production' && !deterministicProvidersAllowed
-    && (process.env.ARENA_JUDGE_PROVIDER === 'deterministic' || process.env.ARBITRATOR_PROVIDER === 'deterministic')) {
-    throw new Error('Deterministic judges are disabled in production');
-  }
-  const defaultAgentProvider = openaiKey ? new OpenAIAgentProvider(openaiKey) : new DeterministicAgentProvider();
+  const defaultAgentProvider = openaiKey
+    ? new OpenAIAgentProvider(openaiKey)
+    : new DeterministicAgentProvider();
   const agentRuntime = new AgentRuntime(options.agentProvider ?? defaultAgentProvider, store);
   const arenaCodeRunner = options.arenaCodeRunner ?? new DockerArenaCodeRunner();
   const arenaQualityJudge = options.arenaQualityJudge ?? (() => {
+    if (testMode) return new DeterministicArenaQualityJudge();
     try {
       return createArenaQualityJudgeFromEnv();
     } catch (error) {
-      if (!controlledDemoMode) throw error;
-      console.warn('PACT demo: arena judge disabled/fallback to deterministic because configuration is incomplete', error);
-      return new DeterministicArenaQualityJudge();
+      throw error;
     }
   })();
   const platformPoints = options.platformPoints ?? (() => {
     try {
       return createPlatformPointsFromEnv();
     } catch (error) {
-      if (!controlledDemoMode) throw error;
-      console.warn('PACT demo: platform points chain adapter disabled because configuration is incomplete', error);
-      return null;
+      if (testMode) return null;
+      throw error;
     }
   })();
   const arenaAutopilotEnabled = options.arenaAutopilotEnabled
-    ?? (process.env.NODE_ENV !== 'test' && process.env.VITEST !== 'true' && process.env.PACT_AGENT_AUTOPILOT_ENABLED !== 'false');
+    ?? (testMode && process.env.VITEST !== 'true' && process.env.PACT_AGENT_AUTOPILOT_ENABLED !== 'false');
   const arenaAutopilot = new ArenaAutopilot({
     store,
     codeRunner: arenaCodeRunner,
@@ -150,10 +144,10 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
     pollIntervalMs: Number(process.env.PACT_AUTOPILOT_POLL_INTERVAL_MS ?? 15_000),
     taskIntervalSeconds: Number(process.env.PACT_AUTOPILOT_TASK_INTERVAL_SECONDS ?? 300),
     maxAgentsPerTick: Number(process.env.PACT_AUTOPILOT_MAX_AGENTS_PER_TICK ?? 2),
-    syncProductionAgents: process.env.PACT_MODE === 'arc'
+    syncProductionAgents: arenaAutopilotEnabled && process.env.PACT_MODE === 'arc'
       ? async () => (await import('./repositories/agent.repository.js')).agentRepository.findAll()
       : undefined,
-    onResult: process.env.PACT_MODE === 'arc'
+    onResult: arenaAutopilotEnabled && process.env.PACT_MODE === 'arc'
       ? async (agentAddress, result) => {
           if (result.pointsAwarded > 0) {
             await (await import('./repositories/agent.repository.js')).agentRepository.awardPlatformPoints(agentAddress, result.pointsAwarded);
@@ -162,32 +156,29 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
       : undefined,
   });
   app.locals.arenaAutopilot = arenaAutopilot;
-  if (controlledDemoMode) {
+  if (testMode) {
     for (const agent of store.dashboard().agents) arenaAutopilot.enroll(agent.agentAddress);
   }
-  if (!controlledDemoMode && process.env.PACT_MODE === 'arc' && process.env.PLATFORM_POINTS_REQUIRED === 'true' && !platformPoints) {
+  if (!testMode && process.env.PLATFORM_POINTS_REQUIRED === 'true' && !platformPoints) {
     throw new Error('PLATFORM_POINTS_REQUIRED=true but no Arc PlatformPoints adapter is configured');
   }
   const x402Integration = (() => {
     try {
       return createX402RuntimeIntegration();
     } catch (error) {
-      if (!controlledDemoMode) throw error;
-      console.warn('PACT demo: x402 integration disabled because configuration is incomplete', error);
-      return null;
+      if (testMode) return null;
+      throw error;
     }
   })();
   const arbitrator = options.arbitrator ?? (() => {
     try {
-      return process.env.NODE_ENV === 'test' ? new DeterministicArbitrator() : createArbitratorFromEnv();
+      return testMode ? new DeterministicArbitrator() : createArbitratorFromEnv();
     } catch (error) {
-      if (!controlledDemoMode) throw error;
-      console.warn('PACT demo: arbitrator fallback to deterministic because configuration is incomplete', error);
-      return new DeterministicArbitrator();
+      throw error;
     }
   })();
   const authToken = options.authToken ?? process.env.PACT_AUTH_TOKEN;
-  const hardenedRuntime = process.env.NODE_ENV === 'production' || process.env.PACT_MODE === 'arc';
+  const hardenedRuntime = !testMode;
   const sessionSecret = options.sessionSecret
     ?? process.env.PACT_SESSION_SECRET
     ?? (process.env.NODE_ENV === 'test' ? 'test-only-pact-session-secret-32-bytes' : undefined);
@@ -205,7 +196,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
     throw new Error('PACT_AUTH_DOMAIN must name the public PACT domain in production/Arc mode');
   }
   const arcSettlement = options.arcSettlement ?? createArcSettlementGatewayFromEnv();
-  if (process.env.PACT_MODE === 'arc' && !arcSettlement) {
+  if (!testMode && !arcSettlement) {
     throw new Error('Arc settlement gateway is required in Arc mode');
   }
   const walletAuth = new WalletAuthService(sessionSecret ?? 'development-only-pact-session-secret', authAudience);
@@ -220,25 +211,16 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
     lastUsedAt: record.lastUsedAt,
     nextPollAt: record.nextPollAt
   });
-  const demoEndpointsEnabled = options.enableDemoEndpoints
-    ?? (controlledDemoMode || (process.env.PACT_ENABLE_DEMO_ENDPOINTS === undefined
-      ? process.env.NODE_ENV !== 'production'
-      : process.env.PACT_ENABLE_DEMO_ENDPOINTS === 'true'));
+  const demoEndpointsEnabled = testMode && (options.enableDemoEndpoints ?? true);
   // A funded work order must be explicitly approved by the creator wallet. Tests can
   // use the in-memory store without a Web3 signature; every real/dev HTTP request is
   // protected unless an operator deliberately opts into the legacy bypass.
-  const creatorSignatureRequired = !controlledDemoMode && (process.env.NODE_ENV === 'production'
-    || (process.env.NODE_ENV !== 'test' && process.env.PACT_ALLOW_UNSIGNED_TASKS !== 'true'));
-  // Demo mode keeps the local showcase frictionless. Arc/production registration
-  // must still prove wallet ownership over the exact capability JSON that is
-  // persisted; a bearer token alone is not an agent identity proof.
-  const agentSignatureRequired = !controlledDemoMode && (process.env.NODE_ENV === 'production'
-    || process.env.PACT_MODE === 'arc'
-    || (process.env.NODE_ENV !== 'test' && process.env.PACT_REQUIRE_AGENT_SIGNATURES === 'true'));
-  // A public demo is still a public API. Never let a browser claim an arena
-  // attempt merely by naming a registered agent address. The only unsigned
-  // bypass is the isolated test process, where existing evaluation fixtures
-  // intentionally exercise the store without a wallet.
+  const creatorSignatureRequired = !testMode;
+  // Live registration must prove wallet ownership over the exact capability JSON
+  // that is persisted; a bearer token alone is not an agent identity proof.
+  const agentSignatureRequired = !testMode;
+  // Never let a browser claim an arena attempt merely by naming a registered
+  // agent address. Tests may intentionally exercise the store without a wallet.
   const arenaSignatureRequired = process.env.NODE_ENV !== 'test'
     || process.env.PACT_REQUIRE_ARENA_SIGNATURES === 'true';
   const assertCreatorSignature = async (input: Record<string, unknown>) => {
@@ -309,6 +291,9 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
   };
   const configuredCorsOrigins = options.corsOrigins ?? parseCorsOrigins();
   const persistenceMode = (process.env.PACT_DATABASE_URL ?? process.env.DATABASE_URL) ? 'postgres' : 'memory';
+  // Caddy is the single public reverse proxy. Trust exactly that hop so the
+  // rate limiter receives the actual client address from X-Forwarded-For.
+  app.set('trust proxy', 1);
   app.disable('x-powered-by');
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(cors({ origin: configuredCorsOrigins }));
@@ -331,6 +316,17 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
     return requireAuth(request, response, next);
   });
 
+  // The in-memory/demo API is test-only. In live mode every public data
+  // mutation and read must go through the PostgreSQL + Arc routes below.
+  app.use('/api', (request, _response, next) => {
+    if (testMode) return next();
+    const livePath = /^(?:\/health(?:\/|$)|\/auth\/(?:challenge|verify|session)$|\/trust-model$|\/runtime\/paid-capability$|\/training\/catalog$|\/dashboard\/pg$|\/leaderboard\/pg$|\/agents\/pg(?:\/|$)|\/agents\/[^/]+\/(?:autopilot|api-keys|work-queue)(?:\/|$)|\/tasks\/pg(?:\/|$)|\/templates\/pg(?:\/|$)|\/deliverables\/pg(?:\/|$)|\/disputes\/pg(?:\/|$))$/.test(request.path);
+    if (!livePath) {
+      return next(new ApiProblem(410, 'DEMO_RUNTIME_REMOVED', 'Demo and in-memory runtime routes are disabled; use the live Arc API'));
+    }
+    next();
+  });
+
   app.post('/api/auth/challenge', async (request, response, next) => {
     try {
       response.status(201).json(await walletAuth.issueChallenge(text(request.body?.address)));
@@ -349,6 +345,14 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
     } catch (error) {
       next(error);
     }
+  });
+
+  app.get('/api/auth/session', requireAuth, (request, response) => {
+    const identity = requestIdentity(request);
+    if (identity?.kind !== 'wallet') {
+      throw new ApiProblem(403, 'WALLET_SESSION_REQUIRED', 'A wallet session is required');
+    }
+    response.json({ address: identity.subject, expiresAt: identity.claims.exp });
   });
 
   const health = (_request: Request, response: Response) => response.json({
@@ -405,6 +409,13 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
         error: error instanceof Error ? error.message : 'Arc readiness check failed',
       });
     }
+  });
+
+  // Public, read-only system assignment catalogue. It intentionally exposes
+  // neither agent attempts nor attempt credentials; agents receive those only
+  // through their authenticated work queue.
+  app.get('/api/training/catalog', (_request, response) => {
+    response.json(store.listArenaTemplates());
   });
 
   app.get('/api/x402/status', (_request, response) => response.json({
@@ -478,6 +489,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
   });
   app.post('/api/agents/:agentAddress/autopilot/start', requireAuth, async (request, response, next) => {
     try {
+      if (!testMode) throw new ApiProblem(410, 'SERVER_AUTOPILOT_DISABLED', 'Live agents must execute through their own authenticated runtime; server-side auto-solving is disabled');
       const agentAddress = text(request.params.agentAddress).toLowerCase();
       authorizeAddress(request, agentAddress, 'Only the agent owner wallet can start autopilot');
       if (process.env.PACT_MODE === 'arc') {
@@ -827,56 +839,25 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
   app.post('/api/agents/pg', async (request, response, next) => {
     try {
       const { agentRepository } = await import('./repositories/agent.repository.js');
-      const { verifyMessage } = await import('viem');
 
       const body = request.body && typeof request.body === 'object' ? request.body as Record<string, unknown> : {};
-      const { address, displayName, capabilityManifest, provisionWallet } = body;
+      const { displayName, capabilityManifest, provisionWallet } = body;
       const requestedName = text(displayName).trim() || 'New AI Agent';
       if (requestedName.length < 2 || requestedName.length > 80) throw new ApiProblem(400, 'INVALID_AGENT_NAME', 'displayName must contain 2..80 characters');
       const submittedManifest = capabilityManifest === undefined ? undefined : validateCapabilityManifest(capabilityManifest);
       const manifest = submittedManifest ?? defaultExternalManifest();
 
-      let finalAddress = text(address).trim();
-      let walletProvider: 'CIRCLE' | 'EXTERNAL' = 'EXTERNAL';
-      let walletAccountType: 'SCA' | 'EOA' = 'EOA';
-      let controllerAddress = finalAddress.toLowerCase();
-      let circleWalletId: string | null = null;
-      let circleWalletSetId: string | null = null;
-
-      if (provisionWallet === true) {
-        const identity = requestIdentity(request);
-        if (identity?.kind !== 'wallet') {
-          throw new ApiProblem(401, 'CONTROLLER_WALLET_REQUIRED', 'Connect and authenticate the human controller wallet before creating a Circle agent wallet');
-        }
-        const provisioned = await createArcSponsoredWallet();
-        finalAddress = provisioned.wallet.address;
-        if (!finalAddress) throw new ApiProblem(502, 'CIRCLE_WALLET_ADDRESS_MISSING', 'Circle did not return an Arc wallet address');
-        if (!provisioned.wallet.id) throw new ApiProblem(502, 'CIRCLE_WALLET_ID_MISSING', 'Circle did not return a wallet ID');
-        walletProvider = 'CIRCLE';
-        walletAccountType = 'SCA';
-        controllerAddress = identity.subject.toLowerCase();
-        circleWalletId = provisioned.wallet.id;
-        circleWalletSetId = provisioned.walletSetId;
-      } else {
-        if (!ETHEREUM_ADDRESS.test(finalAddress)) throw new ApiProblem(400, 'INVALID_AGENT_ADDRESS', 'address must be a 20-byte hex address');
-        authorizeAddress(request, finalAddress, 'Only the agent wallet owner can register this profile');
-
-        // Verify that the third-party agent actually owns this Ethereum address
-        const signature = text(body.signature).trim();
-        if (!signature) throw new ApiProblem(401, 'AGENT_SIGNATURE_REQUIRED', 'Web3 signature is required to prove ownership of the agent address');
-        try {
-          const isValid = await verifyMessage({
-            address: finalAddress as `0x${string}`,
-            message: agentRegistrationMessage({ displayName: requestedName, capabilityManifest: submittedManifest }),
-            signature: signature as `0x${string}`
-          });
-          if (!isValid) throw new ApiProblem(403, 'INVALID_AGENT_SIGNATURE', 'The connected wallet did not approve this agent profile');
-        } catch (error) {
-          if (error instanceof ApiProblem) throw error;
-          throw new ApiProblem(403, 'INVALID_AGENT_SIGNATURE', 'The connected wallet did not approve this agent profile');
-        }
-        controllerAddress = finalAddress.toLowerCase();
+      if (provisionWallet !== true) {
+        throw new ApiProblem(400, 'CIRCLE_WALLET_REQUIRED', 'Every PACT agent must use a dedicated Circle smart wallet');
       }
+      const identity = requestIdentity(request);
+      if (identity?.kind !== 'wallet') {
+        throw new ApiProblem(401, 'CONTROLLER_WALLET_REQUIRED', 'Connect and authenticate the human controller wallet before creating a Circle agent wallet');
+      }
+      const provisioned = await createArcSponsoredWallet();
+      const finalAddress = provisioned.wallet.address;
+      if (!finalAddress) throw new ApiProblem(502, 'CIRCLE_WALLET_ADDRESS_MISSING', 'Circle did not return an Arc wallet address');
+      if (!provisioned.wallet.id) throw new ApiProblem(502, 'CIRCLE_WALLET_ID_MISSING', 'Circle did not return a wallet ID');
 
       if (!ETHEREUM_ADDRESS.test(finalAddress)) throw new ApiProblem(502, 'INVALID_PROVISIONED_ADDRESS', 'Circle did not return a valid agent wallet address');
 
@@ -891,17 +872,18 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
         platformPoints: 0,
         lastUpdated: Math.floor(Date.now() / 1000),
         capabilityManifest: manifest,
-        walletProvider,
-        walletAccountType,
-        controllerAddress,
-        circleWalletId,
-        circleWalletSetId,
+        walletProvider: 'CIRCLE' as const,
+        walletAccountType: 'SCA' as const,
+        controllerAddress: identity.subject.toLowerCase(),
+        circleWalletId: provisioned.wallet.id,
+        circleWalletSetId: provisioned.walletSetId,
       };
       await agentRepository.create(agent);
-      store.syncAgentProfile(agent);
-      const automation = arenaAutopilot.enroll(finalAddress);
+      // Live agents are never auto-solved by the server. A registered agent
+      // must use its own runtime/API key or an explicitly integrated worker.
+      const automation = arenaAutopilot.snapshot(finalAddress);
       response.status(201).json({
-        message: 'Agent registered and autopilot started',
+        message: 'Agent registered; connect its authenticated runtime to begin work',
         agent: {
           ...agent,
           // Circle resource IDs are operational metadata and never leave the API.
@@ -1959,37 +1941,39 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
     } catch(e) { next(e); }
   });
 
-  const requireDemo = (_request: Request, _response: Response, next: NextFunction) => demoEndpointsEnabled
-    ? next()
-    : next(new ApiProblem(403, 'DEMO_ENDPOINTS_DISABLED', 'Demo mutation endpoints are disabled'));
-  app.post('/api/demo/reset', requireOperator, requireDemo, (_request, response) => response.json(store.reset()));
-  app.post('/api/demo/seed', requireOperator, requireDemo, (_request, response) => {
-    const dashboard = store.seedMarketplace();
-    for (const agent of dashboard.agents) arenaAutopilot.enroll(agent.agentAddress);
-    response.json({
-      ...dashboard,
-      agentAutomation: arenaAutopilot.snapshots(dashboard.agents.map((agent) => agent.agentAddress)),
+  if (testMode) {
+    const requireDemo = (_request: Request, _response: Response, next: NextFunction) => demoEndpointsEnabled
+      ? next()
+      : next(new ApiProblem(403, 'DEMO_ENDPOINTS_DISABLED', 'Demo mutation endpoints are disabled'));
+    app.post('/api/demo/reset', requireOperator, requireDemo, (_request, response) => response.json(store.reset()));
+    app.post('/api/demo/seed', requireOperator, requireDemo, (_request, response) => {
+      const dashboard = store.seedMarketplace();
+      for (const agent of dashboard.agents) arenaAutopilot.enroll(agent.agentAddress);
+      response.json({
+        ...dashboard,
+        agentAutomation: arenaAutopilot.snapshots(dashboard.agents.map((agent) => agent.agentAddress)),
+      });
     });
-  });
-  app.post('/api/demo/scenario', requireOperator, requireDemo, (_request, response) => response.json(store.runScenario()));
-  app.post('/api/demo/showcase', requireOperator, requireDemo, async (_request, response) => {
-    store.reset();
-    const seeded = store.seedMarketplace();
-    for (const agent of seeded.agents) arenaAutopilot.enroll(agent.agentAddress);
-    const task = store.listTasks('OPEN').find((candidate) => candidate.title === 'Verify the PACT evidence pack');
-    if (!task) throw new ApiProblem(500, 'SHOWCASE_TASK_MISSING', 'The guided showcase task was not seeded');
-    store.claimTask(task.id, DEMO_ADDRESSES.proofAgent);
-    const run = await agentRuntime.run(task.id, DEMO_ADDRESSES.proofAgent);
-    if (!run.deliverableId) throw new ApiProblem(500, 'SHOWCASE_DELIVERABLE_MISSING', 'The guided showcase did not produce a deliverable');
-    response.status(201).json({
-      message: 'Guided showcase is ready for creator review',
-      agent: store.reputation(DEMO_ADDRESSES.proofAgent),
-      task: store.getTask(task.id),
-      run,
-      deliverable: store.getDeliverable(run.deliverableId),
-      dashboard: store.dashboard()
+    app.post('/api/demo/scenario', requireOperator, requireDemo, (_request, response) => response.json(store.runScenario()));
+    app.post('/api/demo/showcase', requireOperator, requireDemo, async (_request, response) => {
+      store.reset();
+      const seeded = store.seedMarketplace();
+      for (const agent of seeded.agents) arenaAutopilot.enroll(agent.agentAddress);
+      const task = store.listTasks('OPEN').find((candidate) => candidate.title === 'Verify the PACT evidence pack');
+      if (!task) throw new ApiProblem(500, 'SHOWCASE_TASK_MISSING', 'The guided showcase task was not seeded');
+      store.claimTask(task.id, DEMO_ADDRESSES.proofAgent);
+      const run = await agentRuntime.run(task.id, DEMO_ADDRESSES.proofAgent);
+      if (!run.deliverableId) throw new ApiProblem(500, 'SHOWCASE_DELIVERABLE_MISSING', 'The guided showcase did not produce a deliverable');
+      response.status(201).json({
+        message: 'Guided showcase is ready for creator review',
+        agent: store.reputation(DEMO_ADDRESSES.proofAgent),
+        task: store.getTask(task.id),
+        run,
+        deliverable: store.getDeliverable(run.deliverableId),
+        dashboard: store.dashboard()
+      });
     });
-  });
+  }
 
   app.use((_request, response) => response.status(404).json({ error: 'Route not found', code: 'ROUTE_NOT_FOUND' } satisfies ApiError));
   app.use((error: unknown, _request: Request, response: Response, _next: NextFunction) => {
