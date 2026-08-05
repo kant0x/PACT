@@ -17,6 +17,19 @@ const boundedStringArray = (value: unknown, field: string, min: number, max: num
   return value.map((item) => item as string);
 };
 
+const isHttpCallbackUrl = (value: unknown) => {
+  if (typeof value !== 'string' || value.length > 2048 || value !== value.trim()) return false;
+  try {
+    const url = new URL(value);
+    return (url.protocol === 'https:' || url.protocol === 'http:')
+      && Boolean(url.hostname)
+      && !url.username
+      && !url.password;
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Validate and normalize the manifest at the API boundary. The wallet signs
  * the canonical, validated fields (with server-assigned `updatedAt` omitted),
@@ -76,7 +89,7 @@ export function validateCapabilityManifest(input: unknown): AgentCapabilityManif
     assert(runtimeCandidate.kind === 'OPENCLAW_GATEWAY' || runtimeCandidate.kind === 'EXTERNAL_API',
       400, 'INVALID_RUNTIME_BINDING', 'runtime.kind is not recognized');
     const gatewayUrl = runtimeCandidate.gatewayUrl;
-    assert(gatewayUrl === null || gatewayUrl === undefined || (typeof gatewayUrl === 'string' && gatewayUrl.length <= 2048 && /^https?:\/\//i.test(gatewayUrl)),
+    assert(gatewayUrl === null || gatewayUrl === undefined || isHttpCallbackUrl(gatewayUrl),
       400, 'INVALID_RUNTIME_BINDING', 'runtime.gatewayUrl must be an http(s) URL or null');
     assert(typeof runtimeCandidate.sandboxRequired === 'boolean',
       400, 'INVALID_RUNTIME_BINDING', 'runtime.sandboxRequired must be boolean');

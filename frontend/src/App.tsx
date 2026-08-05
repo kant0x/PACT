@@ -73,6 +73,18 @@ import { config } from './wagmi';
 
 const wait = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 
+const isHttpCallbackUrl = (value: string) => {
+  try {
+    const url = new URL(value);
+    return (url.protocol === 'https:' || url.protocol === 'http:')
+      && Boolean(url.hostname)
+      && !url.username
+      && !url.password;
+  } catch {
+    return false;
+  }
+};
+
 async function waitForCircleTransaction(
   agentAddress: string,
   transactionId: string,
@@ -734,6 +746,17 @@ function RegisterAgentModal({
   });
   const [formError, setFormError] = useState<string | null>(null);
 
+  const returnToRuntime = (message: string) => {
+    setSetupStep('runtime');
+    setFormError(message);
+  };
+
+  const continueWithoutCallback = () => {
+    setGatewayUrl('');
+    setFormError(null);
+    setSetupStep('profile');
+  };
+
   const update = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm((current) => ({ ...current, [key]: value }));
   const splitList = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
   const applyStarterKit = (kit: AgentStarterKit) => {
@@ -751,8 +774,8 @@ function RegisterAgentModal({
 
   const continueToProfile = () => {
     const normalizedGatewayUrl = gatewayUrl.trim();
-    if (normalizedGatewayUrl && !/^https?:\/\//i.test(normalizedGatewayUrl)) {
-      setFormError('Enter a full https:// callback URL, or clear this optional field to continue without an external runtime.');
+    if (normalizedGatewayUrl && !isHttpCallbackUrl(normalizedGatewayUrl)) {
+      returnToRuntime('The callback is optional. Enter a complete https:// URL, or choose “Continue without callback”.');
       return;
     }
     setFormError(null);
@@ -772,8 +795,8 @@ function RegisterAgentModal({
     const perTaskLimitUsdc = form.perTaskLimitUsdc.trim();
     const humanApprovalAboveUsdc = form.humanApprovalAboveUsdc.trim();
     setFormError(null);
-    if (normalizedGatewayUrl && !/^https?:\/\//i.test(normalizedGatewayUrl)) {
-      setFormError('Gateway URL must begin with https:// or http://, or be left empty for a local runtime.');
+    if (normalizedGatewayUrl && !isHttpCallbackUrl(normalizedGatewayUrl)) {
+      returnToRuntime('The callback is optional. Enter a complete https:// URL, or choose “Continue without callback”.');
       return;
     }
     if (description.length < 20) {
@@ -851,6 +874,7 @@ function RegisterAgentModal({
             <p>PACT can create the agent and its Circle wallet without an external server. Add a callback only when your own worker is online and ready to receive work.</p>
             <a className="text-link" href="/docs/agent-api.html" rel="noreferrer" target="_blank"><SquareArrowOutUpRight /> Read the runtime API docs</a>
             <label className="field"><span>External agent callback URL <small>optional · add later</small></span><input type="url" value={gatewayUrl} onChange={(event) => { setGatewayUrl(event.target.value); if (formError) setFormError(null); }} placeholder="https://agent.example.com/pact/callback" /></label>
+            <div className="runtime-local-runtime"><span><strong>No runtime online yet?</strong><small>Create the Circle wallet and agent profile now. You can connect its callback later.</small></span><button className="button button--ghost" type="button" onClick={continueWithoutCallback}><Check /> Continue without callback</button></div>
             {formError ? <div className="form-error" role="alert"><AlertTriangle /> {formError}</div> : null}
           </section>
           <div className="agent-learning-note"><Radio /><span><strong>Execution history is on by default.</strong> PACT records signed task receipts and score changes. It does not train or modify the AI model; your runtime can use its own private memory and learning system.</span></div>
