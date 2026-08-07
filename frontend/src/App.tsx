@@ -26,6 +26,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
+import { formatUnits } from 'viem';
 import {
   useCallback,
   useEffect,
@@ -62,13 +63,13 @@ import {
 } from '@pact/shared';
 import { API_BASE, PactApiError, api, authenticateWallet, clearWalletSession, creatorTaskMessage, type PublishTaskInput, type TrustModel } from './api';
 import { useLocale } from './locale';
-import { useAccount, useConnect, useDisconnect, usePublicClient, useSignMessage, useSwitchChain } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, usePublicClient, useReadContract, useSignMessage, useSwitchChain } from 'wagmi';
 import { getWalletClient } from 'wagmi/actions';
 import { PublicFaq } from './components/marketing/PublicFaq';
 import { PublicFooter } from './components/marketing/PublicFooter';
 import { PactContactScene } from './components/marketing/PactContactScene';
-import { cancelArcTask, claimArcTask, completeArcTask, fundOpenOrder, lockAgentCollateral, pauseArcTaskForDispute, withdrawArcStream } from './arc';
-import { isArcMode } from './runtime';
+import { cancelArcTask, claimArcTask, completeArcTask, ERC20_ABI, fundAgentWallet, fundOpenOrder, lockAgentCollateral, pauseArcTaskForDispute, withdrawArcStream } from './arc';
+import { ARC_USDC_ADDRESS, isArcMode } from './runtime';
 import { config } from './wagmi';
 
 const wait = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
@@ -1726,12 +1727,60 @@ function ReputationTermsPanel({ agent }: { agent?: ReputationSnapshot }) {
   );
 }
 
-function CabinetAgentCard({ agent, highlighted }: { agent: ReputationSnapshot; highlighted: boolean }) {
+function AgentFundingModal({
+  agent,
+  busy,
+  onClose,
+  onFund,
+}: {
+  agent: ReputationSnapshot;
+  busy: boolean;
+  onClose: () => void;
+  onFund: (amountUsdc: string) => Promise<void>;
+}) {
+  const [amountUsdc, setAmountUsdc] = useState('25');
+
+  return (
+    <Modal className="modal--agent-funding" eyebrow="Circle agent wallet / USDC" title={`Fund ${agent.displayName}`} onClose={onClose}>
+      <form className="agent-funding-form" onSubmit={(event) => { event.preventDefault(); void onFund(amountUsdc); }}>
+        <div className="agent-funding-form__wallet"><WalletCards /><div><span>DESTINATION / CIRCLE SMART WALLET</span><strong>{agent.agentAddress}</strong><small>Funds are sent from the connected controller wallet on Arc Testnet.</small></div></div>
+        <div className="form-note"><ShieldCheck /><span>USDC is used for paid work claims, collateral, and agent-controlled settlement actions. Training Ground challenges and Platform Points do not spend this balance.</span></div>
+        <label className="field field--wide"><span>Amount / USDC</span><input required min="0.01" step="0.01" type="number" value={amountUsdc} onChange={(event) => setAmountUsdc(event.target.value)} /></label>
+        <div className="modal__actions field--wide"><button className="button button--ghost" type="button" onClick={onClose}>Cancel</button><button className="button button--primary" type="submit" disabled={busy}>{busy ? <RefreshCcw className="spin" /> : <WalletCards />} Send USDC to agent wallet</button></div>
+      </form>
+    </Modal>
+  );
+}
+
+function CabinetAgentCard({
+  agent,
+  highlighted,
+  automation,
+  onFund,
+  onToggleTraining,
+}: {
+  agent: ReputationSnapshot;
+  highlighted: boolean;
+  automation?: AgentAutomationSnapshot;
+  onFund: (agent: ReputationSnapshot) => void;
+  onToggleTraining: (agent: ReputationSnapshot, enabled: boolean) => void;
+}) {
   const capabilityLabels = agent.capabilityManifest.capabilities.map((capability) => capability.label);
   const runtimeConnected = Boolean(agent.capabilityManifest.runtime?.gatewayUrl);
   const walletLabel = agent.wallet?.provider === 'CIRCLE'
     ? `Circle ${agent.wallet.accountType}`
     : agent.wallet?.provider ?? 'Wallet pending';
+  const { data: rawBalance, isLoading: balanceLoading } = useReadContract({
+    address: ARC_USDC_ADDRESS as `0x${string}`,
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+    args: [agent.agentAddress as `0x${string}`],
+    chainId: 5042002,
+    query: { enabled: isArcMode && agent.wallet?.provider === 'CIRCLE' },
+  });
+  const balanceLabel = typeof rawBalance === 'bigint'
+    ? Number(formatUnits(rawBalance, 6)).toLocaleString('en-US', { maximumFractionDigits: 2 })
+    : balanceLoading ? '…' : '—';
 
   return (
     <article className={highlighted ? 'cabinet-agent-card cabinet-agent-card--highlighted' : 'cabinet-agent-card'}>
@@ -1749,13 +1798,16 @@ function CabinetAgentCard({ agent, highlighted }: { agent: ReputationSnapshot; h
       <div className="cabinet-agent-card__facts">
         <div><span>TRUST SCORE</span><strong>{agent.score}<small>/1000</small></strong></div>
         <div><span>SETTLED TASKS</span><strong>{agent.completedTasks}</strong></div>
+        <div><span>USDC BALANCE</span><strong>{balanceLabel}</strong></div>
         <div><span>RUNTIME</span><strong>{runtimeConnected ? 'CONNECTED' : 'NOT CONNECTED'}</strong></div>
       </div>
+      <AgentAutopilotStatus automation={automation} />
       <div className="cabinet-agent-card__capabilities">
         <span>PUBLIC DIRECTIONS / TASK MATCHING</span>
         <div>{capabilityLabels.length ? capabilityLabels.map((label) => <b key={label}>{label}</b>) : <small>Manifest pending</small>}</div>
       </div>
       <p className="cabinet-agent-card__note">The selected direction tells PACT which work may match this profile. It does not train the model. PACT stores execution history and scores; learning or memory belongs to the connected runtime.</p>
+      <div className="cabinet-agent-card__actions"><button className="button button--outline button--small" type="button" onClick={() => onFund(agent)}><WalletCards /> Fund USDC</button><button className="button button--primary button--small" type="button" onClick={() => onToggleTraining(agent, !automation?.enabled)}><Radio /> {automation?.enabled ? 'Pause self-training' : 'Start self-training'}</button></div>
     </article>
   );
 }
@@ -1772,6 +1824,9 @@ function DappDashboard({
   onActivate,
   onCancel,
   onWithdraw,
+  onRunAgent,
+  onFundAgent,
+  onToggleTraining,
   createdAgentNotice,
   onDismissCreatedAgent,
 }: {
@@ -1786,6 +1841,9 @@ function DappDashboard({
   onActivate?: (task: MarketplaceTask) => void;
   onCancel?: (task: MarketplaceTask) => void;
   onWithdraw?: (task: MarketplaceTask) => void;
+  onRunAgent?: (task: MarketplaceTask) => void;
+  onFundAgent: (agent: ReputationSnapshot) => void;
+  onToggleTraining: (agent: ReputationSnapshot, enabled: boolean) => void;
   createdAgentNotice?: CreatedAgentNotice | null;
   onDismissCreatedAgent?: () => void;
 }) {
@@ -1877,7 +1935,7 @@ function DappDashboard({
               <div><div className="eyebrow">AGENT IDENTITIES / YOUR CABINET</div><h2 id="cabinet-agents-title">Your agents</h2></div>
               <div className="cabinet-agents__header-note"><strong>{myAgents.length}</strong><span>{myAgents.length === 1 ? 'registered profile' : 'registered profiles'}</span></div>
             </header>
-            {myAgents.length ? <div className="cabinet-agents__grid">{myAgents.map((agent) => <CabinetAgentCard key={agent.agentAddress} agent={agent} highlighted={agent.agentAddress.toLowerCase() === createdAgentNotice?.agentAddress.toLowerCase()} />)}</div> : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title="No agent profiles in this cabinet yet" copy="Create an agent to see its Circle wallet address, public directions, runtime status, and reputation record here." /></div>}
+            {myAgents.length ? <div className="cabinet-agents__grid">{myAgents.map((agent) => <CabinetAgentCard key={agent.agentAddress} agent={agent} automation={snapshot.agentAutomation?.[agent.agentAddress.toLowerCase()]} highlighted={agent.agentAddress.toLowerCase() === createdAgentNotice?.agentAddress.toLowerCase()} onFund={onFundAgent} onToggleTraining={onToggleTraining} />)}</div> : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title="No agent profiles in this cabinet yet" copy="Create an agent to see its Circle wallet address, public directions, runtime status, and reputation record here." /></div>}
             <div className="agent-learning-note agent-learning-note--cabinet"><Radio /><div><strong>Learning boundary</strong><span>PACT does not self-train the model. It records receipts, outcomes, Trust Score, and Platform Points. Any memory or learning happens only inside your connected runtime if you build it.</span></div></div>
           </section>
           <section className="dapp-quick-grid reveal">
@@ -1925,7 +1983,7 @@ function DappDashboard({
                     <h3>{task.title}</h3>
                     <p>{task.status === 'ASSIGNED' ? t('Collateral is still required before the payment stream can start.') : task.successCriteria}</p>
                     <div className="client-order-card__meta"><span>{t('REWARD')}<strong>${money(task.totalAmount)} USDC</strong></span><span>{t('COLLATERAL')}<strong>${money(task.collateralLocked)} USDC</strong></span></div>
-                    {task.status === 'ASSIGNED' ? <div className="client-order-card__decision"><strong>{t('Assignment reserved on Arc')}</strong><button className="button button--primary button--small" disabled={!onActivate} onClick={() => onActivate?.(task)} type="button"><ShieldCheck /> {t('Post collateral & start')}</button></div> : task.status === 'STREAMING' && isArcMode ? <div className="client-order-card__decision"><strong>{t('The payment stream is active. Submit evidence when the deliverable is ready.')}</strong><button className="button button--outline button--small" disabled={!onWithdraw} onClick={() => onWithdraw?.(task)} type="button"><WalletCards /> Withdraw accrued</button></div> : <small className="client-order-card__hint">{t('This assignment is recorded in the settlement ledger.')}</small>}
+                    {task.status === 'ASSIGNED' ? <div className="client-order-card__decision"><strong>{t('Assignment reserved on Arc')}</strong><button className="button button--primary button--small" disabled={!onActivate} onClick={() => onActivate?.(task)} type="button"><ShieldCheck /> {t('Post collateral & start')}</button></div> : task.status === 'STREAMING' && isArcMode ? <div className="client-order-card__decision"><strong>{t('The payment stream is active. Submit evidence when the deliverable is ready.')}</strong><div><button className="button button--primary button--small" disabled={!onRunAgent} onClick={() => onRunAgent?.(task)} type="button"><Bot /> Run agent now</button><button className="button button--outline button--small" disabled={!onWithdraw} onClick={() => onWithdraw?.(task)} type="button"><WalletCards /> Withdraw accrued</button></div></div> : <small className="client-order-card__hint">{t('This assignment is recorded in the settlement ledger.')}</small>}
                   </article>
                 ))}
               </div>
@@ -2207,6 +2265,7 @@ export default function App() {
   const [publishOpen, setPublishOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [createdAgentNotice, setCreatedAgentNotice] = useState<CreatedAgentNotice | null>(null);
+  const [fundingAgent, setFundingAgent] = useState<ReputationSnapshot | null>(null);
   const [disputeTask, setDisputeTask] = useState<MarketplaceTask | null>(null);
   const [reviewDispute, setReviewDispute] = useState<Dispute | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -2341,11 +2400,11 @@ export default function App() {
   }, [pendingFunding]);
 
   useEffect(() => {
-    if (!publishOpen && !registerOpen && !disputeTask && !reviewDispute && !arenaChallenge && !registryProfile && !walletModalOpen) return undefined;
+    if (!publishOpen && !registerOpen && !fundingAgent && !disputeTask && !reviewDispute && !arenaChallenge && !registryProfile && !walletModalOpen) return undefined;
     const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = previous; };
-  }, [publishOpen, registerOpen, disputeTask, reviewDispute, arenaChallenge, registryProfile, walletModalOpen]);
+  }, [publishOpen, registerOpen, fundingAgent, disputeTask, reviewDispute, arenaChallenge, registryProfile, walletModalOpen]);
 
   const perform = useCallback(async (key: string, successMessage: string | ((result: unknown) => string), action: () => Promise<unknown>): Promise<unknown | false> => {
     setBusyKey(key);
@@ -2363,6 +2422,42 @@ export default function App() {
       setBusyKey(null);
     }
   }, [loadDashboard]);
+
+  const runAgentTask = useCallback((task: MarketplaceTask) => {
+    void perform(`run-agent:${task.id}`, 'Agent runtime finished and submitted a deliverable for review.', async () => {
+      if (!connectedAddress || !task.agentAddress) throw new Error('Connect the agent controller wallet before starting runtime execution.');
+      await authenticateWallet(connectedAddress, (message) => signMessageAsync({ message }));
+      return api.runAgent(task.id, task.agentAddress);
+    });
+  }, [connectedAddress, perform, signMessageAsync]);
+
+  const toggleAgentTraining = useCallback((agent: ReputationSnapshot, enabled: boolean) => {
+    void perform(`training:${agent.agentAddress}`, enabled ? 'Self-training is enabled. The agent will run daily PACT challenges.' : 'Self-training is paused for this agent.', () => api.agentAutopilot(agent.agentAddress, enabled ? 'start' : 'pause'));
+  }, [perform]);
+
+  const fundSelectedAgent = useCallback(async (amountUsdc: string) => {
+    if (!fundingAgent || !connectedAddress) {
+      setToast({ tone: 'error', message: 'Connect the controller wallet before funding an agent.' });
+      return;
+    }
+    const result = await perform(`fund-agent:${fundingAgent.agentAddress}`, 'USDC sent to the Circle agent wallet.', async () => {
+      if (!arcPublicClient) throw new Error('Arc Testnet RPC is unavailable.');
+      await authenticateWallet(connectedAddress, (message) => signMessageAsync({ message }));
+      if (chainId !== 5042002) {
+        setToast({ tone: 'success', message: 'Switch your wallet to Arc Testnet…' });
+        await switchChainAsync({ chainId: 5042002 });
+      }
+      return fundAgentWallet({
+        account: connectedAddress,
+        agentAddress: fundingAgent.agentAddress as `0x${string}`,
+        amountUsdc,
+        publicClient: arcPublicClient,
+        walletClient: await getWalletClient(config, { chainId: 5042002 }),
+        onProgress: (message) => setToast({ tone: 'success', message }),
+      });
+    });
+    if (result) setFundingAgent(null);
+  }, [arcPublicClient, chainId, connectedAddress, fundingAgent, perform, signMessageAsync, switchChainAsync]);
 
   const currentAgent = snapshot?.agents.find((agent) => agent.agentAddress === selectedAgent) ?? snapshot?.agents[0];
   const openTasks = snapshot?.tasks.filter((task) => task.status === 'OPEN') ?? [];
@@ -2487,7 +2582,7 @@ export default function App() {
             <>
               {view === 'overview' ? <Overview snapshot={snapshot} onView={changeView} /> : null}
               {view === 'protocol' ? <AgentProtocol onView={changeView} /> : null}
-              {view === 'dapp' ? <DappDashboard snapshot={snapshot} connectedAddress={activeAddress} onConnect={connectAgent} onPublish={() => requestPublish()} onCreateAgent={requestCreateAgent} onView={changeView} createdAgentNotice={createdAgentNotice} onDismissCreatedAgent={() => setCreatedAgentNotice(null)} onAccept={(deliverable) => void perform(`accept:${deliverable.taskId}`, 'Result accepted. Settlement and reputation are finalized.', async () => {
+              {view === 'dapp' ? <DappDashboard snapshot={snapshot} connectedAddress={activeAddress} onConnect={connectAgent} onPublish={() => requestPublish()} onCreateAgent={requestCreateAgent} onView={changeView} onFundAgent={setFundingAgent} onToggleTraining={toggleAgentTraining} onRunAgent={runAgentTask} createdAgentNotice={createdAgentNotice} onDismissCreatedAgent={() => setCreatedAgentNotice(null)} onAccept={(deliverable) => void perform(`accept:${deliverable.taskId}`, 'Result accepted. Settlement and reputation are finalized.', async () => {
                 if (!isArcMode) return api.acceptDeliverable(deliverable.id);
                 const task = tasksById.get(deliverable.taskId);
                 if (!task?.chainTaskId) throw new Error('The work order has no Arc task ID.');
@@ -2753,6 +2848,7 @@ export default function App() {
       </main>
 
       {walletModalOpen ? <WalletConnectModal onClose={() => setWalletModalOpen(false)} /> : null}
+      {fundingAgent && activeAddress ? <AgentFundingModal agent={fundingAgent} busy={busyKey === `fund-agent:${fundingAgent.agentAddress}`} onClose={() => setFundingAgent(null)} onFund={fundSelectedAgent} /> : null}
       {publishOpen && activeAddress ? <PublishModal preferredAgent={snapshot?.agents.find((agent) => agent.agentAddress.toLowerCase() === hireAgentAddress?.toLowerCase())} creatorAddress={activeAddress} busy={busyKey === 'publish'} onClose={() => { setPublishOpen(false); setHireAgentAddress(null); }} onPublish={async (input) => {
         const succeeded = await perform('publish', hireAgentAddress ? 'Funded invitation published on Arc Testnet.' : 'Funded work order published on Arc Testnet.', async () => {
           if (!isArcMode) return api.publishTask(input);

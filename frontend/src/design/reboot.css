@@ -1582,6 +1582,14 @@ html[lang="es"] .overview-section-heading h2 {
 .registration-check strong { color: var(--pact-ink); font-size: 12px; }
 .registration-check small { color: var(--pact-muted); font: 400 10px/1.5 var(--font-mono); }
 .registration-check input { margin-top: 3px; accent-color: var(--pact-rust); }
+.modal--agent-funding { width: min(700px, 100%); }
+.agent-funding-form { display: grid; gap: 16px; }
+.agent-funding-form__wallet { display: flex; align-items: flex-start; gap: 13px; padding: 15px; border-left: 2px solid var(--pact-rust); background: rgba(203,103,63,.07); }
+.agent-funding-form__wallet > svg { flex: 0 0 auto; width: 20px; color: var(--pact-rust-hot); }
+.agent-funding-form__wallet > div { display: grid; gap: 6px; min-width: 0; }
+.agent-funding-form__wallet span { color: var(--pact-rust-hot); font: 500 8px/1.2 var(--font-mono); letter-spacing: .11em; }
+.agent-funding-form__wallet strong { overflow-wrap: anywhere; color: var(--pact-ink-strong); font: 500 11px/1.4 var(--font-mono); }
+.agent-funding-form__wallet small { color: var(--pact-muted); font: 400 10px/1.4 var(--font-mono); }
 
 /* Cabinet ownership: the created identity should be impossible to miss. */
 .agent-created-banner { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: start; padding: 20px; border: 1px solid var(--pact-line-strong); background: linear-gradient(135deg, rgba(203,103,63,.17), rgba(14,13,12,.96) 58%); }
@@ -1612,7 +1620,7 @@ html[lang="es"] .overview-section-heading h2 {
 .cabinet-agent-card__wallet strong { overflow-wrap: anywhere; color: var(--pact-ink-strong); font: 500 11px/1.4 var(--font-mono); }
 .cabinet-agent-card__wallet small { color: var(--pact-muted); font: 400 10px/1.4 var(--font-mono); }
 .cabinet-agent-card__wallet > svg { flex: 0 0 auto; width: 20px; color: var(--pact-rust-hot); }
-.cabinet-agent-card__facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); }
+.cabinet-agent-card__facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); }
 .cabinet-agent-card__facts > div { display: grid; gap: 5px; min-height: 57px; padding: 10px; background: var(--pact-surface); }
 .cabinet-agent-card__facts span { color: var(--pact-faint); font: 500 8px/1.2 var(--font-mono); letter-spacing: .08em; }
 .cabinet-agent-card__facts strong { color: var(--pact-ink); font: 600 16px/1 "Archivo Narrow", sans-serif; }
@@ -1622,6 +1630,8 @@ html[lang="es"] .overview-section-heading h2 {
 .cabinet-agent-card__capabilities b { padding: 6px 8px; color: var(--pact-ink); border: 1px solid var(--pact-line-strong); background: rgba(203,103,63,.06); font: 500 9px/1.1 var(--font-mono); }
 .cabinet-agent-card__capabilities small { color: var(--pact-muted); font: 400 10px/1.4 var(--font-mono); }
 .cabinet-agent-card__note { margin: 0; padding-top: 12px; color: var(--pact-muted); border-top: 1px solid var(--line); font: 400 10px/1.5 var(--font-mono); }
+.cabinet-agent-card__actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 2px; }
+.cabinet-agent-card__actions .button { flex: 1 1 180px; justify-content: center; }
 
 @media (max-width: 720px) {
   .runtime-choice-grid, .runtime-choice-grid--kits, .wallet-mode-grid, .form-grid, .agent-setup-progress, .agent-manifest-advanced__fields, .agent-kit-explainer__grid { grid-template-columns: 1fr; }
@@ -1632,6 +1642,7 @@ html[lang="es"] .overview-section-heading h2 {
   .agent-created-banner > .icon-button { grid-column: 2; justify-self: end; grid-row: 1; }
   .cabinet-agents { padding: 16px; }
   .cabinet-agent-card__header { flex-direction: column; }
+  .cabinet-agent-card__facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .wallet-connect-banner { grid-template-columns: auto 1fr; padding: 15px; }
   .wallet-connect-banner .button { grid-column: 1 / -1; width: 100%; justify-content: center; }
 }
