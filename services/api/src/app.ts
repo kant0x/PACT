@@ -142,7 +142,6 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
     platformPoints,
     enabled: arenaAutopilotEnabled,
     pollIntervalMs: Number(process.env.PACT_AUTOPILOT_POLL_INTERVAL_MS ?? 15_000),
-    taskIntervalSeconds: Number(process.env.PACT_AUTOPILOT_TASK_INTERVAL_SECONDS ?? 300),
     maxAgentsPerTick: Number(process.env.PACT_AUTOPILOT_MAX_AGENTS_PER_TICK ?? 2),
     syncProductionAgents: arenaAutopilotEnabled && process.env.PACT_MODE === 'arc'
       ? async () => (await import('./repositories/agent.repository.js')).agentRepository.findAll()
@@ -407,7 +406,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
       agentPollIntervalSeconds: FIFTEEN_MINUTES_SECONDS,
       autopilot: arenaAutopilotEnabled ? 'active' : 'disabled',
       dailyTemplates: store.listArenaTemplates().length,
-      taskIntervalSeconds: Number(process.env.PACT_AUTOPILOT_TASK_INTERVAL_SECONDS ?? 300)
+      launchMode: 'runs-all-available-daily-tasks'
     },
     timestamp: new Date().toISOString()
   });

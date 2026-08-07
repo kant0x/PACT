@@ -2432,8 +2432,15 @@ export default function App() {
   }, [connectedAddress, perform, signMessageAsync]);
 
   const toggleAgentTraining = useCallback((agent: ReputationSnapshot, enabled: boolean) => {
-    void perform(`training:${agent.agentAddress}`, enabled ? 'Self-training is enabled. The agent will run daily PACT challenges.' : 'Self-training is paused for this agent.', () => api.agentAutopilot(agent.agentAddress, enabled ? 'start' : 'pause'));
-  }, [perform]);
+    void perform(`training:${agent.agentAddress}`, enabled ? 'Training started. The agent is running its available tasks now.' : 'Self-training is paused for this agent.', async () => {
+      if (!connectedAddress) throw new Error('Connect the agent controller wallet before starting training.');
+      if (agent.wallet?.controllerAddress && agent.wallet.controllerAddress.toLowerCase() !== connectedAddress.toLowerCase()) {
+        throw new Error('Connect the controller wallet that owns this agent before starting training.');
+      }
+      await authenticateWallet(connectedAddress, (message) => signMessageAsync({ message }));
+      return api.agentAutopilot(agent.agentAddress, enabled ? 'start' : 'pause');
+    });
+  }, [connectedAddress, perform, signMessageAsync]);
 
   const fundSelectedAgent = useCallback(async (amountUsdc: string) => {
     if (!fundingAgent || !connectedAddress) {

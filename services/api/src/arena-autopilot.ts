@@ -30,7 +30,6 @@ export interface ArenaAutopilotOptions {
   enabled?: boolean;
   autoStart?: boolean;
   pollIntervalMs?: number;
-  taskIntervalSeconds?: number;
   maxAgentsPerTick?: number;
   syncProductionAgents?: () => Promise<Array<{
     agentAddress: string;
@@ -90,7 +89,6 @@ export class ArenaAutopilot {
   private readonly states = new Map<string, RuntimeState>();
   private readonly running = new Set<string>();
   private readonly enabled: boolean;
-  private readonly taskIntervalSeconds: number;
   private readonly maxAgentsPerTick: number;
   private interval: NodeJS.Timeout | null = null;
   private firstTick: NodeJS.Timeout | null = null;
@@ -98,7 +96,6 @@ export class ArenaAutopilot {
 
   constructor(private readonly options: ArenaAutopilotOptions) {
     this.enabled = options.enabled ?? true;
-    this.taskIntervalSeconds = Math.max(15, options.taskIntervalSeconds ?? 300);
     this.maxAgentsPerTick = Math.max(1, options.maxAgentsPerTick ?? 2);
     if (this.enabled && options.autoStart !== false) {
       const pollIntervalMs = Math.max(5_000, options.pollIntervalMs ?? 15_000);
@@ -176,44 +173,45 @@ export class ArenaAutopilot {
     const state = this.states.get(address) ?? freshState();
     this.states.set(address, state);
     try {
-      const templates = this.options.store.listArenaTemplates(address);
-      const template = templates.find((candidate) => candidate.inProgressToday)
-        ?? templates.find((candidate) => candidate.availableToday);
-      if (!template) {
-        const nextReset = templates.map((candidate) => candidate.nextAttemptAt).filter(Boolean).sort((a, b) => a - b)[0] ?? null;
-        state.status = 'WAITING_DAILY_RESET';
-        state.nextRunAt = nextReset;
+      // One explicit start runs the complete set of daily Training Ground
+      // tasks. The runner stays sequential so a single agent never has
+      // multiple private attempts or judge submissions in flight.
+      while (true) {
+        const templates = this.options.store.listArenaTemplates(address);
+        const template = templates.find((candidate) => candidate.inProgressToday)
+          ?? templates.find((candidate) => candidate.availableToday);
+        if (!template) {
+          const nextReset = templates.map((candidate) => candidate.nextAttemptAt).filter(Boolean).sort((a, b) => a - b)[0] ?? null;
+          state.status = 'WAITING_DAILY_RESET';
+          state.nextRunAt = nextReset;
+          state.currentTemplateId = null;
+          state.currentTaskTitle = null;
+          return this.snapshot(address);
+        }
+
+        state.status = 'TRAINING';
+        state.currentTemplateId = template.id;
+        state.currentTaskTitle = template.title;
+        state.lastError = null;
+        const challenge = this.options.store.startArenaAttempt(template.id, address);
+        const submission = this.solve(challenge);
+        const result = await this.options.store.submitArenaAttempt(challenge.attemptId, {
+          attemptToken: challenge.attemptToken,
+          agentAddress: address,
+          submission,
+          consentToTraining: true,
+        }, {
+          codeRunner: this.options.codeRunner,
+          qualityJudge: this.options.qualityJudge,
+          platformPoints: this.options.platformPoints,
+        });
+        state.lastRunAt = nowSeconds();
+        state.lastScore = result.score;
+        state.lastPointsAwarded = result.pointsAwarded;
         state.currentTemplateId = null;
         state.currentTaskTitle = null;
-        return this.snapshot(address);
+        await this.options.onResult?.(address, result);
       }
-
-      state.status = 'TRAINING';
-      state.currentTemplateId = template.id;
-      state.currentTaskTitle = template.title;
-      state.lastError = null;
-      const challenge = this.options.store.startArenaAttempt(template.id, address);
-      const submission = this.solve(challenge);
-      const result = await this.options.store.submitArenaAttempt(challenge.attemptId, {
-        attemptToken: challenge.attemptToken,
-        agentAddress: address,
-        submission,
-        consentToTraining: true,
-      }, {
-        codeRunner: this.options.codeRunner,
-        qualityJudge: this.options.qualityJudge,
-        platformPoints: this.options.platformPoints,
-      });
-      state.lastRunAt = nowSeconds();
-      state.lastScore = result.score;
-      state.lastPointsAwarded = result.pointsAwarded;
-      state.currentTemplateId = null;
-      state.currentTaskTitle = null;
-      const remaining = this.options.store.listArenaTemplates(address).some((candidate) => candidate.availableToday || candidate.inProgressToday);
-      state.status = remaining ? 'WAITING_NEXT_TASK' : 'WAITING_DAILY_RESET';
-      state.nextRunAt = remaining ? nowSeconds() + this.taskIntervalSeconds : result.nextAttemptAt;
-      await this.options.onResult?.(address, result);
-      return this.snapshot(address);
     } catch (error) {
       state.status = 'ERROR';
       state.lastError = error instanceof Error ? error.message.slice(0, 500) : 'Autopilot training failed';

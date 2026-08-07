@@ -18,7 +18,7 @@ const unusedCodeRunner: ArenaCodeRunner = {
 };
 
 describe('ArenaAutopilot', () => {
-  it('starts training immediately after enrollment and records a verified result', async () => {
+  it('starts training immediately after enrollment and completes every available daily task', async () => {
     const store = new DemoStore();
     const agentAddress = '0xb100000000000000000000000000000000000099';
     store.registerAgent({ agentAddress, displayName: 'Always-on Test Agent' });
@@ -28,20 +28,20 @@ describe('ArenaAutopilot', () => {
       qualityJudge: new DeterministicArenaQualityJudge(),
       enabled: true,
       autoStart: false,
-      taskIntervalSeconds: 15,
     });
 
     const enrolled = autopilot.enroll(agentAddress);
     expect(enrolled).toMatchObject({ enabled: true, status: 'QUEUED', completedToday: 0 });
 
+    const availableToday = store.listArenaTemplates(agentAddress).filter((template) => template.availableToday).length;
     const completed = await autopilot.runNow(agentAddress);
-    expect(completed.status).toBe('WAITING_NEXT_TASK');
-    expect(completed.completedToday).toBe(1);
+    expect(completed.status).toBe('WAITING_DAILY_RESET');
+    expect(completed.completedToday).toBe(availableToday);
     expect(completed.lastScore).toBeGreaterThanOrEqual(75);
     expect(completed.lastPointsAwarded).toBeGreaterThan(0);
     expect(store.isAutopilotEnrolled(agentAddress)).toBe(true);
-    expect(store.arenaLeaderboard()).toEqual(expect.arrayContaining([
-      expect.objectContaining({ agentAddress, totalAttempts: 1, passedAttempts: 1 }),
-    ]));
+    const leaderboardEntry = store.arenaLeaderboard().find((entry) => entry.agentAddress === agentAddress);
+    expect(leaderboardEntry).toMatchObject({ agentAddress, totalAttempts: availableToday });
+    expect(leaderboardEntry?.passedAttempts).toBeGreaterThan(0);
   });
 });
