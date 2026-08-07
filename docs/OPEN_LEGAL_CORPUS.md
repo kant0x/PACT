@@ -1,7 +1,7 @@
-# Open legal corpus starter
+# Open legal corpus
 
 This project contains a small, source-attributed starter collection used by
-the `Open legal research: Supreme Court opinions` Training Ground quest. It is
+the `Legal evidence dossier` agent-training profile. It is
 implemented in `services/api/src/open-legal-corpus.ts` so the API can keep the
 evaluation extracts and their provenance together.
 
@@ -18,17 +18,57 @@ The stored text is a concise evaluation extract and always carries the primary
 source URL. It is not legal advice and must not be used to determine legal
 rights or obligations.
 
-## Scaling beyond the starter corpus
+## Production corpus: 5,000 reviewed documents
 
 Do not commit multi-gigabyte case-law dumps or embeddings to this repository.
-Keep the raw files and index on the API side, then expose only attempt-scoped
-search and read tools to agents. CourtListener publishes open bulk case-law
-data, including opinion records and a separate citations map; its bulk-data
-documentation is the appropriate source for a larger import pipeline:
+Keep the 3–10 GB raw PDF/CSV archive in storage controlled by the API operator.
+The API accepts a compact runtime pack of **reviewed evidence cards**, and sends
+an agent only a new, attempt-scoped dossier (at most 24 documents) through the
+search/read MCP tools. The browser receives neither the corpus nor an answer
+key.
+
+CourtListener publishes open bulk case-law data, including opinion records and
+a separate citations map. Its documentation describes the CSV format, snapshot
+schedule, source links, and rights notice:
 
 https://wiki.free.law/c/courtlistener/help/api/bulk-data/bulk-legal-data
 
+The importer is [prepare_open_legal_corpus.py](../training/prepare_open_legal_corpus.py).
+It reads CourtListener's `opinions` and optional `opinion_clusters` CSV files,
+then writes a source-attributed JSONL runtime pack and an audit manifest. Raw
+data is deliberately written below `data/`, which is ignored by Git.
+
+```powershell
+python training/prepare_open_legal_corpus.py `
+  --opinions D:\legal-source\opinions-YYYY-MM-DD.csv `
+  --clusters D:\legal-source\opinion-clusters-YYYY-MM-DD.csv `
+  --reviewed-cards D:\legal-source\reviewed-cards.jsonl `
+  --output data\legal-corpus\courtlistener-reviewed.jsonl `
+  --manifest data\legal-corpus\courtlistener-reviewed.manifest.json `
+  --limit 5000
+```
+
+`reviewed-cards.jsonl` contains one JSON object per approved evaluation card:
+
+```json
+{"sourceOpinionId":"123456","sourceUrl":"https://official-court.example/opinion.pdf","question":"What controlling rule did the court apply?","answer":"…","evidenceSelectors":["exact phrase in the source","second exact phrase in the source"]}
+```
+
+The importer rejects cards unless both evidence selectors are present in the
+source text. The API rejects runtime packs without a manifest, primary source
+URL, reviewed answer, and two scoped evidence chunks. This prevents an
+unreviewed generated question from becoming a point-scored training run.
+
+Configure the hardened API with the exported compact pack, not the raw archive:
+
+```text
+PACT_OPEN_LEGAL_CORPUS_PATH=/data/legal-corpus/courtlistener-reviewed.jsonl
+```
+
+The first release may use the four official SCOTUS starter cards when this
+variable is unset. Once the reviewed pack is mounted, its document count becomes
+the number of legal-run variants and each agent receives a distinct dossier.
+
 Before importing a new collection, record its source URL, retrieval date,
-license or rights status, content hash, jurisdiction, and any privacy review.
-The browser bundle must never contain the full corpus or private retrieval
-credentials.
+rights status, content hash, jurisdiction, and any privacy review. Do not mix
+sealed records or personal data into the open legal corpus.

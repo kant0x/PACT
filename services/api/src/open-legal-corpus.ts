@@ -1,3 +1,6 @@
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 /**
  * Small, source-attributed seed corpus for the Open Legal Research quest.
  *
@@ -22,7 +25,7 @@ export interface OpenLegalCorpusDocument {
   }>;
 }
 
-export const OPEN_LEGAL_CORPUS_DOCUMENTS: OpenLegalCorpusDocument[] = [
+const starterDocuments: OpenLegalCorpusDocument[] = [
   {
     documentId: 'scotus-2025-tiktok-v-garland',
     title: 'TikTok Inc. v. Garland',
@@ -112,3 +115,133 @@ export const OPEN_LEGAL_CORPUS_DOCUMENTS: OpenLegalCorpusDocument[] = [
     ]
   }
 ];
+
+export interface OpenLegalCorpusRuntimeManifest {
+  kind: 'manifest';
+  schemaVersion: 1;
+  corpusId: string;
+  source: {
+    provider: string;
+    sourceUrl: string;
+    retrievedAt: string;
+    rights: string;
+  };
+}
+
+export interface OpenLegalCorpusRuntimeCard extends OpenLegalCorpusDocument {
+  kind: 'evaluation_card';
+}
+
+const MAX_RUNTIME_PACK_BYTES = 128 * 1024 * 1024;
+
+/**
+ * Source PDFs may occupy several gigabytes in object storage. The runtime
+ * pack is deliberately much smaller: it contains only reviewed evidence
+ * chunks and answer keys needed by the verifier, never the original archive.
+ */
+export const OPEN_LEGAL_CORPUS_SCALE = {
+  targetDocuments: 5_000,
+  targetDossierDocuments: 24,
+  maxRuntimePackBytes: MAX_RUNTIME_PACK_BYTES,
+  sourceProvider: 'Free Law Project / CourtListener bulk data',
+  sourceDocumentationUrl: 'https://wiki.free.law/c/courtlistener/help/api/bulk-data/bulk-legal-data'
+} as const;
+
+const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+const requiredText = (record: Record<string, unknown>, field: string, limit = 12_000) => {
+  const value = record[field];
+  if (typeof value !== 'string' || !value.trim() || value.length > limit) throw new Error(`Open legal corpus ${field} is invalid`);
+  return value.trim();
+};
+
+const requiredHttpsUrl = (record: Record<string, unknown>, field: string) => {
+  const value = requiredText(record, field, 2_000);
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' || url.username || url.password) throw new Error('not an https URL');
+    return url.toString();
+  } catch {
+    throw new Error(`Open legal corpus ${field} must be a safe HTTPS URL`);
+  }
+};
+
+const parseChunks = (value: unknown, documentId: string) => {
+  if (!Array.isArray(value) || value.length < 2 || value.length > 24) throw new Error('Open legal corpus cards require 2-24 evidence chunks');
+  const seen = new Set<string>();
+  return value.map((item) => {
+    if (!isRecord(item)) throw new Error('Open legal corpus chunk must be an object');
+    const chunkId = requiredText(item, 'chunkId', 300);
+    if (!chunkId.startsWith(`${documentId}#`) || seen.has(chunkId)) throw new Error('Open legal corpus chunkId must be unique and scoped to its document');
+    seen.add(chunkId);
+    return {
+      chunkId,
+      title: requiredText(item, 'title', 500),
+      text: requiredText(item, 'text', 8_000)
+    };
+  });
+};
+
+/**
+ * Parse an operator-created runtime pack. A legal challenge cannot become
+ * live until it has source provenance, a reviewed answer, and two evidence
+ * fragments that the verifier can check.
+ */
+export const parseOpenLegalCorpusRuntimePack = (content: string): OpenLegalCorpusDocument[] => {
+  const lines = content.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length < 3) throw new Error('Open legal corpus runtime pack needs a manifest and at least two reviewed cards');
+  const records = lines.map((line, index) => {
+    try {
+      const parsed: unknown = JSON.parse(line);
+      if (!isRecord(parsed)) throw new Error('not an object');
+      return parsed;
+    } catch {
+      throw new Error(`Open legal corpus runtime pack line ${index + 1} is not valid JSON`);
+    }
+  });
+  const manifest = records[0]!;
+  if (manifest.kind !== 'manifest' || manifest.schemaVersion !== 1) throw new Error('Open legal corpus runtime pack must start with schema version 1 manifest');
+  requiredText(manifest, 'corpusId', 160);
+  if (!isRecord(manifest.source)) throw new Error('Open legal corpus manifest requires source provenance');
+  requiredText(manifest.source, 'provider', 300);
+  requiredHttpsUrl(manifest.source, 'sourceUrl');
+  requiredText(manifest.source, 'retrievedAt', 80);
+  requiredText(manifest.source, 'rights', 1_000);
+
+  const documents: OpenLegalCorpusDocument[] = [];
+  const documentIds = new Set<string>();
+  for (const record of records.slice(1)) {
+    if (record.kind !== 'evaluation_card') throw new Error('Open legal corpus runtime pack supports reviewed evaluation_card records only');
+    const documentId = requiredText(record, 'documentId', 300);
+    if (documentIds.has(documentId)) throw new Error('Open legal corpus documentId must be unique');
+    documentIds.add(documentId);
+    documents.push({
+      documentId,
+      title: requiredText(record, 'title', 1_000),
+      docket: requiredText(record, 'docket', 300),
+      decidedAt: requiredText(record, 'decidedAt', 80),
+      citation: requiredText(record, 'citation', 500),
+      sourceUrl: requiredHttpsUrl(record, 'sourceUrl'),
+      question: requiredText(record, 'question', 2_000),
+      answer: requiredText(record, 'answer', 2_000),
+      chunks: parseChunks(record.chunks, documentId)
+    });
+  }
+  return documents;
+};
+
+const loadConfiguredRuntimePack = (): OpenLegalCorpusDocument[] => {
+  const configuredPath = process.env.PACT_OPEN_LEGAL_CORPUS_PATH?.trim();
+  if (!configuredPath) return starterDocuments;
+  const runtimePackPath = resolve(configuredPath);
+  if (!existsSync(runtimePackPath)) throw new Error(`PACT_OPEN_LEGAL_CORPUS_PATH does not exist: ${runtimePackPath}`);
+  const size = statSync(runtimePackPath).size;
+  if (size <= 0 || size > MAX_RUNTIME_PACK_BYTES) throw new Error(`PACT_OPEN_LEGAL_CORPUS_PATH must be between 1 byte and ${MAX_RUNTIME_PACK_BYTES} bytes`);
+  return parseOpenLegalCorpusRuntimePack(readFileSync(runtimePackPath, 'utf8'));
+};
+
+/**
+ * The production runtime either consumes an audited compact index supplied by
+ * the operator, or falls back to the small official SCOTUS starter set.
+ */
+export const OPEN_LEGAL_CORPUS_DOCUMENTS = loadConfiguredRuntimePack();

@@ -6,6 +6,7 @@ import WebSocket from 'ws';
 import { privateKeyToAccount } from 'viem/accounts';
 import { DEMO_ADDRESSES } from '@pact/shared';
 import { createApp } from '../src/app.js';
+import { parseOpenLegalCorpusRuntimePack } from '../src/open-legal-corpus.js';
 import { createPactServer, type PactServer } from '../src/server.js';
 import { DemoStore } from '../src/store.js';
 
@@ -15,6 +16,30 @@ afterEach(async () => {
 });
 
 describe('PACT demo API', () => {
+  it('accepts only source-attributed reviewed legal runtime cards', () => {
+    const manifest = {
+      kind: 'manifest', schemaVersion: 1, corpusId: 'reviewed-legal-test',
+      source: {
+        provider: 'Test source', sourceUrl: 'https://example.gov/bulk-data',
+        retrievedAt: '2026-08-07T00:00:00.000Z', rights: 'public test data'
+      }
+    };
+    const card = (id: string) => ({
+      kind: 'evaluation_card', documentId: id, title: `Case ${id}`, docket: '24-1', decidedAt: '2026-01-01', citation: 'Test 1',
+      sourceUrl: `https://example.gov/${id}.pdf`, question: 'Which controlling rule applies to this case?', answer: 'The reviewed rule.',
+      chunks: [
+        { chunkId: `${id}#holding`, title: 'Holding', text: 'The reviewed holding contains the controlling rule.' },
+        { chunkId: `${id}#rationale`, title: 'Rationale', text: 'The accompanying rationale supports the controlling rule.' }
+      ]
+    });
+    const pack = [manifest, card('case-a'), card('case-b')].map((row) => JSON.stringify(row)).join('\n');
+    expect(parseOpenLegalCorpusRuntimePack(pack)).toHaveLength(2);
+
+    const unsafe = [manifest, { ...card('case-a'), sourceUrl: 'http://example.gov/case-a.pdf' }, card('case-b')]
+      .map((row) => JSON.stringify(row)).join('\n');
+    expect(() => parseOpenLegalCorpusRuntimePack(unsafe)).toThrow(/safe HTTPS URL/);
+  });
+
   it('reports health and an empty demo dashboard', async () => {
     const response = await request(createApp(new DemoStore())).get('/api/health').expect(200);
     expect(response.body).toMatchObject({

@@ -9,7 +9,7 @@ import type {
   ArenaToolDescriptor,
   ArenaToolPayload
 } from '@pact/shared';
-import { OPEN_LEGAL_CORPUS_DOCUMENTS } from './open-legal-corpus.js';
+import { OPEN_LEGAL_CORPUS_DOCUMENTS, OPEN_LEGAL_CORPUS_SCALE } from './open-legal-corpus.js';
 
 export const ARENA_GENERATOR_VERSION = 'pact-arena-generator-v3';
 export const ARENA_RUBRIC_VERSION = 'pact-arena-rubric-v3';
@@ -144,14 +144,14 @@ export const BUILT_IN_ARENA_TEMPLATES: ArenaTemplateRecord[] = [
   },
   {
     id: 'daily-open-legal-research-v1',
-    title: 'Open legal research: Supreme Court opinions',
-    description: 'Primary-source opinion index: retrieve the controlling rule and emit the conclusion with two verified citation chunk identifiers.',
+    title: 'Legal evidence dossier',
+    description: 'Agent-only legal research run: search an attempt-scoped dossier, reconcile the controlling rule, and emit a conclusion with two verified source chunks.',
     kind: 'DOCUMENT_RETRIEVAL',
     rewardPoints: 95,
     ownerType: 'PLATFORM',
     ownerName: 'PACT Platform',
-    variantCount: 4,
-    expectedMinutes: 22,
+    variantCount: OPEN_LEGAL_CORPUS_DOCUMENTS.length,
+    expectedMinutes: 26,
     isActive: true
   },
   {
@@ -392,8 +392,21 @@ const makeDocumentRetrievalInstance = (seed: string, attemptId: string): Documen
 };
 
 const makeOpenLegalRetrievalInstance = (seed: string, attemptId: string): DocumentRetrievalPrivateInstance => {
-  const selected = OPEN_LEGAL_CORPUS_DOCUMENTS[seededInt(seed, 'open-legal-document', 0, OPEN_LEGAL_CORPUS_DOCUMENTS.length - 1)]!;
-  const chunks: DocumentEvidenceChunk[] = OPEN_LEGAL_CORPUS_DOCUMENTS.flatMap((document) => document.chunks.map((chunk) => ({
+  const sourceCorpus = OPEN_LEGAL_CORPUS_DOCUMENTS;
+  const selected = sourceCorpus[seededInt(seed, 'open-legal-document', 0, sourceCorpus.length - 1)]!;
+  // The corpus may contain thousands of documents, but one run receives a
+  // sealed dossier: the target opinion plus deterministic, relevant-looking
+  // distractors. The whole corpus never becomes a prompt or browser payload.
+  const dossier = [
+    selected,
+    ...sourceCorpus
+      .filter((document) => document.documentId !== selected.documentId)
+      .map((document) => ({ document, order: seededHex(seed, `legal-dossier:${document.documentId}`) }))
+      .sort((left, right) => left.order.localeCompare(right.order))
+      .slice(0, Math.max(0, OPEN_LEGAL_CORPUS_SCALE.targetDossierDocuments - 1))
+      .map(({ document }) => document)
+  ];
+  const chunks: DocumentEvidenceChunk[] = dossier.flatMap((document) => document.chunks.map((chunk) => ({
     documentId: document.documentId,
     chunkId: chunk.chunkId,
     title: `${document.title} / ${chunk.title}`,
@@ -403,18 +416,18 @@ const makeOpenLegalRetrievalInstance = (seed: string, attemptId: string): Docume
   const payload: ArenaDocumentRetrievalPayload = {
     kind: 'DOCUMENT_RETRIEVAL',
     corpus: {
-      id: 'open-legal-scotus-2025-seed',
-      name: 'Open Legal Research / U.S. Supreme Court opinions',
-      documentCount: OPEN_LEGAL_CORPUS_DOCUMENTS.length,
-      chunkCount: chunks.length,
-      contentHash: sha256(JSON.stringify(chunks)),
+      id: 'open-legal-reviewed-evidence-v1',
+      name: 'Open Legal Research / reviewed case-law evidence',
+      documentCount: sourceCorpus.length,
+      chunkCount: sourceCorpus.reduce((count, document) => count + document.chunks.length, 0),
+      contentHash: sha256(JSON.stringify(sourceCorpus.map((document) => ({ documentId: document.documentId, chunks: document.chunks })))),
       access: 'ATTEMPT_MCP_RETRIEVAL',
-      notice: 'Source-attributed evaluation extracts from official Supreme Court opinion PDFs. This is a research benchmark, not legal advice; follow the primary-source link for the complete opinion.'
+      notice: `The source archive stays server-side. This run exposes a sealed ${dossier.length}-document dossier from a source-attributed, reviewed index; follow the primary-source link for the complete opinion. This is a research benchmark, not legal advice.`
     },
     question: {
       prompt: selected.question,
       answerFormat: 'TEXT',
-      citationInstructions: 'Cite both source chunks for the selected opinion. A citation is valid only after it has been retrieved through this attempt.',
+      citationInstructions: 'Cite the two required source chunks for the selected opinion. A citation is valid only after it has been retrieved through this attempt.',
       requiredCitations: 2
     },
     mcpEndpoint: `/api/arena/attempts/${attemptId}/mcp`,
@@ -436,7 +449,7 @@ const makeOpenLegalRetrievalInstance = (seed: string, attemptId: string): Docume
     payload,
     chunks,
     expectedAnswer: selected.answer,
-    expectedCitations: selected.chunks.map((chunk) => ({ documentId: selected.documentId, chunkId: chunk.chunkId })),
+    expectedCitations: selected.chunks.slice(0, 2).map((chunk) => ({ documentId: selected.documentId, chunkId: chunk.chunkId })),
     calls: [],
     discoveredChunkIds: [],
     openedChunkIds: []
