@@ -1872,6 +1872,15 @@ function DappDashboard({
   const activeOrders = myOrders.filter((task) => ['ASSIGNED', 'STREAMING', 'PAUSED', 'DISPUTED'].includes(task.status));
   const openOrders = snapshot.tasks.filter((task) => task.status === 'OPEN');
   const deliverablesByTask = new Map(snapshot.deliverables.map((deliverable) => [deliverable.taskId, deliverable]));
+  const completedAgentTasks = myAgents.reduce((total, agent) => total + agent.completedTasks, 0);
+  const failedAgentTasks = myAgents.reduce((total, agent) => total + agent.failedTasks, 0);
+  const totalAgentOutcomes = completedAgentTasks + failedAgentTasks;
+  const averageTrustScore = myAgents.length
+    ? Math.round(myAgents.reduce((total, agent) => total + agent.score, 0) / myAgents.length)
+    : 0;
+  const totalPlatformPoints = myAgents.reduce((total, agent) => total + agent.platformPoints, 0);
+  const activeAutomations = myAgents.filter((agent) => snapshot.agentAutomation?.[agent.agentAddress.toLowerCase()]?.enabled).length;
+  const connectedRuntimes = myAgents.filter((agent) => Boolean(agent.capabilityManifest.runtime?.gatewayUrl)).length;
 
   const cabinetTabs: Array<{ id: CabinetSection; label: string; count?: number }> = [
     { id: 'overview', label: 'Overview' },
@@ -1921,6 +1930,7 @@ function DappDashboard({
                 <button type="button" onClick={() => setCabinetSection('orders')}><span>In progress</span><strong>{activeOrders.length}</strong><ArrowRight /></button>
                 <button type="button" onClick={() => setCabinetSection('assignments')}><span>My agent assignments</span><strong>{myAssignments.length}</strong><ArrowRight /></button>
               </div>
+              {myAgents.length ? <section className="cabinet-agent-performance" aria-labelledby="agent-performance-title"><header><div><span>AGENT PERFORMANCE</span><strong id="agent-performance-title">{myAgents.length === 1 ? myAgents[0].displayName : `${myAgents.length} agent profiles`}</strong></div><button className="button button--outline button--small" onClick={() => setCabinetSection('agents')} type="button">Your agents <ArrowRight /></button></header><div className="cabinet-agent-performance__metrics"><div><span>TRUST SCORE</span><strong>{averageTrustScore}<small>/1000</small></strong></div><div><span>SETTLED TASKS</span><strong>{completedAgentTasks}</strong></div><div><span>SUCCESS RATE</span><strong>{totalAgentOutcomes ? `${Math.round((completedAgentTasks / totalAgentOutcomes) * 100)}%` : '—'}</strong></div><div><span>PLATFORM POINTS</span><strong>{totalPlatformPoints}</strong></div><div><span>AUTOPILOT</span><strong>{activeAutomations}/{myAgents.length}</strong></div><div><span>RUNTIME ONLINE</span><strong>{connectedRuntimes}/{myAgents.length}</strong></div></div></section> : null}
               {!myAgents.length && !myOrders.length ? <div className="cabinet-overview__empty"><span>Get started</span><strong>Create an agent or publish a work order.</strong><div><button className="button button--outline button--small" onClick={onCreateAgent} type="button"><Bot /> Create an agent</button><button className="button button--primary button--small" onClick={onPublish} type="button"><Plus /> Create task</button></div></div> : null}
             </section>
           ) : null}
