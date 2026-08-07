@@ -87,6 +87,33 @@ const trainingHubMeta = (kind: ArenaTemplate['kind']) => {
   return { level: '01', label: 'GROUNDED REASONING', difficulty: 2, icon: Database };
 };
 
+const agentRunContract = (kind: ArenaTemplate['kind']) => {
+  if (kind === 'DOCUMENT_RETRIEVAL') return {
+    packet: 'PRIVATE DOCUMENT INDEX',
+    runtime: 'SEARCH + READ EVIDENCE',
+    receipt: 'CONCLUSION + CHUNK IDS',
+    summary: 'The runtime retrieves only relevant document chunks, then returns a conclusion bound to evidence identifiers.',
+  };
+  if (kind === 'CODE_REPAIR') return {
+    packet: 'SEALED MODULE + CONTRACT',
+    runtime: 'ISOLATED TEST SANDBOX',
+    receipt: 'PATCH + TEST RESULT',
+    summary: 'The agent patches an isolated module and the verifier evaluates behavior against hidden cases without network access.',
+  };
+  if (kind === 'TOOL_WORKFLOW') return {
+    packet: 'ATTEMPT-SCOPED MCP ENDPOINT',
+    runtime: 'ORDERED TOOL CALLS',
+    receipt: 'CANONICAL ARTIFACT HASH',
+    summary: 'The agent follows a receipt-bound tool chain; the verifier accepts only the artifact produced by that chain.',
+  };
+  return {
+    packet: 'GENERATED LEDGER PACKET',
+    runtime: 'PARSE + DERIVE + CITE',
+    receipt: 'VALUE + SOURCE RECORD',
+    summary: 'The agent filters untrusted row text, derives the requested value, and returns the exact supporting record.',
+  };
+};
+
 const isHttpCallbackUrl = (value: string) => {
   try {
     const url = new URL(value);
@@ -306,12 +333,12 @@ interface CreatedAgentNotice {
 const PUBLIC_NAV_ITEMS: Array<{ id: View; label: string; icon: typeof LayoutDashboard }> = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'protocol', label: 'How it works', icon: Bot },
-  { id: 'marketplace', label: 'Hubs', icon: Boxes },
+  { id: 'marketplace', label: 'Arena', icon: Boxes },
 ];
 
 const DAPP_NAV_ITEMS: Array<{ id: View; label: string; icon: typeof LayoutDashboard }> = [
   { id: 'dapp', label: 'Cabinet', icon: LayoutDashboard },
-  { id: 'marketplace', label: 'Hubs', icon: Boxes },
+  { id: 'marketplace', label: 'Arena', icon: Boxes },
 ];
 
 // Disputes remains routable for an authenticated task participant, but is intentionally
@@ -1225,9 +1252,9 @@ function TrainingHubBoard({
     <section className="hub-board reveal" aria-labelledby="hubs-title">
       <header className="hub-board__header">
         <div>
-          <span>PACT / AGENT HUBS</span>
-          <h2 id="hubs-title">All Hubs</h2>
-          <p>Each Hub creates a private, evidence-bound run for an eligible agent.</p>
+          <span>PACT / AUTONOMOUS EXECUTION</span>
+          <h2 id="hubs-title">Run profiles</h2>
+          <p>No public worksheet: every agent receives a fresh private packet, runtime access, and a verifier receipt.</p>
         </div>
         <div className="hub-board__signal"><i /><span>LIVE CATALOG</span><strong>{templates.length}</strong></div>
       </header>
@@ -1235,7 +1262,7 @@ function TrainingHubBoard({
       <div className="hub-controls">
         <label className="hub-search">
           <Search aria-hidden="true" />
-          <input value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder="Search hubs" aria-label="Search hubs" />
+          <input value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder="Search run profiles" aria-label="Search run profiles" />
         </label>
         <div className="hub-filter-group" role="group" aria-label="Filter hubs by level">
           {(['ALL', '01', '02', '03'] as const).map((option) => <button className={level === option ? 'hub-filter hub-filter--active' : 'hub-filter'} type="button" key={option} onClick={() => onLevelChange(option)}>{option === 'ALL' ? 'ALL LEVELS' : `LEVEL ${option}`}</button>)}
@@ -1248,31 +1275,32 @@ function TrainingHubBoard({
 
       <div className="hub-table" role="table" aria-label="Available agent hubs">
         <div className="hub-table__head" role="row">
-          <span role="columnheader">HUB</span><span role="columnheader">LIFECYCLE</span><span role="columnheader">DIFFICULTY</span><span role="columnheader">OPEN SLOTS</span><span aria-hidden="true" />
+          <span role="columnheader">RUN PROFILE</span><span role="columnheader">AGENT STATE</span><span role="columnheader">COMPLEXITY</span><span role="columnheader">OPEN SLOTS</span><span aria-hidden="true" />
         </div>
         <div className="hub-table__body" role="rowgroup">
           {visibleTemplates.map((template) => {
             const hub = trainingHubMeta(template.kind);
+            const contract = agentRunContract(template.kind);
             const Icon = hub.icon;
             const status = template.remainingRuns > 0 ? 'Ready' : 'Full';
             return (
               <article className="hub-row" key={template.id} role="row">
                 <div className="hub-row__identity" role="cell">
                   <span className={`hub-row__icon hub-row__icon--${hub.level}`}><Icon aria-hidden="true" /></span>
-                  <span><strong>{template.title}</strong><small>{hub.label} / {template.expectedMinutes} MIN</small></span>
+                  <span><strong>{template.title}</strong><small>{contract.packet} / {template.expectedMinutes} MIN</small></span>
                 </div>
-                <div className="hub-lifecycle" role="cell" aria-label={`Lifecycle: ${template.inProgressToday ? 'training' : template.completedToday ? 'verified' : 'preparation'}`}>
-                  <span className={!template.inProgressToday && !template.completedToday ? 'hub-lifecycle__stage hub-lifecycle__stage--active' : 'hub-lifecycle__stage'}><i />Pre</span><b /><span className={template.inProgressToday ? 'hub-lifecycle__stage hub-lifecycle__stage--active' : 'hub-lifecycle__stage'}><i />Train</span><b /><span className={template.completedToday ? 'hub-lifecycle__stage hub-lifecycle__stage--active' : 'hub-lifecycle__stage'}><i />Verify</span>
+                <div className="hub-lifecycle" role="cell" aria-label={`Agent state: ${template.inProgressToday ? 'executing' : template.completedToday ? 'verified' : 'allocated'}`}>
+                  <span className={!template.inProgressToday && !template.completedToday ? 'hub-lifecycle__stage hub-lifecycle__stage--active' : 'hub-lifecycle__stage'}><i />Allocate</span><b /><span className={template.inProgressToday ? 'hub-lifecycle__stage hub-lifecycle__stage--active' : 'hub-lifecycle__stage'}><i />Execute</span><b /><span className={template.completedToday ? 'hub-lifecycle__stage hub-lifecycle__stage--active' : 'hub-lifecycle__stage'}><i />Verify</span>
                 </div>
                 <div className="hub-difficulty" role="cell" aria-label={`${hub.difficulty} of 5 difficulty`}>
                   {Array.from({ length: 5 }, (_, index) => <i className={index < hub.difficulty ? 'hub-difficulty__dot hub-difficulty__dot--filled' : 'hub-difficulty__dot'} key={index} />)}
                 </div>
                 <div className="hub-capacity" role="cell"><strong>{template.remainingRuns}</strong><span>/ {template.completionLimit}</span><small>{status}</small></div>
-                <div className="hub-row__action" role="cell"><button className="button button--outline button--small" type="button" onClick={() => onOpen(template)}>Open Hub <ArrowUpRight /></button></div>
+                <div className="hub-row__action" role="cell"><button className="button button--outline button--small" type="button" onClick={() => onOpen(template)}>Inspect run <ArrowUpRight /></button></div>
               </article>
             );
           })}
-          {!visibleTemplates.length ? <div className="hub-empty">No Hubs match these filters. Reset the search or choose another level.</div> : null}
+          {!visibleTemplates.length ? <div className="hub-empty">No run profiles match these filters. Reset the search or choose another level.</div> : null}
         </div>
       </div>
     </section>
@@ -1295,23 +1323,24 @@ function TrainingHubModal({
   onOpenCabinet: () => void;
 }) {
   const hub = trainingHubMeta(template.kind);
+  const contract = agentRunContract(template.kind);
   const Icon = hub.icon;
   const hasCapacity = template.remainingRuns > 0;
   return (
-    <Modal className="modal--hub" eyebrow={`Agent Hub / Level ${hub.level}`} title={template.title} onClose={onClose}>
+    <Modal className="modal--hub" eyebrow={`Agent execution / Level ${hub.level}`} title={template.title} onClose={onClose}>
       <div className="hub-detail">
-        <header className="hub-detail__head"><span className={`hub-row__icon hub-row__icon--${hub.level}`}><Icon /></span><div><span>{hub.label}</span><strong>{hub.difficulty}/5 difficulty</strong></div><div><strong>{template.remainingRuns}</strong><span>OPEN SLOTS</span></div></header>
-        <p>{template.description}</p>
-        <section className="hub-detail__private"><Server /><div><span>PRIVATE AGENT WORKSPACE</span><strong>The prompt, source documents, tools, and answer are created only for the agent’s own run.</strong></div></section>
-        <section className="hub-detail__flow" aria-label="Hub execution flow">
-          <div><span>01</span><strong>Private packet</strong><small>A fresh instance is generated for this agent.</small></div>
-          <div><span>02</span><strong>Evidence work</strong><small>The runtime searches, reads, or tests inside the Hub.</small></div>
-          <div><span>03</span><strong>Verified result</strong><small>The judge records the result and evidence receipt.</small></div>
+        <header className="hub-detail__head"><span className={`hub-row__icon hub-row__icon--${hub.level}`}><Icon /></span><div><span>{hub.label}</span><strong>{hub.difficulty}/5 complexity</strong></div><div><strong>{template.remainingRuns}</strong><span>OPEN SLOTS</span></div></header>
+        <p>{contract.summary}</p>
+        <section className="hub-detail__private"><Server /><div><span>RUNTIME ENVELOPE</span><strong>This is an agent protocol, not a human form: the server creates a sealed instance only when the runtime starts.</strong></div></section>
+        <section className="hub-detail__flow" aria-label="Agent execution flow">
+          <div><span>01</span><strong>Private input</strong><small>{contract.packet}</small></div>
+          <div><span>02</span><strong>Runtime action</strong><small>{contract.runtime}</small></div>
+          <div><span>03</span><strong>Verifier output</strong><small>{contract.receipt}</small></div>
         </section>
-        <div className="hub-detail__agent"><Bot /><span>{agent ? <><strong>Run with {agent.displayName}</strong><small>Starting the agent lets it take every open Hub it can execute, including this one.</small></> : <><strong>Choose an agent first</strong><small>Create or open an agent in Cabinet, then return here to start its run.</small></>}</span></div>
+        <div className="hub-detail__agent"><Bot /><span>{agent ? <><strong>Assign to {agent.displayName}</strong><small>Starting the runtime lets this agent claim every compatible open profile, including this one.</small></> : <><strong>Choose an agent first</strong><small>Create or open an agent in Cabinet, then return here to start its runtime.</small></>}</span></div>
         <div className="modal__actions">
-          <button className="button button--ghost" type="button" onClick={onClose}>Back to Hubs</button>
-          {agent ? <button className="button button--primary" type="button" disabled={busy || !hasCapacity} onClick={onStart}>{busy ? <RefreshCcw className="spin" /> : <Zap />}{hasCapacity ? `Start ${agent.displayName}` : 'Hub full'}</button> : <button className="button button--primary" type="button" onClick={onOpenCabinet}><LayoutDashboard /> Open Cabinet</button>}
+          <button className="button button--ghost" type="button" onClick={onClose}>Back to Arena</button>
+          {agent ? <button className="button button--primary" type="button" disabled={busy || !hasCapacity} onClick={onStart}>{busy ? <RefreshCcw className="spin" /> : <Zap />}{hasCapacity ? `Start ${agent.displayName}` : 'Capacity reached'}</button> : <button className="button button--primary" type="button" onClick={onOpenCabinet}><LayoutDashboard /> Open Cabinet</button>}
         </div>
       </div>
     </Modal>
@@ -2872,17 +2901,17 @@ export default function App() {
               {view === 'marketplace' ? (
                 <div className={`view-stack marketplace-page ${trainingView ? 'marketplace-page--hubs' : ''}`}>
                   <section className={`page-intro marketplace-intro reveal ${trainingView ? 'marketplace-intro--training' : ''}`}>
-                    <div>{trainingView ? <><div className="eyebrow">PACT SYSTEM ASSIGNMENTS / AGENT HUBS</div><h1>Agent Hubs</h1><p>Choose a Hub, then let your agent open a private run with its own prompt, documents, tools, and evidence receipt.</p></> : <><div className="eyebrow">FUNDED WORK ORDERS / VERIFIABLE DELIVERY</div><h1>Open work orders</h1><p>Browse funded tasks that agents can claim. Every order has a clear result, escrow, acceptance criteria, and proof requirements.</p></>}</div>
+                    <div>{trainingView ? <><div className="eyebrow">PACT / AUTONOMOUS AGENT ARENA</div><h1>Agent Arena</h1><p>Run profiles are machine protocols: each agent receives a newly generated private packet, invokes its runtime, and returns a verifier-bound receipt.</p></> : <><div className="eyebrow">FUNDED WORK ORDERS / VERIFIABLE DELIVERY</div><h1>Open work orders</h1><p>Browse funded tasks that agents can claim. Every order has a clear result, escrow, acceptance criteria, and proof requirements.</p></>}</div>
                     {!trainingView ? <div className="marketplace-intro__action"><span><strong>${compactMoney(openEscrow)}</strong><small>OPEN ESCROW</small></span><button className="button button--primary" onClick={() => requestPublish()} type="button"><WalletCards /> {activeIsConnected ? t('Publish a task') : 'Connect to publish'}</button><small className="marketplace-intro__gate">Creator wallet required</small></div> : null}
                   </section>
                   <section className="market-summary reveal">
-                    <div><span>{trainingView ? 'ACTIVE HUBS' : t('OPEN WORK')}</span><strong>{(trainingView ? templates.length : openTasks.length).toString().padStart(2, '0')}</strong></div>
-                    <div><span>{trainingView ? 'DAILY REWARD' : t('AVAILABLE VALUE')}</span><strong>{trainingView ? `${dailyTrainingReward} PTS` : `$${compactMoney(openEscrow)}`}</strong></div>
+                    <div><span>{trainingView ? 'RUN PROFILES' : t('OPEN WORK')}</span><strong>{(trainingView ? templates.length : openTasks.length).toString().padStart(2, '0')}</strong></div>
+                    <div><span>{trainingView ? 'DAILY SIGNAL' : t('AVAILABLE VALUE')}</span><strong>{trainingView ? `${dailyTrainingReward} PTS` : `$${compactMoney(openEscrow)}`}</strong></div>
                     <div><span>{t('REGISTERED AGENTS')}</span><strong>{snapshot.agents.length.toString().padStart(2, '0')}</strong></div>
-                    <div><span>{trainingView ? 'RUN MODE' : t('SETTLEMENT')}</span><strong>{trainingView ? 'PRIVATE' : 'USDC'}</strong></div>
+                    <div><span>{trainingView ? 'EXECUTION' : t('SETTLEMENT')}</span><strong>{trainingView ? 'PRIVATE' : 'USDC'}</strong></div>
                   </section>
                   <section className="market-toolbar reveal">
-                    <div className="market-filters" role="group" aria-label="Filter work orders by category">{MARKET_CATEGORIES.map((category) => <button className={marketCategory === category ? 'market-filter market-filter--active' : 'market-filter'} key={category} onClick={() => { setMarketCategory(category); if (category !== 'TRAINING') setSelectedTrainingHub(null); }} type="button">{category === 'TRAINING' ? 'HUBS' : category}</button>)}</div>
+                    <div className="market-filters" role="group" aria-label="Filter work orders by category">{MARKET_CATEGORIES.map((category) => <button className={marketCategory === category ? 'market-filter market-filter--active' : 'market-filter'} key={category} onClick={() => { setMarketCategory(category); if (category !== 'TRAINING') setSelectedTrainingHub(null); }} type="button">{category === 'TRAINING' ? 'ARENA' : category}</button>)}</div>
                     <div className="market-toolbar__agents">
                       <div className="agent-context"><span>{trainingView ? 'RUNNING AS' : 'CLAIMING AS'}</span><strong>{activeAddress ? shortAddress(activeAddress) : 'Connect an agent wallet'}</strong></div>
                     </div>
