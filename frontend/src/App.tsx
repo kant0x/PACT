@@ -2902,7 +2902,7 @@ export default function App() {
                 <div className={`view-stack marketplace-page ${trainingView ? 'marketplace-page--hubs' : ''}`}>
                   <section className={`page-intro marketplace-intro reveal ${trainingView ? 'marketplace-intro--training' : ''}`}>
                     <div>{trainingView ? <><div className="eyebrow">PACT / AUTONOMOUS AGENT ARENA</div><h1>Agent Arena</h1><p>Run profiles are machine protocols: each agent receives a newly generated private packet, invokes its runtime, and returns a verifier-bound receipt.</p></> : <><div className="eyebrow">FUNDED WORK ORDERS / VERIFIABLE DELIVERY</div><h1>Open work orders</h1><p>Browse funded tasks that agents can claim. Every order has a clear result, escrow, acceptance criteria, and proof requirements.</p></>}</div>
-                    {!trainingView ? <div className="marketplace-intro__action"><span><strong>${compactMoney(openEscrow)}</strong><small>OPEN ESCROW</small></span><button className="button button--primary" onClick={() => requestPublish()} type="button"><WalletCards /> {activeIsConnected ? t('Publish a task') : 'Connect to publish'}</button><small className="marketplace-intro__gate">Creator wallet required</small></div> : null}
+                    {!trainingView && marketCategory !== 'ALL' ? <div className="marketplace-intro__action"><span><strong>${compactMoney(openEscrow)}</strong><small>OPEN ESCROW</small></span><button className="button button--primary" onClick={() => requestPublish()} type="button"><WalletCards /> {activeIsConnected ? t('Publish a task') : 'Connect to publish'}</button><small className="marketplace-intro__gate">Creator wallet required</small></div> : null}
                   </section>
                   <section className="market-summary reveal">
                     <div><span>{trainingView ? 'RUN PROFILES' : t('OPEN WORK')}</span><strong>{(trainingView ? templates.length : openTasks.length).toString().padStart(2, '0')}</strong></div>
@@ -2911,7 +2911,7 @@ export default function App() {
                     <div><span>{trainingView ? 'EXECUTION' : t('SETTLEMENT')}</span><strong>{trainingView ? 'PRIVATE' : 'USDC'}</strong></div>
                   </section>
                   <section className="market-toolbar reveal">
-                    <div className="market-filters" role="group" aria-label="Filter work orders by category">{MARKET_CATEGORIES.map((category) => <button className={marketCategory === category ? 'market-filter market-filter--active' : 'market-filter'} key={category} onClick={() => { setMarketCategory(category); if (category !== 'TRAINING') setSelectedTrainingHub(null); }} type="button">{category === 'TRAINING' ? 'ARENA' : category}</button>)}</div>
+                    <div className="market-filters" role="group" aria-label="Filter work orders by category">{MARKET_CATEGORIES.map((category) => <button className={marketCategory === category ? 'market-filter market-filter--active' : 'market-filter'} key={category} onClick={() => { setMarketCategory(category); if (category !== 'TRAINING') setSelectedTrainingHub(null); }} type="button">{category === 'TRAINING' ? t('Training') : category}</button>)}</div>
                     <div className="market-toolbar__agents">
                       <div className="agent-context"><span>{trainingView ? 'RUNNING AS' : 'CLAIMING AS'}</span><strong>{activeAddress ? shortAddress(activeAddress) : 'Connect an agent wallet'}</strong></div>
                     </div>
@@ -2980,7 +2980,7 @@ export default function App() {
                           return api.claimTask(taskId, agentAddress);
                         })} />)}
                       </section>
-                    ) : <div className="empty-state-stack"><EmptyState icon={<Boxes />} title="No work orders in this category" copy="Choose another category or publish a funded work order." /></div>
+                    ) : <div className="empty-state-stack"><EmptyState icon={<Boxes />} title={marketCategory === 'ALL' ? t('No public work orders') : t('No work orders in this category')} copy={marketCategory === 'ALL' ? t('Open Training to run your agent against private generated profiles.') : t('Choose another category or publish a funded work order.')} /></div>
                   )}
                 </div>
               ) : null}
