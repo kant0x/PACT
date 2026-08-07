@@ -45,6 +45,33 @@ export class ExecutionTraceRepository {
     return res.rows.map(this.mapRowToTrace);
   }
 
+  async findLearnableForAgent(agentAddress: string, limit = 6): Promise<AgentExecutionTrace[]> {
+    const safeLimit = Math.max(1, Math.min(20, Math.floor(limit)));
+    const res = await query(`
+      SELECT * FROM execution_traces
+      WHERE agent_address = $1
+        AND consent_to_training = TRUE
+        AND outcome = 'SUCCESS'
+        AND review_status = 'APPROVED'
+      ORDER BY finalized_at DESC NULLS LAST, created_at DESC
+      LIMIT $2
+    `, [agentAddress.toLowerCase(), safeLimit]);
+    return res.rows.map(this.mapRowToTrace);
+  }
+
+  async markOutcomeByTaskId(taskId: string, outcome: AgentExecutionTrace['outcome'], reviewerId?: string): Promise<void> {
+    const finalizedAt = Math.floor(Date.now() / 1000);
+    await query(`
+      UPDATE execution_traces
+      SET outcome = $1,
+          finalized_at = $2,
+          review_status = CASE WHEN $1 = 'SUCCESS' THEN 'APPROVED' ELSE review_status END,
+          reviewed_at = CASE WHEN $1 = 'SUCCESS' THEN $2 ELSE reviewed_at END,
+          reviewer_id = CASE WHEN $1 = 'SUCCESS' THEN $4 ELSE reviewer_id END
+      WHERE task_id = $3 AND outcome = 'PENDING'
+    `, [outcome, finalizedAt, taskId, reviewerId ?? null]);
+  }
+
   async update(id: string, updates: Partial<AgentExecutionTrace>): Promise<AgentExecutionTrace | null> {
     const current = await this.findById(id);
     if (!current) return null;

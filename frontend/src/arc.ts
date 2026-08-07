@@ -15,10 +15,27 @@ export const ERC20_ABI = [
   },
   {
     type: 'function',
+    name: 'balanceOf',
+    stateMutability: 'view',
+    inputs: [{ name: 'account', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    type: 'function',
     name: 'approve',
     stateMutability: 'nonpayable',
     inputs: [
       { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+  {
+    type: 'function',
+    name: 'transfer',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'to', type: 'address' },
       { name: 'amount', type: 'uint256' },
     ],
     outputs: [{ name: '', type: 'bool' }],
@@ -136,6 +153,31 @@ export async function fundOpenOrder(input: FundOpenOrderInput): Promise<`0x${str
   if (fundingReceipt.status !== 'success') throw new Error('Work-order funding reverted on Arc Testnet.');
   input.onProgress?.('Funding confirmed. Publishing the signed work order…');
   return fundingHash;
+}
+
+export async function fundAgentWallet(input: {
+  account: `0x${string}`;
+  agentAddress: `0x${string}`;
+  amountUsdc: string;
+  publicClient: PublicClient;
+  walletClient: WalletClient;
+  onProgress?: (message: string) => void;
+}): Promise<`0x${string}`> {
+  const amount = parseUnits(input.amountUsdc, 6);
+  if (amount <= 0n) throw new Error('Agent funding amount must be greater than zero.');
+  input.onProgress?.('Sending USDC to the Circle agent wallet…');
+  const hash = await input.walletClient.writeContract({
+    account: input.account,
+    chain: input.publicClient.chain,
+    address: ARC_USDC_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'transfer',
+    args: [input.agentAddress, amount],
+  });
+  const receipt = await input.publicClient.waitForTransactionReceipt({ hash });
+  if (receipt.status !== 'success') throw new Error('USDC transfer to the Circle agent wallet reverted on Arc Testnet.');
+  input.onProgress?.('Agent wallet funding confirmed on Arc Testnet.');
+  return hash;
 }
 
 export async function claimArcTask(input: {

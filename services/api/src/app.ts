@@ -134,7 +134,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
     }
   })();
   const arenaAutopilotEnabled = options.arenaAutopilotEnabled
-    ?? (testMode && process.env.VITEST !== 'true' && process.env.PACT_AGENT_AUTOPILOT_ENABLED !== 'false');
+    ?? (process.env.VITEST !== 'true' && process.env.PACT_AGENT_AUTOPILOT_ENABLED !== 'false');
   const arenaAutopilot = new ArenaAutopilot({
     store,
     codeRunner: arenaCodeRunner,
@@ -288,6 +288,33 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
   const authorizeWalletOrAgent = (request: Request, address: string, message?: string) => {
     if (allowAnonymousTestBypass(request)) return;
     assertWalletOrAgentSubject(request, address, message);
+  };
+  const authorizeAgentController = async (request: Request, address: string, message = 'Only the agent wallet owner can manage this agent') => {
+    if (allowAnonymousTestBypass(request)) return;
+    const identity = requestIdentity(request);
+    if (identity?.kind === 'operator') return;
+    if (identity?.kind !== 'wallet') throw new ApiProblem(403, 'RESOURCE_FORBIDDEN', message);
+    if (identity.subject.toLowerCase() === address.toLowerCase()) return;
+    if (process.env.PACT_MODE === 'arc') {
+      const { agentRepository } = await import('./repositories/agent.repository.js');
+      const agent = await agentRepository.findByAddress(address);
+      if (agent?.controllerAddress.toLowerCase() === identity.subject.toLowerCase()) return;
+    }
+    throw new ApiProblem(403, 'RESOURCE_FORBIDDEN', message);
+  };
+  const authorizeAgentExecution = async (request: Request, address: string, message = 'Only the selected agent or its controller can start runtime execution') => {
+    if (allowAnonymousTestBypass(request)) return;
+    const identity = requestIdentity(request);
+    if (identity?.kind === 'operator') return;
+    if (identity?.kind === 'agent' && identity.subject.toLowerCase() === address.toLowerCase()) return;
+    if (identity?.kind !== 'wallet') throw new ApiProblem(403, 'RESOURCE_FORBIDDEN', message);
+    if (identity.subject.toLowerCase() === address.toLowerCase()) return;
+    if (process.env.PACT_MODE === 'arc') {
+      const { agentRepository } = await import('./repositories/agent.repository.js');
+      const agent = await agentRepository.findByAddress(address);
+      if (agent?.controllerAddress.toLowerCase() === identity.subject.toLowerCase()) return;
+    }
+    throw new ApiProblem(403, 'RESOURCE_FORBIDDEN', message);
   };
   const configuredCorsOrigins = options.corsOrigins ?? parseCorsOrigins();
   const persistenceMode = (process.env.PACT_DATABASE_URL ?? process.env.DATABASE_URL) ? 'postgres' : 'memory';
@@ -489,9 +516,9 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
   });
   app.post('/api/agents/:agentAddress/autopilot/start', requireAuth, async (request, response, next) => {
     try {
-      if (!testMode) throw new ApiProblem(410, 'SERVER_AUTOPILOT_DISABLED', 'Live agents must execute through their own authenticated runtime; server-side auto-solving is disabled');
+      if (!arenaAutopilotEnabled) throw new ApiProblem(503, 'SERVER_AUTOPILOT_DISABLED', 'Self-training is disabled by PACT_AGENT_AUTOPILOT_ENABLED');
       const agentAddress = text(request.params.agentAddress).toLowerCase();
-      authorizeAddress(request, agentAddress, 'Only the agent owner wallet can start autopilot');
+      await authorizeAgentController(request, agentAddress, 'Only the agent owner wallet can start autopilot');
       if (process.env.PACT_MODE === 'arc') {
         const { agentRepository } = await import('./repositories/agent.repository.js');
         const agent = await agentRepository.findByAddress(agentAddress);
@@ -508,7 +535,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
   app.post('/api/agents/:agentAddress/autopilot/pause', requireAuth, async (request, response, next) => {
     try {
       const agentAddress = text(request.params.agentAddress).toLowerCase();
-      authorizeAddress(request, agentAddress, 'Only the agent owner wallet can pause autopilot');
+      await authorizeAgentController(request, agentAddress, 'Only the agent owner wallet can pause autopilot');
       response.json(arenaAutopilot.disable(agentAddress));
     } catch (error) {
       next(error);
@@ -1518,7 +1545,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
       const taskId = text(request.body?.taskId);
       const agentAddress = text(request.body?.agentAddress);
       if (!taskId || !agentAddress) throw new ApiProblem(400, 'INVALID_AGENT_RUN', 'taskId and agentAddress are required');
-      authorizeWalletOrAgent(request, agentAddress, 'Only the selected agent can start its runtime');
+      await authorizeAgentExecution(request, agentAddress);
       response.status(201).json(await agentRuntime.run(taskId, agentAddress, true));
     } catch(e) { next(e); }
   });
@@ -1602,6 +1629,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
     try {
       const { deliverableRepository } = await import('./repositories/deliverable.repository.js');
       const { taskRepository } = await import('./repositories/task.repository.js');
+      const { executionTraceRepository } = await import('./repositories/execution-trace.repository.js');
 
       const deliverable = await deliverableRepository.findById(request.params.id);
       if (!deliverable) throw new ApiProblem(404, 'NOT_FOUND', 'Deliverable not found');
@@ -1645,6 +1673,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
       if (task.agentAddress) {
         const { agentRepository } = await import('./repositories/agent.repository.js');
         await agentRepository.recordCommercialOutcome(task.agentAddress, true, task.totalAmount);
+        await executionTraceRepository.markOutcomeByTaskId(deliverable.taskId, 'SUCCESS', task.creatorAddress);
       }
 
       // Award platform points if it was a training task template.

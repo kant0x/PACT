@@ -1,6 +1,8 @@
 import {
   AgentDeliverable,
   AgentCapabilityManifest,
+  AgentAutomationSnapshot,
+  AgentRun,
   ArenaLeaderboardEntry,
   ArenaTemplate,
   DashboardSnapshot,
@@ -242,6 +244,13 @@ export const api = {
     }),
   circleTransaction: (agentAddress: string, transactionId: string) =>
     request<CircleTransactionStatus>(`/api/agents/pg/${encodeURIComponent(agentAddress)}/circle/transactions/${encodeURIComponent(transactionId)}`),
+  agentAutopilot: (agentAddress: string, action: 'start' | 'pause') =>
+    request<AgentAutomationSnapshot>(`/api/agents/${encodeURIComponent(agentAddress)}/autopilot/${action}`, { method: 'POST' }),
+  runAgent: (taskId: string, agentAddress: string) =>
+    request<AgentRun>('/api/agent-runs/pg', {
+      method: 'POST',
+      body: JSON.stringify({ taskId, agentAddress }),
+    }),
   startTask: (taskId: string, collateralTransactionHash: `0x${string}`) =>
     request<MarketplaceTask>(`/api/tasks/pg/${encodeURIComponent(taskId)}/start`, {
       method: 'POST',

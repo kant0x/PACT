@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200" height="430" viewBox="0 0 1200 430"
+     role="img" aria-labelledby="title desc">
+  <title id="title">PACT work-order lifecycle</title>
+  <desc id="desc">Seven checkpoints from a client brief to a finalized commercial reputation record.</desc>
+
+  <defs>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M36 0H0V36" fill="none" stroke="#F5F4F3" stroke-opacity="0.035"/>
+    </pattern>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#CB673F"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="430" rx="24" fill="#0E0D0C"/>
+  <rect width="1200" height="430" rx="24" fill="url(#grid)"/>
+  <text x="56" y="62" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="600" letter-spacing="2.2" fill="#CB673F">ONE WORK ORDER / SEVEN CHECKPOINTS</text>
+  <text x="56" y="97" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="22" fill="#E4E3E3">Every transition leaves a record. Reputation changes last.</text>
+
+  <path d="M104 212H1096" stroke="#914425" stroke-width="2" stroke-dasharray="5 8"/>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
+    <g transform="translate(48 137)">
+      <rect width="136" height="150" rx="6" fill="#171310" stroke="#CB673F" stroke-width="2"/>
+      <circle cx="26" cy="28" r="15" fill="#CB673F"/>
+      <text x="21" y="34" font-size="17" font-weight="700" fill="#080808">01</text>
+      <text x="18" y="76" font-size="21" font-weight="700" fill="#F5F4F3">BRIEF</text>
+      <text x="18" y="105" font-size="16" fill="#A39D99">outcome, budget,</text>
+      <text x="18" y="127" font-size="16" fill="#A39D99">criteria, deadline</text>
+    </g>
+    <path d="M188 212H204" stroke="#CB673F" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <g transform="translate(210 137)">
+      <rect width="136" height="150" rx="6" fill="#171310" stroke="#914425"/>
+      <circle cx="26" cy="28" r="15" fill="#251C18" stroke="#CB673F"/>
+      <text x="21" y="34" font-size="17" font-weight="700" fill="#E58A61">02</text>
+      <text x="18" y="76" font-size="21" font-weight="700" fill="#F5F4F3">MATCH</text>
+      <text x="18" y="105" font-size="16" fill="#A39D99">capability and</text>
+      <text x="18" y="127" font-size="16" fill="#A39D99">eligibility check</text>
+    </g>
+    <path d="M350 212H366" stroke="#CB673F" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <g transform="translate(372 137)">
+      <rect width="136" height="150" rx="6" fill="#171310" stroke="#914425"/>
+      <circle cx="26" cy="28" r="15" fill="#251C18" stroke="#CB673F"/>
+      <text x="21" y="34" font-size="17" font-weight="700" fill="#E58A61">03</text>
+      <text x="18" y="76" font-size="21" font-weight="700" fill="#F5F4F3">EXECUTE</text>
+      <text x="18" y="105" font-size="16" fill="#A39D99">payment and</text>
+      <text x="18" y="127" font-size="16" fill="#A39D99">collateral reserved</text>
+    </g>
+    <path d="M512 212H528" stroke="#CB673F" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <g transform="translate(534 137)">
+      <rect width="136" height="150" rx="6" fill="#171310" stroke="#914425"/>
+      <circle cx="26" cy="28" r="15" fill="#251C18" stroke="#CB673F"/>
+      <text x="21" y="34" font-size="17" font-weight="700" fill="#E58A61">04</text>
+      <text x="18" y="76" font-size="21" font-weight="700" fill="#F5F4F3">PROVE</text>
+      <text x="18" y="105" font-size="16" fill="#A39D99">deliverable plus</text>
+      <text x="18" y="127" font-size="16" fill="#A39D99">evidence packet</text>
+    </g>
+    <path d="M674 212H690" stroke="#CB673F" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <g transform="translate(696 137)">
+      <rect width="136" height="150" rx="6" fill="#251C18" stroke="#CB673F" stroke-width="2"/>
+      <circle cx="26" cy="28" r="15" fill="#CB673F"/>
+      <text x="21" y="34" font-size="17" font-weight="700" fill="#080808">05</text>
+      <text x="18" y="76" font-size="21" font-weight="700" fill="#F5F4F3">DECIDE</text>
+      <text x="18" y="105" font-size="16" fill="#E4E3E3">accept or open</text>
+      <text x="18" y="127" font-size="16" fill="#E4E3E3">a private dispute</text>
+    </g>
+    <path d="M836 212H852" stroke="#CB673F" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <g transform="translate(858 137)">
+      <rect width="136" height="150" rx="6" fill="#171310" stroke="#914425"/>
+      <circle cx="26" cy="28" r="15" fill="#251C18" stroke="#CB673F"/>
+      <text x="21" y="34" font-size="17" font-weight="700" fill="#E58A61">06</text>
+      <text x="18" y="76" font-size="21" font-weight="700" fill="#F5F4F3">SETTLE</text>
+      <text x="18" y="105" font-size="16" fill="#A39D99">payment and</text>
+      <text x="18" y="127" font-size="16" fill="#A39D99">collateral policy</text>
+    </g>
+    <path d="M998 212H1014" stroke="#CB673F" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <g transform="translate(1020 137)">
+      <rect width="136" height="150" rx="6" fill="#171310" stroke="#914425"/>
+      <circle cx="26" cy="28" r="15" fill="#251C18" stroke="#CB673F"/>
+      <text x="21" y="34" font-size="17" font-weight="700" fill="#E58A61">07</text>
+      <text x="18" y="76" font-size="21" font-weight="700" fill="#F5F4F3">RECORD</text>
+      <text x="18" y="105" font-size="16" fill="#A39D99">Trust Score moves</text>
+      <text x="18" y="127" font-size="16" fill="#A39D99">after finality</text>
+    </g>
+  </g>
+
+  <g transform="translate(56 340)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+    <rect width="1088" height="50" rx="5" fill="#080808" stroke="#914425"/>
+    <circle cx="24" cy="25" r="7" fill="#CB673F"/>
+    <text x="44" y="31" font-size="17" font-weight="600" fill="#F5F4F3">FAIL-SAFE:</text>
+    <text x="170" y="31" font-size="17" fill="#A39D99">the contract timeout path can cancel a task if the judge/API is unavailable.</text>
+  </g>
+</svg>
