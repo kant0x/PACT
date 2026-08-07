@@ -1,6 +1,7 @@
 import {
  AlertTriangle,
   ArrowRight,
+  ArrowUpRight,
   BadgeCheck,
   Bot,
   Boxes,
@@ -8,6 +9,9 @@ import {
   ChevronRight,
   Clapperboard,
   Clock3,
+  Database,
+  FileCode2,
+  FileSearch,
   FileWarning,
   Gauge,
   KeyRound,
@@ -18,11 +22,13 @@ import {
   RefreshCcw,
   Server,
   Scale,
+  Search,
   ShieldCheck,
   SquareArrowOutUpRight,
   Trophy,
   Users,
   WalletCards,
+  Workflow,
   X,
   Zap,
 } from 'lucide-react';
@@ -74,11 +80,11 @@ import { config } from './wagmi';
 
 const wait = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 
-const trainingQuestMeta = (kind: ArenaTemplate['kind']) => {
-  if (kind === 'DOCUMENT_RETRIEVAL') return { level: '03', label: 'DOCUMENT INTELLIGENCE', cue: 'RETRIEVE · RECONCILE · CITE' };
-  if (kind === 'CODE_REPAIR') return { level: '02', label: 'SYSTEMS REPAIR', cue: 'PATCH · TEST · VERIFY' };
-  if (kind === 'TOOL_WORKFLOW') return { level: '02', label: 'TOOL OPERATIONS', cue: 'FETCH · TRANSFORM · PROVE' };
-  return { level: '01', label: 'GROUNDED REASONING', cue: 'ANALYZE · COMPUTE · CITE' };
+const trainingHubMeta = (kind: ArenaTemplate['kind']) => {
+  if (kind === 'DOCUMENT_RETRIEVAL') return { level: '03', label: 'DOCUMENT INTELLIGENCE', difficulty: 5, icon: FileSearch };
+  if (kind === 'CODE_REPAIR') return { level: '02', label: 'SYSTEMS REPAIR', difficulty: 4, icon: FileCode2 };
+  if (kind === 'TOOL_WORKFLOW') return { level: '02', label: 'TOOL OPERATIONS', difficulty: 3, icon: Workflow };
+  return { level: '01', label: 'GROUNDED REASONING', difficulty: 2, icon: Database };
 };
 
 const isHttpCallbackUrl = (value: string) => {
@@ -300,12 +306,12 @@ interface CreatedAgentNotice {
 const PUBLIC_NAV_ITEMS: Array<{ id: View; label: string; icon: typeof LayoutDashboard }> = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'protocol', label: 'How it works', icon: Bot },
-  { id: 'marketplace', label: 'Tasks', icon: Boxes },
+  { id: 'marketplace', label: 'Hubs', icon: Boxes },
 ];
 
 const DAPP_NAV_ITEMS: Array<{ id: View; label: string; icon: typeof LayoutDashboard }> = [
   { id: 'dapp', label: 'Cabinet', icon: LayoutDashboard },
-  { id: 'marketplace', label: 'Tasks', icon: Boxes },
+  { id: 'marketplace', label: 'Hubs', icon: Boxes },
 ];
 
 // Disputes remains routable for an authenticated task participant, but is intentionally
@@ -1182,6 +1188,131 @@ function AutomatedArenaResultModal({
           ? <small><a href={`https://testnet.arcscan.app/tx/${result.pointsReceipt.transactionHash}`} target="_blank" rel="noreferrer">View award transaction <SquareArrowOutUpRight /></a>{result.pointsReceipt.agentTotal === null ? null : ` · agent total ${result.pointsReceipt.agentTotal} PTS`}</small>
           : <small>{result.pointsAwarded > 0 ? 'The award was recorded by the configured platform ledger.' : 'No points were awarded for this attempt.'}</small>}</span></div>
         <button className="button button--primary" onClick={onClose} type="button">Back to tasks</button>
+      </div>
+    </Modal>
+  );
+}
+
+function TrainingHubBoard({
+  templates,
+  search,
+  level,
+  availability,
+  onSearchChange,
+  onLevelChange,
+  onAvailabilityChange,
+  onOpen,
+}: {
+  templates: ArenaTemplate[];
+  search: string;
+  level: 'ALL' | '01' | '02' | '03';
+  availability: 'ALL' | 'READY' | 'FULL';
+  onSearchChange: (value: string) => void;
+  onLevelChange: (value: 'ALL' | '01' | '02' | '03') => void;
+  onAvailabilityChange: (value: 'ALL' | 'READY' | 'FULL') => void;
+  onOpen: (template: ArenaTemplate) => void;
+}) {
+  const visibleTemplates = templates.filter((template) => {
+    const hub = trainingHubMeta(template.kind);
+    const matchesSearch = `${template.title} ${template.description} ${hub.label}`.toLowerCase().includes(search.trim().toLowerCase());
+    const matchesLevel = level === 'ALL' || hub.level === level;
+    const matchesAvailability = availability === 'ALL'
+      || (availability === 'READY' ? template.remainingRuns > 0 : template.remainingRuns === 0);
+    return matchesSearch && matchesLevel && matchesAvailability;
+  });
+
+  return (
+    <section className="hub-board reveal" aria-labelledby="hubs-title">
+      <header className="hub-board__header">
+        <div>
+          <span>PACT / AGENT HUBS</span>
+          <h2 id="hubs-title">All Hubs</h2>
+          <p>Each Hub creates a private, evidence-bound run for an eligible agent.</p>
+        </div>
+        <div className="hub-board__signal"><i /><span>LIVE CATALOG</span><strong>{templates.length}</strong></div>
+      </header>
+
+      <div className="hub-controls">
+        <label className="hub-search">
+          <Search aria-hidden="true" />
+          <input value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder="Search hubs" aria-label="Search hubs" />
+        </label>
+        <div className="hub-filter-group" role="group" aria-label="Filter hubs by level">
+          {(['ALL', '01', '02', '03'] as const).map((option) => <button className={level === option ? 'hub-filter hub-filter--active' : 'hub-filter'} type="button" key={option} onClick={() => onLevelChange(option)}>{option === 'ALL' ? 'ALL LEVELS' : `LEVEL ${option}`}</button>)}
+        </div>
+        <div className="hub-filter-group hub-filter-group--availability" role="group" aria-label="Filter hubs by capacity">
+          {(['ALL', 'READY', 'FULL'] as const).map((option) => <button className={availability === option ? 'hub-filter hub-filter--active' : 'hub-filter'} type="button" key={option} onClick={() => onAvailabilityChange(option)}>{option}</button>)}
+        </div>
+        <span className="hub-controls__count">{visibleTemplates.length} / {templates.length} SHOWN</span>
+      </div>
+
+      <div className="hub-table" role="table" aria-label="Available agent hubs">
+        <div className="hub-table__head" role="row">
+          <span role="columnheader">HUB</span><span role="columnheader">LIFECYCLE</span><span role="columnheader">DIFFICULTY</span><span role="columnheader">OPEN SLOTS</span><span aria-hidden="true" />
+        </div>
+        <div className="hub-table__body" role="rowgroup">
+          {visibleTemplates.map((template) => {
+            const hub = trainingHubMeta(template.kind);
+            const Icon = hub.icon;
+            const status = template.remainingRuns > 0 ? 'Ready' : 'Full';
+            return (
+              <article className="hub-row" key={template.id} role="row">
+                <div className="hub-row__identity" role="cell">
+                  <span className={`hub-row__icon hub-row__icon--${hub.level}`}><Icon aria-hidden="true" /></span>
+                  <span><strong>{template.title}</strong><small>{hub.label} / {template.expectedMinutes} MIN</small></span>
+                </div>
+                <div className="hub-lifecycle" role="cell" aria-label={`Lifecycle: ${template.inProgressToday ? 'training' : template.completedToday ? 'verified' : 'preparation'}`}>
+                  <span className={!template.inProgressToday && !template.completedToday ? 'hub-lifecycle__stage hub-lifecycle__stage--active' : 'hub-lifecycle__stage'}><i />Pre</span><b /><span className={template.inProgressToday ? 'hub-lifecycle__stage hub-lifecycle__stage--active' : 'hub-lifecycle__stage'}><i />Train</span><b /><span className={template.completedToday ? 'hub-lifecycle__stage hub-lifecycle__stage--active' : 'hub-lifecycle__stage'}><i />Verify</span>
+                </div>
+                <div className="hub-difficulty" role="cell" aria-label={`${hub.difficulty} of 5 difficulty`}>
+                  {Array.from({ length: 5 }, (_, index) => <i className={index < hub.difficulty ? 'hub-difficulty__dot hub-difficulty__dot--filled' : 'hub-difficulty__dot'} key={index} />)}
+                </div>
+                <div className="hub-capacity" role="cell"><strong>{template.remainingRuns}</strong><span>/ {template.completionLimit}</span><small>{status}</small></div>
+                <div className="hub-row__action" role="cell"><button className="button button--outline button--small" type="button" onClick={() => onOpen(template)}>Open Hub <ArrowUpRight /></button></div>
+              </article>
+            );
+          })}
+          {!visibleTemplates.length ? <div className="hub-empty">No Hubs match these filters. Reset the search or choose another level.</div> : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TrainingHubModal({
+  template,
+  agent,
+  busy,
+  onClose,
+  onStart,
+  onOpenCabinet,
+}: {
+  template: ArenaTemplate;
+  agent?: ReputationSnapshot;
+  busy: boolean;
+  onClose: () => void;
+  onStart: () => void;
+  onOpenCabinet: () => void;
+}) {
+  const hub = trainingHubMeta(template.kind);
+  const Icon = hub.icon;
+  const hasCapacity = template.remainingRuns > 0;
+  return (
+    <Modal className="modal--hub" eyebrow={`Agent Hub / Level ${hub.level}`} title={template.title} onClose={onClose}>
+      <div className="hub-detail">
+        <header className="hub-detail__head"><span className={`hub-row__icon hub-row__icon--${hub.level}`}><Icon /></span><div><span>{hub.label}</span><strong>{hub.difficulty}/5 difficulty</strong></div><div><strong>{template.remainingRuns}</strong><span>OPEN SLOTS</span></div></header>
+        <p>{template.description}</p>
+        <section className="hub-detail__private"><Server /><div><span>PRIVATE AGENT WORKSPACE</span><strong>The prompt, source documents, tools, and answer are created only for the agent’s own run.</strong></div></section>
+        <section className="hub-detail__flow" aria-label="Hub execution flow">
+          <div><span>01</span><strong>Private packet</strong><small>A fresh instance is generated for this agent.</small></div>
+          <div><span>02</span><strong>Evidence work</strong><small>The runtime searches, reads, or tests inside the Hub.</small></div>
+          <div><span>03</span><strong>Verified result</strong><small>The judge records the result and evidence receipt.</small></div>
+        </section>
+        <div className="hub-detail__agent"><Bot /><span>{agent ? <><strong>Run with {agent.displayName}</strong><small>Starting the agent lets it take every open Hub it can execute, including this one.</small></> : <><strong>Choose an agent first</strong><small>Create or open an agent in Cabinet, then return here to start its run.</small></>}</span></div>
+        <div className="modal__actions">
+          <button className="button button--ghost" type="button" onClick={onClose}>Back to Hubs</button>
+          {agent ? <button className="button button--primary" type="button" disabled={busy || !hasCapacity} onClick={onStart}>{busy ? <RefreshCcw className="spin" /> : <Zap />}{hasCapacity ? `Start ${agent.displayName}` : 'Hub full'}</button> : <button className="button button--primary" type="button" onClick={onOpenCabinet}><LayoutDashboard /> Open Cabinet</button>}
+        </div>
       </div>
     </Modal>
   );
@@ -2317,6 +2448,10 @@ export default function App() {
   const [registryProfile, setRegistryProfile] = useState<string | null>(null);
   const [hireAgentAddress, setHireAgentAddress] = useState<string | null>(null);
   const [marketCategory, setMarketCategory] = useState<MarketCategory>('ALL');
+  const [hubSearch, setHubSearch] = useState('');
+  const [hubLevel, setHubLevel] = useState<'ALL' | '01' | '02' | '03'>('ALL');
+  const [hubAvailability, setHubAvailability] = useState<'ALL' | 'READY' | 'FULL'>('ALL');
+  const [selectedTrainingHub, setSelectedTrainingHub] = useState<ArenaTemplate | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [createdAgentNotice, setCreatedAgentNotice] = useState<CreatedAgentNotice | null>(null);
@@ -2455,7 +2590,7 @@ export default function App() {
   }, [pendingFunding]);
 
   useEffect(() => {
-    if (!publishOpen && !registerOpen && !fundingAgent && !disputeTask && !reviewDispute && !arenaChallenge && !registryProfile && !walletModalOpen) return undefined;
+    if (!publishOpen && !registerOpen && !fundingAgent && !disputeTask && !reviewDispute && !arenaChallenge && !registryProfile && !selectedTrainingHub && !walletModalOpen) return undefined;
     const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = previous; };
@@ -2522,6 +2657,9 @@ export default function App() {
   }, [arcPublicClient, chainId, connectedAddress, fundingAgent, perform, signMessageAsync, switchChainAsync]);
 
   const currentAgent = snapshot?.agents.find((agent) => agent.agentAddress === selectedAgent) ?? snapshot?.agents[0];
+  const hubAgent = activeAddress
+    ? snapshot?.agents.find((agent) => agent.agentAddress.toLowerCase() === activeAddress.toLowerCase() || agent.wallet?.controllerAddress.toLowerCase() === activeAddress.toLowerCase())
+    : undefined;
   const openTasks = snapshot?.tasks.filter((task) => task.status === 'OPEN') ?? [];
   const visibleOpenTasks = marketCategory === 'ALL' || marketCategory === 'TRAINING' ? openTasks : openTasks.filter((task) => taskCategory(task) === marketCategory);
   const trainingView = marketCategory === 'TRAINING';
@@ -2732,58 +2870,26 @@ export default function App() {
               {view === 'leaderboard' ? <PlatformLeaderboard entries={arenaLeaderboard} onView={changeView} /> : null}
 
               {view === 'marketplace' ? (
-                <div className="view-stack marketplace-page">
+                <div className={`view-stack marketplace-page ${trainingView ? 'marketplace-page--hubs' : ''}`}>
                   <section className={`page-intro marketplace-intro reveal ${trainingView ? 'marketplace-intro--training' : ''}`}>
-                    <div>{trainingView ? <><div className="eyebrow">PACT SYSTEM ASSIGNMENTS / AGENT TRAINING</div><h1>Training Ground</h1><p>Daily PACT challenges for registered agents. Complete them to earn Platform Points and build verified execution history without customer escrow.</p></> : <><div className="eyebrow">FUNDED WORK ORDERS / VERIFIABLE DELIVERY</div><h1>Open work orders</h1><p>Browse funded tasks that agents can claim. Every order has a clear result, escrow, acceptance criteria, and proof requirements.</p></>}</div>
+                    <div>{trainingView ? <><div className="eyebrow">PACT SYSTEM ASSIGNMENTS / AGENT HUBS</div><h1>Agent Hubs</h1><p>Choose a Hub, then let your agent open a private run with its own prompt, documents, tools, and evidence receipt.</p></> : <><div className="eyebrow">FUNDED WORK ORDERS / VERIFIABLE DELIVERY</div><h1>Open work orders</h1><p>Browse funded tasks that agents can claim. Every order has a clear result, escrow, acceptance criteria, and proof requirements.</p></>}</div>
                     {!trainingView ? <div className="marketplace-intro__action"><span><strong>${compactMoney(openEscrow)}</strong><small>OPEN ESCROW</small></span><button className="button button--primary" onClick={() => requestPublish()} type="button"><WalletCards /> {activeIsConnected ? t('Publish a task') : 'Connect to publish'}</button><small className="marketplace-intro__gate">Creator wallet required</small></div> : null}
                   </section>
                   <section className="market-summary reveal">
-                    <div><span>{trainingView ? 'SYSTEM TASKS' : t('OPEN WORK')}</span><strong>{(trainingView ? templates.length : openTasks.length).toString().padStart(2, '0')}</strong></div>
-                    <div><span>{trainingView ? 'DAILY POINTS' : t('AVAILABLE VALUE')}</span><strong>{trainingView ? `${dailyTrainingReward} PTS` : `$${compactMoney(openEscrow)}`}</strong></div>
+                    <div><span>{trainingView ? 'ACTIVE HUBS' : t('OPEN WORK')}</span><strong>{(trainingView ? templates.length : openTasks.length).toString().padStart(2, '0')}</strong></div>
+                    <div><span>{trainingView ? 'DAILY REWARD' : t('AVAILABLE VALUE')}</span><strong>{trainingView ? `${dailyTrainingReward} PTS` : `$${compactMoney(openEscrow)}`}</strong></div>
                     <div><span>{t('REGISTERED AGENTS')}</span><strong>{snapshot.agents.length.toString().padStart(2, '0')}</strong></div>
-                    <div><span>{trainingView ? 'REWARD RAIL' : t('SETTLEMENT')}</span><strong>{trainingView ? 'PTS' : 'USDC'}</strong></div>
+                    <div><span>{trainingView ? 'RUN MODE' : t('SETTLEMENT')}</span><strong>{trainingView ? 'PRIVATE' : 'USDC'}</strong></div>
                   </section>
                   <section className="market-toolbar reveal">
-                    <div className="market-filters" role="group" aria-label="Filter work orders by category">{MARKET_CATEGORIES.map((category) => <button className={marketCategory === category ? 'market-filter market-filter--active' : 'market-filter'} key={category} onClick={() => setMarketCategory(category)} type="button">{category}</button>)}</div>
+                    <div className="market-filters" role="group" aria-label="Filter work orders by category">{MARKET_CATEGORIES.map((category) => <button className={marketCategory === category ? 'market-filter market-filter--active' : 'market-filter'} key={category} onClick={() => { setMarketCategory(category); if (category !== 'TRAINING') setSelectedTrainingHub(null); }} type="button">{category === 'TRAINING' ? 'HUBS' : category}</button>)}</div>
                     <div className="market-toolbar__agents">
-                      <div className="agent-context"><span>CLAIMING AS</span><strong>{activeAddress ? shortAddress(activeAddress) : 'Connect an agent wallet'}</strong></div>
+                      <div className="agent-context"><span>{trainingView ? 'RUNNING AS' : 'CLAIMING AS'}</span><strong>{activeAddress ? shortAddress(activeAddress) : 'Connect an agent wallet'}</strong></div>
                     </div>
                   </section>
                   {marketCategory === 'TRAINING' ? (
                     templates.length ? (
-                      <>
-                      <section className="task-grid">
-                        {templates.map((template) => {
-                          const quest = trainingQuestMeta(template.kind);
-                          return (
-                          <article className="task-card task-card--training reveal" data-level={quest.level} key={template.id}>
-                            <div className="task-card__content">
-                              <header className="task-card__header">
-                                <span className="status-pill status-pill--neutral">LEVEL {quest.level}</span>
-                                <span className="mono">{quest.label}</span>
-                              </header>
-                              <div className="training-quest-cue" aria-hidden="true"><span>PACT / AGENT QUEST</span><strong>{quest.cue}</strong></div>
-                              <h3>{template.title}</h3>
-                              <p>{template.description}</p>
-                              <footer className="training-task-footer">
-                              <dl className="task-card__facts">
-                                <div><dt>Reward</dt><dd>{template.rewardPoints} <small>PTS</small></dd></div>
-                                <div><dt>Brief</dt><dd>{template.expectedMinutes} <small>MIN</small></dd></div>
-                              </dl>
-                              <span className={template.remainingRuns > 0 ? 'training-task-access' : 'training-task-access training-task-access--full'}>{template.remainingRuns > 0 ? t('OPEN') : t('FULL')}</span>
-                              </footer>
-                            </div>
-                            <div className="claim-zone">
-                              <div className={`arena-runtime-status arena-runtime-status--compact ${template.remainingRuns === 0 ? 'arena-runtime-status--done' : ''}`}>
-                                {template.remainingRuns === 0 ? <ShieldCheck /> : <Zap />}
-                                <span>{template.remainingRuns === 0 ? t('Capacity reached') : 'Private run for each agent'}</span>
-                              </div>
-                            </div>
-                          </article>
-                          );
-                        })}
-                      </section>
-                      </>
+                      <TrainingHubBoard templates={templates} search={hubSearch} level={hubLevel} availability={hubAvailability} onSearchChange={setHubSearch} onLevelChange={setHubLevel} onAvailabilityChange={setHubAvailability} onOpen={setSelectedTrainingHub} />
                     ) : <EmptyState icon={<Boxes />} title="No training templates" copy="Wait for the platform to add training tasks." />
                   ) : (
                     visibleOpenTasks.length ? (
@@ -2955,6 +3061,21 @@ export default function App() {
         result={arenaResult}
         agentName={snapshot?.agents.find((agent) => agent.agentAddress === arenaChallenge.agentAddress)?.displayName ?? shortAddress(arenaChallenge.agentAddress)}
         onClose={() => { setArenaChallenge(null); setArenaResult(null); }}
+      /> : null}
+      {selectedTrainingHub ? <TrainingHubModal
+        template={selectedTrainingHub}
+        agent={hubAgent}
+        busy={Boolean(hubAgent && busyKey === `training:${hubAgent.agentAddress}`)}
+        onClose={() => setSelectedTrainingHub(null)}
+        onStart={() => {
+          if (!hubAgent) return;
+          setSelectedTrainingHub(null);
+          toggleAgentTraining(hubAgent, true);
+        }}
+        onOpenCabinet={() => {
+          setSelectedTrainingHub(null);
+          changeView('dapp');
+        }}
       /> : null}
       {disputeTask ? <DisputeModal task={disputeTask} busy={busyKey === `dispute:${disputeTask.id}`} onClose={() => setDisputeTask(null)} onSubmit={async (reason, evidence) => {
         const succeeded = await perform(`dispute:${disputeTask.id}`, (result) => {
