@@ -33,7 +33,20 @@ export class PactApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const sessionToken = typeof window === 'undefined' ? null : window.sessionStorage.getItem(SESSION_KEY);
+  const sessionToken = (() => {
+    if (typeof window === 'undefined') return null;
+    const saved = window.sessionStorage.getItem(SESSION_KEY);
+    if (!saved) return null;
+    try {
+      const session = JSON.parse(saved) as Partial<WalletSession>;
+      if (typeof session.token === 'string' && session.token) return session.token;
+    } catch {
+      // Support a short-lived session saved by an older browser build.
+      if (saved.startsWith('pact1.')) return saved;
+    }
+    window.sessionStorage.removeItem(SESSION_KEY);
+    return null;
+  })();
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
