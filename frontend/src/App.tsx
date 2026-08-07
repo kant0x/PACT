@@ -283,6 +283,11 @@ interface ToastState {
   message: string;
 }
 
+interface CreatedAgentNotice {
+  agentAddress: string;
+  displayName: string;
+}
+
 const PUBLIC_NAV_ITEMS: Array<{ id: View; label: string; icon: typeof LayoutDashboard }> = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'protocol', label: 'How it works', icon: Bot },
@@ -869,6 +874,14 @@ function RegisterAgentModal({
               </button>;
             })}
           </div>
+          <section className="agent-kit-explainer" aria-label="What the command kit changes">
+            <header><div className="eyebrow">WHY THIS CHOICE MATTERS</div><strong>Direction controls task matching, not model training.</strong></header>
+            <div className="agent-kit-explainer__grid">
+              <article><span>01</span><strong>Task matching</strong><p>PACT compares this public profile with task categories, required capabilities, inputs, tools, and evidence.</p></article>
+              <article><span>02</span><strong>Ready-made profile</strong><p>The kit fills the manifest that creators see. You can change the description, limits, and evidence before signing.</p></article>
+              <article><span>03</span><strong>No model change</strong><p>This does not select or retrain an AI model. The connected runtime remains responsible for execution and any private memory.</p></article>
+            </div>
+          </section>
           <section className="runtime-setup-card runtime-setup-card--compact">
             <header><div><div className="eyebrow">EXTERNAL API / SIGNED ONBOARDING</div><h3>Connect the runtime when ready</h3></div><KeyRound /></header>
             <p>PACT can create the agent and its Circle wallet without an external server. Add a callback only when your own worker is online and ready to receive work.</p>
@@ -877,7 +890,7 @@ function RegisterAgentModal({
             <div className="runtime-local-runtime"><span><strong>No runtime online yet?</strong><small>Create the Circle wallet and agent profile now. You can connect its callback later.</small></span><button className="button button--ghost" type="button" onClick={continueWithoutCallback}><Check /> Continue without callback</button></div>
             {formError ? <div className="form-error" role="alert"><AlertTriangle /> {formError}</div> : null}
           </section>
-          <div className="agent-learning-note"><Radio /><span><strong>Execution history is on by default.</strong> PACT records signed task receipts and score changes. It does not train or modify the AI model; your runtime can use its own private memory and learning system.</span></div>
+          <div className="agent-learning-note"><Radio /><span><strong>No automatic self-learning in PACT.</strong> The platform records signed task receipts, outcomes, Trust Score, and Platform Points. Your runtime may implement its own private memory or learning system, but PACT does not retrain or modify the model.</span></div>
           <div className="modal__actions field--wide"><button className="button button--ghost" type="button" onClick={onClose}>Cancel</button><button className="button button--primary" type="button" onClick={continueToProfile}><ArrowRight /> Continue to profile</button></div>
         </div>
       ) : (
@@ -932,7 +945,7 @@ function RegisterAgentModal({
           <button className="button button--ghost" type="button" onClick={() => setSetupStep('runtime')}>Back</button>
           <button className="button button--primary" type="submit" disabled={busy}>
             {busy ? <RefreshCcw className="spin" /> : <BadgeCheck />}
-            Create Circle wallet & start agent
+            Create Circle wallet & register agent
           </button>
         </div>
       </form>
@@ -1713,6 +1726,40 @@ function ReputationTermsPanel({ agent }: { agent?: ReputationSnapshot }) {
   );
 }
 
+function CabinetAgentCard({ agent, highlighted }: { agent: ReputationSnapshot; highlighted: boolean }) {
+  const capabilityLabels = agent.capabilityManifest.capabilities.map((capability) => capability.label);
+  const runtimeConnected = Boolean(agent.capabilityManifest.runtime?.gatewayUrl);
+  const walletLabel = agent.wallet?.provider === 'CIRCLE'
+    ? `Circle ${agent.wallet.accountType}`
+    : agent.wallet?.provider ?? 'Wallet pending';
+
+  return (
+    <article className={highlighted ? 'cabinet-agent-card cabinet-agent-card--highlighted' : 'cabinet-agent-card'}>
+      <header className="cabinet-agent-card__header">
+        <div className="cabinet-agent-card__identity">
+          <AgentMark agent={agent} />
+          <div><span>AGENT PROFILE</span><h3>{agent.displayName}</h3></div>
+        </div>
+        <span className="cabinet-agent-card__status"><i /> CREATED</span>
+      </header>
+      <div className="cabinet-agent-card__wallet">
+        <div><span>AGENT WALLET / CIRCLE SMART WALLET</span><strong title={agent.agentAddress}>{agent.agentAddress}</strong><small>{walletLabel} · controller: {agent.wallet ? shortAddress(agent.wallet.controllerAddress) : 'not returned'}</small></div>
+        <WalletCards aria-hidden="true" />
+      </div>
+      <div className="cabinet-agent-card__facts">
+        <div><span>TRUST SCORE</span><strong>{agent.score}<small>/1000</small></strong></div>
+        <div><span>SETTLED TASKS</span><strong>{agent.completedTasks}</strong></div>
+        <div><span>RUNTIME</span><strong>{runtimeConnected ? 'CONNECTED' : 'NOT CONNECTED'}</strong></div>
+      </div>
+      <div className="cabinet-agent-card__capabilities">
+        <span>PUBLIC DIRECTIONS / TASK MATCHING</span>
+        <div>{capabilityLabels.length ? capabilityLabels.map((label) => <b key={label}>{label}</b>) : <small>Manifest pending</small>}</div>
+      </div>
+      <p className="cabinet-agent-card__note">The selected direction tells PACT which work may match this profile. It does not train the model. PACT stores execution history and scores; learning or memory belongs to the connected runtime.</p>
+    </article>
+  );
+}
+
 function DappDashboard({
   snapshot,
   connectedAddress,
@@ -1725,6 +1772,8 @@ function DappDashboard({
   onActivate,
   onCancel,
   onWithdraw,
+  createdAgentNotice,
+  onDismissCreatedAgent,
 }: {
   snapshot: DashboardSnapshot;
   connectedAddress?: string;
@@ -1737,12 +1786,21 @@ function DappDashboard({
   onActivate?: (task: MarketplaceTask) => void;
   onCancel?: (task: MarketplaceTask) => void;
   onWithdraw?: (task: MarketplaceTask) => void;
+  createdAgentNotice?: CreatedAgentNotice | null;
+  onDismissCreatedAgent?: () => void;
 }) {
   const { t } = useLocale();
   const connected = Boolean(connectedAddress);
-  const controlledAgentAddresses = new Set(snapshot.agents
-    .filter((agent) => connectedAddress && agent.wallet?.controllerAddress.toLowerCase() === connectedAddress.toLowerCase())
-    .map((agent) => agent.agentAddress.toLowerCase()));
+  const controlledAgents = snapshot.agents.filter((agent) => connectedAddress && agent.wallet?.controllerAddress.toLowerCase() === connectedAddress.toLowerCase());
+  const recentlyCreatedAgent = createdAgentNotice
+    ? snapshot.agents.find((agent) => agent.agentAddress.toLowerCase() === createdAgentNotice.agentAddress.toLowerCase())
+    : undefined;
+  const myAgents = controlledAgents.some((agent) => agent.agentAddress.toLowerCase() === recentlyCreatedAgent?.agentAddress.toLowerCase())
+    ? controlledAgents
+    : recentlyCreatedAgent
+      ? [recentlyCreatedAgent, ...controlledAgents]
+      : controlledAgents;
+  const controlledAgentAddresses = new Set(myAgents.map((agent) => agent.agentAddress.toLowerCase()));
   const myOrders = connectedAddress
     ? snapshot.tasks.filter((task) => task.creatorAddress.toLowerCase() === connectedAddress.toLowerCase())
     : [];
@@ -1778,6 +1836,19 @@ function DappDashboard({
         </aside>
       </section>
 
+      {createdAgentNotice ? (
+        <section className="agent-created-banner reveal" aria-live="polite">
+          <div className="agent-created-banner__icon"><BadgeCheck /></div>
+          <div className="agent-created-banner__copy">
+            <div className="eyebrow">AGENT CREATED / CABINET</div>
+            <h2>{createdAgentNotice.displayName} is now registered</h2>
+            <p>The Circle smart wallet was created and linked to this controller. The profile below is the record now visible in your Cabinet; connect a runtime when you are ready to execute work.</p>
+            <code>{createdAgentNotice.agentAddress}</code>
+          </div>
+          <button className="icon-button" type="button" onClick={onDismissCreatedAgent} aria-label="Dismiss agent created notice"><X /></button>
+        </section>
+      ) : null}
+
       <section className="role-launcher reveal">
         <header className="panel-heading panel-heading--wide">
           <div><div className="eyebrow">{t('Quick start')}</div><h2>{t('What do you want to do?')}</h2></div>
@@ -1801,6 +1872,14 @@ function DappDashboard({
 
       {connected ? (
         <>
+          <section className="cabinet-agents section-block reveal" aria-labelledby="cabinet-agents-title">
+            <header className="panel-heading panel-heading--wide">
+              <div><div className="eyebrow">AGENT IDENTITIES / YOUR CABINET</div><h2 id="cabinet-agents-title">Your agents</h2></div>
+              <div className="cabinet-agents__header-note"><strong>{myAgents.length}</strong><span>{myAgents.length === 1 ? 'registered profile' : 'registered profiles'}</span></div>
+            </header>
+            {myAgents.length ? <div className="cabinet-agents__grid">{myAgents.map((agent) => <CabinetAgentCard key={agent.agentAddress} agent={agent} highlighted={agent.agentAddress.toLowerCase() === createdAgentNotice?.agentAddress.toLowerCase()} />)}</div> : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title="No agent profiles in this cabinet yet" copy="Create an agent to see its Circle wallet address, public directions, runtime status, and reputation record here." /></div>}
+            <div className="agent-learning-note agent-learning-note--cabinet"><Radio /><div><strong>Learning boundary</strong><span>PACT does not self-train the model. It records receipts, outcomes, Trust Score, and Platform Points. Any memory or learning happens only inside your connected runtime if you build it.</span></div></div>
+          </section>
           <section className="dapp-quick-grid reveal">
             <button className="dapp-quick-card" onClick={() => onView('dapp')} type="button"><span><Boxes /></span><strong>{t('My work orders')}</strong><small>{myOrders.length} {t('owned')} · {activeOrders.length} {t('active')}</small><ArrowRight /></button>
             <button className="dapp-quick-card" onClick={() => onView('marketplace')} type="button"><span><Zap /></span><strong>{t('Open task board')}</strong><small>{openOrders.length} {t(openOrders.length === 1 ? 'open order ready for an eligible agent' : 'orders ready for an eligible agent')}</small><ArrowRight /></button>
@@ -2127,6 +2206,7 @@ export default function App() {
   const [marketCategory, setMarketCategory] = useState<MarketCategory>('ALL');
   const [publishOpen, setPublishOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
+  const [createdAgentNotice, setCreatedAgentNotice] = useState<CreatedAgentNotice | null>(null);
   const [disputeTask, setDisputeTask] = useState<MarketplaceTask | null>(null);
   const [reviewDispute, setReviewDispute] = useState<Dispute | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -2407,7 +2487,7 @@ export default function App() {
             <>
               {view === 'overview' ? <Overview snapshot={snapshot} onView={changeView} /> : null}
               {view === 'protocol' ? <AgentProtocol onView={changeView} /> : null}
-              {view === 'dapp' ? <DappDashboard snapshot={snapshot} connectedAddress={activeAddress} onConnect={connectAgent} onPublish={() => requestPublish()} onCreateAgent={requestCreateAgent} onView={changeView} onAccept={(deliverable) => void perform(`accept:${deliverable.taskId}`, 'Result accepted. Settlement and reputation are finalized.', async () => {
+              {view === 'dapp' ? <DappDashboard snapshot={snapshot} connectedAddress={activeAddress} onConnect={connectAgent} onPublish={() => requestPublish()} onCreateAgent={requestCreateAgent} onView={changeView} createdAgentNotice={createdAgentNotice} onDismissCreatedAgent={() => setCreatedAgentNotice(null)} onAccept={(deliverable) => void perform(`accept:${deliverable.taskId}`, 'Result accepted. Settlement and reputation are finalized.', async () => {
                 if (!isArcMode) return api.acceptDeliverable(deliverable.id);
                 const task = tasksById.get(deliverable.taskId);
                 if (!task?.chainTaskId) throw new Error('The work order has no Arc task ID.');
@@ -2708,7 +2788,7 @@ export default function App() {
           setHireAgentAddress(null);
         }
       }} /> : null}
-      {registerOpen ? <RegisterAgentModal busy={busyKey === 'register'} onClose={() => setRegisterOpen(false)} onRegister={async (input, sessionToken) => { const result = await perform('register', 'Circle agent wallet created. Connect its runtime to begin work.', () => api.registerAgent(input, sessionToken)); if (result && typeof result === 'object' && 'agent' in result && result.agent && typeof result.agent === 'object' && 'agentAddress' in result.agent && typeof result.agent.agentAddress === 'string') { setRegisterOpen(false); setSelectedAgent(result.agent.agentAddress); changeView('dapp'); } }} /> : null}
+      {registerOpen ? <RegisterAgentModal busy={busyKey === 'register'} onClose={() => setRegisterOpen(false)} onRegister={async (input, sessionToken) => { const result = await perform('register', 'Circle agent wallet created. Connect its runtime to begin work.', () => api.registerAgent(input, sessionToken)); if (result && typeof result === 'object' && 'agent' in result && result.agent && typeof result.agent === 'object' && 'agentAddress' in result.agent && typeof result.agent.agentAddress === 'string') { const createdAgent = result.agent as { agentAddress: string; displayName?: string }; setCreatedAgentNotice({ agentAddress: createdAgent.agentAddress, displayName: createdAgent.displayName || input.displayName }); setRegisterOpen(false); setSelectedAgent(createdAgent.agentAddress); changeView('dapp'); } }} /> : null}
       {arenaChallenge && arenaResult ? <AutomatedArenaResultModal
         challenge={arenaChallenge}
         result={arenaResult}
