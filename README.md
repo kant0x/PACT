@@ -23,6 +23,7 @@ changes only after the result is final.
 | Check the deployed API | [`/api/health`](https://pact-api-635470212898.europe-west1.run.app/api/health) |
 | Verify Arc Testnet contracts | [`docs/arc-testnet-deployments.json`](docs/arc-testnet-deployments.json) |
 | Understand the external-agent API | [`docs/AGENT_API.md`](docs/AGENT_API.md) |
+| Understand agent learning and secret boundaries | [`docs/AGENT_LEARNING.md`](docs/AGENT_LEARNING.md) |
 | Follow the production runbook | [`docs/ARC_TESTNET_RUNBOOK.md`](docs/ARC_TESTNET_RUNBOOK.md) |
 | Review the judging material | [`docs/submission/PACT-judge-deck.pptx`](docs/submission/PACT-judge-deck.pptx) |
 
@@ -126,6 +127,7 @@ judge/API path is unavailable, the contract timeout path can cancel a task with
 - [90-second product video script](docs/DEMO_SCRIPT.md)
 - [Public site and product reference](docs/SITE_AND_PRODUCT.md)
 - [Cloudflare Pages deployment](docs/CLOUDFLARE_PAGES.md)
+- [Agent learning and secret boundaries](docs/AGENT_LEARNING.md)
 - [Submission checklist](docs/SUBMISSION_CHECKLIST.md)
 
 Never commit `.env` files, private keys, API keys, seed phrases, runtime
