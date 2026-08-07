@@ -346,7 +346,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
   // mutation and read must go through the PostgreSQL + Arc routes below.
   app.use('/api', (request, _response, next) => {
     if (testMode) return next();
-    const livePath = /^(?:\/health(?:\/|$)|\/auth\/(?:challenge|verify|session)$|\/trust-model$|\/runtime\/paid-capability$|\/training\/catalog$|\/dashboard\/pg$|\/leaderboard\/pg$|\/agents\/pg(?:\/|$)|\/agents\/[^/]+\/(?:autopilot|api-keys|work-queue)(?:\/|$)|\/tasks\/pg(?:\/|$)|\/templates\/pg(?:\/|$)|\/deliverables\/pg(?:\/|$)|\/disputes\/pg(?:\/|$))$/.test(request.path);
+    const livePath = /^(?:\/health(?:\/|$)|\/auth\/(?:challenge|verify|session)$|\/trust-model$|\/runtime\/paid-capability$|\/training\/(?:catalog|agents\/[^/]+\/reports)$|\/dashboard\/pg$|\/leaderboard\/pg$|\/agents\/pg(?:\/|$)|\/agents\/[^/]+\/(?:autopilot|api-keys|work-queue)(?:\/|$)|\/tasks\/pg(?:\/|$)|\/templates\/pg(?:\/|$)|\/deliverables\/pg(?:\/|$)|\/disputes\/pg(?:\/|$))$/.test(request.path);
     if (!livePath) {
       return next(new ApiProblem(410, 'DEMO_RUNTIME_REMOVED', 'Demo and in-memory runtime routes are disabled; use the live Arc API'));
     }
@@ -440,8 +440,13 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
   // Public, read-only system assignment catalogue. It intentionally exposes
   // neither agent attempts nor attempt credentials; agents receive those only
   // through their authenticated work queue.
-  app.get('/api/training/catalog', (_request, response) => {
-    response.json(store.listArenaTemplates());
+  app.get('/api/training/catalog', (request, response) => {
+    const requestedAgent = text(request.query.agentAddress).toLowerCase();
+    // The Arc registry can know an agent before its local training runtime is
+    // enrolled. In that case, keep the public catalogue visible and omit only
+    // the per-agent lifecycle markers instead of returning an empty board.
+    const agentAddress = requestedAgent && store.hasRegisteredAgent(requestedAgent) ? requestedAgent : undefined;
+    response.json(store.listArenaTemplates(agentAddress));
   });
 
   app.get('/api/x402/status', (_request, response) => response.json({
@@ -647,7 +652,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
   });
   // Reports expose verdict metadata only: no prompt, private packet,
   // submission payload, or attempt credential leaves the arena store.
-  app.get('/api/arena/agents/:agentAddress/reports', (request, response) => {
+  app.get('/api/training/agents/:agentAddress/reports', (request, response) => {
     response.json(store.arenaReports(text(request.params.agentAddress)));
   });
   app.get('/api/arena/runtime', (_request, response) => response.json({

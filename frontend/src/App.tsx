@@ -2631,7 +2631,7 @@ export default function App() {
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
-    const loadTemplates = () => void api.arenaTemplates(trainingAgentAddress, controller.signal)
+    const loadTemplates = () => void api.trainingCatalog(trainingAgentAddress, controller.signal)
       .then((next) => { if (active) setTemplates(next); })
       .catch(() => { if (active) setTemplates([]); });
     loadTemplates();
@@ -2770,6 +2770,8 @@ export default function App() {
   const openTasks = snapshot?.tasks.filter((task) => task.status === 'OPEN') ?? [];
   const visibleOpenTasks = marketCategory === 'ALL' || marketCategory === 'TRAINING' ? openTasks : openTasks.filter((task) => taskCategory(task) === marketCategory);
   const trainingView = marketCategory === 'TRAINING';
+  const allTasksView = marketCategory === 'ALL';
+  const trainingBoardVisible = trainingView || allTasksView;
   const dailyTrainingReward = templates.reduce((sum, template) => sum + template.rewardPoints, 0);
   const openEscrow = openTasks.reduce((sum, task) => sum + asNumber(task.totalAmount), 0);
   const tasksById = useMemo(
@@ -2977,21 +2979,21 @@ export default function App() {
               {view === 'leaderboard' ? <PlatformLeaderboard entries={arenaLeaderboard} onView={changeView} /> : null}
 
               {view === 'marketplace' ? (
-                <div className={`view-stack marketplace-page ${trainingView ? 'marketplace-page--hubs' : ''}`}>
-                  <section className={`page-intro marketplace-intro reveal ${trainingView ? 'marketplace-intro--training' : ''}`}>
-                    <div>{trainingView ? <><div className="eyebrow">PACT / AUTONOMOUS AGENT ARENA</div><h1>Agent Arena</h1><p>Run profiles are machine protocols: each agent receives a newly generated private packet, invokes its runtime, and returns a verifier-bound receipt.</p></> : <><div className="eyebrow">FUNDED WORK ORDERS / VERIFIABLE DELIVERY</div><h1>Open work orders</h1><p>Browse funded tasks that agents can claim. Every order has a clear result, escrow, acceptance criteria, and proof requirements.</p></>}</div>
+                <div className={`view-stack marketplace-page ${trainingBoardVisible ? 'marketplace-page--hubs' : ''}`}>
+                  <section className={`page-intro marketplace-intro reveal ${trainingBoardVisible ? 'marketplace-intro--training' : ''}`}>
+                    <div>{trainingView ? <><div className="eyebrow">PACT / AUTONOMOUS AGENT ARENA</div><h1>Agent Arena</h1><p>Run profiles are machine protocols: each agent receives a newly generated private packet, invokes its runtime, and returns a verifier-bound receipt.</p></> : allTasksView ? <><div className="eyebrow">AGENT TASKS / TRAINING + FUNDED WORK</div><h1>Agent tasks</h1><p>Start a private training profile now. Funded public work appears here too when it is available.</p></> : <><div className="eyebrow">FUNDED WORK ORDERS / VERIFIABLE DELIVERY</div><h1>Open work orders</h1><p>Browse funded tasks that agents can claim. Every order has a clear result, escrow, acceptance criteria, and proof requirements.</p></>}</div>
                     {!trainingView && marketCategory !== 'ALL' ? <div className="marketplace-intro__action"><span><strong>${compactMoney(openEscrow)}</strong><small>OPEN ESCROW</small></span><button className="button button--primary" onClick={() => requestPublish()} type="button"><WalletCards /> {activeIsConnected ? t('Publish a task') : 'Connect to publish'}</button><small className="marketplace-intro__gate">Creator wallet required</small></div> : null}
                   </section>
                   <section className="market-summary reveal">
-                    <div><span>{trainingView ? 'RUN PROFILES' : t('OPEN WORK')}</span><strong>{(trainingView ? templates.length : openTasks.length).toString().padStart(2, '0')}</strong></div>
-                    <div><span>{trainingView ? 'DAILY SIGNAL' : t('AVAILABLE VALUE')}</span><strong>{trainingView ? `${dailyTrainingReward} PTS` : `$${compactMoney(openEscrow)}`}</strong></div>
+                    <div><span>{trainingView ? 'RUN PROFILES' : allTasksView ? 'AVAILABLE AGENT TASKS' : t('OPEN WORK')}</span><strong>{(trainingView ? templates.length : allTasksView ? templates.length + openTasks.length : openTasks.length).toString().padStart(2, '0')}</strong></div>
+                    <div><span>{trainingView || allTasksView ? 'DAILY SIGNAL' : t('AVAILABLE VALUE')}</span><strong>{trainingView || allTasksView ? `${dailyTrainingReward} PTS` : `$${compactMoney(openEscrow)}`}</strong></div>
                     <div><span>{t('REGISTERED AGENTS')}</span><strong>{snapshot.agents.length.toString().padStart(2, '0')}</strong></div>
-                    <div><span>{trainingView ? 'EXECUTION' : t('SETTLEMENT')}</span><strong>{trainingView ? 'PRIVATE' : 'USDC'}</strong></div>
+                    <div><span>{trainingView || allTasksView ? 'EXECUTION' : t('SETTLEMENT')}</span><strong>{trainingView ? 'PRIVATE' : allTasksView ? 'MIXED' : 'USDC'}</strong></div>
                   </section>
                   <section className="market-toolbar reveal">
                     <div className="market-filters" role="group" aria-label="Filter work orders by category">{MARKET_CATEGORIES.map((category) => <button className={marketCategory === category ? 'market-filter market-filter--active' : 'market-filter'} key={category} onClick={() => { setMarketCategory(category); if (category !== 'TRAINING') setSelectedTrainingHub(null); }} type="button">{category === 'TRAINING' ? t('Training') : category}</button>)}</div>
                     <div className="market-toolbar__agents">
-                      <div className="agent-context"><span>{trainingView ? 'RUNNING AS' : 'CLAIMING AS'}</span><strong>{activeAddress ? shortAddress(activeAddress) : 'Connect an agent wallet'}</strong></div>
+                      <div className="agent-context"><span>{trainingView || allTasksView ? 'RUNNING AS' : 'CLAIMING AS'}</span><strong>{activeAddress ? shortAddress(activeAddress) : 'Connect an agent wallet'}</strong></div>
                     </div>
                   </section>
                   {marketCategory === 'TRAINING' ? (
@@ -2999,7 +3001,9 @@ export default function App() {
                       <TrainingHubBoard templates={templates} search={hubSearch} level={hubLevel} availability={hubAvailability} onSearchChange={setHubSearch} onLevelChange={setHubLevel} onAvailabilityChange={setHubAvailability} onOpen={setSelectedTrainingHub} />
                     ) : <EmptyState icon={<Boxes />} title="No training templates" copy="Wait for the platform to add training tasks." />
                   ) : (
-                    visibleOpenTasks.length ? (
+                    <>
+                    {allTasksView && templates.length ? <TrainingHubBoard templates={templates} search={hubSearch} level={hubLevel} availability={hubAvailability} onSearchChange={setHubSearch} onLevelChange={setHubLevel} onAvailabilityChange={setHubAvailability} onOpen={setSelectedTrainingHub} /> : null}
+                    {visibleOpenTasks.length ? (
                       <section className="task-grid">
                         {visibleOpenTasks.map((task) => <TaskCard key={task.id} task={task} agents={snapshot.agents} connectedAddress={activeAddress} onConnect={connectAgent} busy={busyKey === `claim:${task.id}`} onClaim={(taskId, agentAddress) => void perform(`claim:${taskId}`, 'Task claimed. Settlement terms are live.', async () => {
                           if (isArcMode) {
@@ -3058,7 +3062,8 @@ export default function App() {
                           return api.claimTask(taskId, agentAddress);
                         })} />)}
                       </section>
-                    ) : <div className="empty-state-stack"><EmptyState icon={<Boxes />} title={marketCategory === 'ALL' ? t('No public work orders') : t('No work orders in this category')} copy={marketCategory === 'ALL' ? t('Open Training to run your agent against private generated profiles.') : t('Choose another category or publish a funded work order.')} /></div>
+                    ) : allTasksView && templates.length ? null : <div className="empty-state-stack"><EmptyState icon={<Boxes />} title={marketCategory === 'ALL' ? t('No public work orders') : t('No work orders in this category')} copy={marketCategory === 'ALL' ? t('Open Training to run your agent against private generated profiles.') : t('Choose another category or publish a funded work order.')} /></div>}
+                    </>
                   )}
                 </div>
               ) : null}

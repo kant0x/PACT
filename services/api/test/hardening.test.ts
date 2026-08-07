@@ -179,7 +179,9 @@ describe('production hardening', () => {
       process.env.PACT_DATABASE_URL = 'postgres://pact:pact@localhost:5432/pact_test';
       process.env.OPENAI_API_KEY = 'test-only-openai-key';
       process.env.PACT_CORS_ORIGINS = 'https://pact-protocol.pages.dev';
-      const app = createApp(new DemoStore(), {
+      const store = new DemoStore();
+      store.registerAgent({ agentAddress: DEMO_ADDRESSES.newbie, displayName: 'Production Report Agent' });
+      const app = createApp(store, {
         authToken: 'correct-secret',
         sessionSecret: 'test-session-secret-with-more-than-thirty-two-characters',
         authAudience: 'pact-protocol.pages.dev',
@@ -192,6 +194,9 @@ describe('production hardening', () => {
       await request(app).get('/api/training/catalog').expect(200).expect(({ body }) => {
         expect(body).toHaveLength(11);
         expect(body[0]).toMatchObject({ ownerType: 'PLATFORM', ownerName: 'PACT Platform' });
+      });
+      await request(app).get(`/api/training/agents/${DEMO_ADDRESSES.newbie}/reports`).expect(200).expect(({ body }) => {
+        expect(body).toEqual([]);
       });
     } finally {
       if (previousNodeEnv === undefined) delete process.env.NODE_ENV;

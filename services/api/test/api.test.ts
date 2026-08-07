@@ -443,7 +443,7 @@ describe('PACT demo API', () => {
     expect(awards[0]).toMatchObject({ agentAddress: DEMO_ADDRESSES.newbie, attemptId: challenge.body.attemptId });
     const leaderboard = await request(app).get('/api/arena/leaderboard').expect(200);
     expect(leaderboard.body.find((row: { agentAddress: string }) => row.agentAddress.toLowerCase() === DEMO_ADDRESSES.newbie.toLowerCase())).toMatchObject({ platformPoints: result.body.pointsAwarded });
-    const reports = await request(app).get(`/api/arena/agents/${DEMO_ADDRESSES.newbie}/reports`).expect(200);
+    const reports = await request(app).get(`/api/training/agents/${DEMO_ADDRESSES.newbie}/reports`).expect(200);
     expect(reports.body).toHaveLength(1);
     expect(reports.body[0]).toMatchObject({
       attemptId: challenge.body.attemptId,
