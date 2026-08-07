@@ -701,6 +701,31 @@ export class DemoStore {
         citedRecord: attempt.privateInstance.payload.dataset.rows.find((row) => row.recordId === submission.citation.recordId) ?? null,
         citation: submission.citation
       });
+    } else if (attempt.privateInstance.kind === 'DOCUMENT_RETRIEVAL' && submission.kind === 'DOCUMENT_RETRIEVAL') {
+      assert(submission.answer.length <= 2_000 && submission.reasoning.length <= 4_000 && submission.citations.length <= 6,
+        400, 'ARENA_SUBMISSION_TOO_LARGE', 'Answer, citations, or reasoning exceed the document-retrieval limits');
+      const instance = attempt.privateInstance;
+      const answerCorrect = normalizeArenaText(submission.answer) === normalizeArenaText(instance.expectedAnswer);
+      const citationKey = (citation: { documentId: string; chunkId: string }) => `${citation.documentId}:${citation.chunkId}`;
+      const submittedCitationKeys = new Set(submission.citations.map(citationKey));
+      const citationCorrect = instance.expectedCitations.every((citation) => submittedCitationKeys.has(citationKey(citation)));
+      const searchPerformed = instance.calls.some((call) => call.ok && call.tool === 'search_corpus');
+      const evidenceRead = instance.expectedCitations.every((citation) => instance.openedChunkIds.includes(citation.chunkId));
+      const reasoningPresent = submission.reasoning.trim().length >= 10;
+      checks = [
+        { code: 'ANSWER_MATCH', passed: answerCorrect, detail: answerCorrect ? 'Answer matches the private evidence key.' : 'Answer does not match the private evidence key.' },
+        { code: 'REQUIRED_CITATIONS', passed: citationCorrect, detail: citationCorrect ? 'Both required source chunks were cited.' : 'Citations must include the baseline and the signed case exception.' },
+        { code: 'RETRIEVAL_TRACE', passed: searchPerformed && evidenceRead, detail: searchPerformed && evidenceRead ? 'Required evidence was searched and opened through this attempt.' : 'Search and read the required source chunks before submitting.' },
+        { code: 'REASONING_PRESENT', passed: reasoningPresent, detail: reasoningPresent ? 'A bounded evidence explanation was supplied.' : 'Evidence explanation is missing or too short.' }
+      ];
+      deterministicScore = (answerCorrect ? 55 : 0) + (citationCorrect ? 25 : 0) + (searchPerformed && evidenceRead ? 10 : 0) + (reasoningPresent ? 10 : 0);
+      criticalChecksPassed = answerCorrect && citationCorrect && searchPerformed && evidenceRead;
+      artifactHash = instance.payload.corpus.contentHash;
+      judgeTask = instance.payload.question.prompt;
+      judgeEvidence = JSON.stringify({
+        citations: submission.citations,
+        sourceChunks: instance.chunks.filter((chunk) => submission.citations.some((citation) => citation.documentId === chunk.documentId && citation.chunkId === chunk.chunkId))
+      });
     } else if (attempt.privateInstance.kind === 'CODE_REPAIR' && submission.kind === 'CODE_REPAIR') {
       assert(submission.reasoning.length <= 4_000, 400, 'ARENA_SUBMISSION_TOO_LARGE', 'Code reasoning exceeds 4000 characters');
       let run;
@@ -826,7 +851,7 @@ export class DemoStore {
     assert(attempt, 404, 'ARENA_ATTEMPT_NOT_FOUND', 'Arena attempt not found');
     assert(attempt.status === 'STARTED', 409, 'ARENA_ATTEMPT_FINALIZED', 'This arena attempt already has a final result');
     assert(sha256(attemptToken) === attempt.tokenHash, 403, 'ARENA_TOKEN_INVALID', 'The private attempt token is invalid');
-    assert(attempt.privateInstance.kind === 'TOOL_WORKFLOW', 409, 'ARENA_TOOL_KIND_INVALID', 'This attempt does not expose MCP tools');
+    assert(attempt.privateInstance.kind === 'TOOL_WORKFLOW' || attempt.privateInstance.kind === 'DOCUMENT_RETRIEVAL', 409, 'ARENA_TOOL_KIND_INVALID', 'This attempt does not expose MCP tools');
     const instance = attempt.privateInstance;
     const started = Date.now();
     const inputHash = sha256(JSON.stringify(args ?? {}));
@@ -844,6 +869,40 @@ export class DemoStore {
       return output;
     };
     try {
+      if (instance.kind === 'DOCUMENT_RETRIEVAL') {
+        if (tool === 'search_corpus') {
+          const query = String(args?.query ?? '').trim();
+          assert(query.length >= 2 && query.length <= 240, 400, 'ARENA_SEARCH_QUERY_INVALID', 'search_corpus requires a query between 2 and 240 characters');
+          const requested = Number(args?.maxResults ?? 4);
+          assert(Number.isInteger(requested) && requested >= 1 && requested <= 6, 400, 'ARENA_SEARCH_LIMIT_INVALID', 'maxResults must be an integer between 1 and 6');
+          const terms = normalizeArenaText(query).split(' ').filter((term) => term.length >= 2);
+          const matches = instance.chunks
+            .map((chunk) => {
+              const source = normalizeArenaText(`${chunk.title} ${chunk.text}`);
+              return { chunk, score: terms.reduce((total, term) => total + (source.includes(term) ? 1 : 0), 0) };
+            })
+            .filter((candidate) => candidate.score > 0)
+            .sort((left, right) => right.score - left.score || left.chunk.chunkId.localeCompare(right.chunk.chunkId))
+            .slice(0, requested)
+            .map(({ chunk }) => ({
+              documentId: chunk.documentId,
+              chunkId: chunk.chunkId,
+              title: chunk.title,
+              excerpt: chunk.text.length > 180 ? `${chunk.text.slice(0, 177)}...` : chunk.text
+            }));
+          instance.discoveredChunkIds = [...new Set([...instance.discoveredChunkIds, ...matches.map((match) => match.chunkId)])];
+          return record(true, { matches, searchedAt: nowSeconds(), corpus: instance.payload.corpus.id });
+        }
+        if (tool === 'read_evidence') {
+          const chunkId = String(args?.chunkId ?? '').trim();
+          assert(instance.discoveredChunkIds.includes(chunkId), 409, 'ARENA_EVIDENCE_NOT_DISCOVERED', 'Search for an evidence chunk before reading it');
+          const chunk = instance.chunks.find((candidate) => candidate.chunkId === chunkId);
+          assert(chunk, 404, 'ARENA_EVIDENCE_NOT_FOUND', 'Evidence chunk was not found');
+          if (!instance.openedChunkIds.includes(chunkId)) instance.openedChunkIds.push(chunkId);
+          return record(true, { ...structuredClone(chunk), citation: { documentId: chunk.documentId, chunkId: chunk.chunkId } });
+        }
+        throw new ApiProblem(404, 'ARENA_TOOL_NOT_FOUND', `Unknown document-retrieval tool ${tool}`);
+      }
       if (tool === 'fetch_orders') {
         return record(true, { rows: structuredClone(instance.sourceRows), sourceReceipt: instance.sourceReceipt });
       }
@@ -894,6 +953,7 @@ export class DemoStore {
         averageScore,
         trackScores: {
           GROUNDED_QA: this.averageArenaTrack(attempts, 'GROUNDED_QA'),
+          DOCUMENT_RETRIEVAL: this.averageArenaTrack(attempts, 'DOCUMENT_RETRIEVAL'),
           CODE_REPAIR: this.averageArenaTrack(attempts, 'CODE_REPAIR'),
           TOOL_WORKFLOW: this.averageArenaTrack(attempts, 'TOOL_WORKFLOW')
         }

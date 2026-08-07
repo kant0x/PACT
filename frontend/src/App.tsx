@@ -74,6 +74,13 @@ import { config } from './wagmi';
 
 const wait = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 
+const trainingQuestMeta = (kind: ArenaTemplate['kind']) => {
+  if (kind === 'DOCUMENT_RETRIEVAL') return { level: '03', label: 'DOCUMENT INTELLIGENCE', cue: 'RETRIEVE · RECONCILE · CITE' };
+  if (kind === 'CODE_REPAIR') return { level: '02', label: 'SYSTEMS REPAIR', cue: 'PATCH · TEST · VERIFY' };
+  if (kind === 'TOOL_WORKFLOW') return { level: '02', label: 'TOOL OPERATIONS', cue: 'FETCH · TRANSFORM · PROVE' };
+  return { level: '01', label: 'GROUNDED REASONING', cue: 'ANALYZE · COMPUTE · CITE' };
+};
+
 const isHttpCallbackUrl = (value: string) => {
   try {
     const url = new URL(value);
@@ -976,6 +983,13 @@ function ArenaAttemptModal({
   const [answer, setAnswer] = useState('');
   const [recordId, setRecordId] = useState('');
   const [field, setField] = useState('amount');
+  const [documentAnswer, setDocumentAnswer] = useState('');
+  const [documentCitations, setDocumentCitations] = useState([
+    { documentId: '', chunkId: '' },
+    { documentId: '', chunkId: '' }
+  ]);
+  const [corpusQuery, setCorpusQuery] = useState('');
+  const [corpusMatches, setCorpusMatches] = useState<Array<{ documentId: string; chunkId: string; title: string; excerpt: string }>>([]);
   const [code, setCode] = useState(() => payload.kind === 'CODE_REPAIR' ? payload.files[payload.entrypoint] ?? '' : '');
   const [artifactHash, setArtifactHash] = useState('');
   const [reasoning, setReasoning] = useState('');
@@ -994,6 +1008,10 @@ function ArenaAttemptModal({
       void onSubmit({ kind: 'GROUNDED_QA', answer, citation: { recordId, field }, reasoning }, consentToTraining);
       return;
     }
+    if (payload.kind === 'DOCUMENT_RETRIEVAL') {
+      void onSubmit({ kind: 'DOCUMENT_RETRIEVAL', answer: documentAnswer, citations: documentCitations, reasoning }, consentToTraining);
+      return;
+    }
     if (payload.kind === 'CODE_REPAIR') {
       void onSubmit({ kind: 'CODE_REPAIR', files: { ...payload.files, [payload.entrypoint]: code }, reasoning }, consentToTraining);
       return;
@@ -1006,6 +1024,16 @@ function ArenaAttemptModal({
     try {
       const output = await onToolCall(tool, input);
       setToolLog((current) => [...current, { tool, output }]);
+      if (tool === 'search_corpus' && Array.isArray(output.matches)) {
+        setCorpusMatches(output.matches.filter((match): match is { documentId: string; chunkId: string; title: string; excerpt: string } =>
+          typeof match === 'object'
+          && match !== null
+          && typeof (match as Record<string, unknown>).documentId === 'string'
+          && typeof (match as Record<string, unknown>).chunkId === 'string'
+          && typeof (match as Record<string, unknown>).title === 'string'
+          && typeof (match as Record<string, unknown>).excerpt === 'string'
+        ));
+      }
       if (typeof output.sourceReceipt === 'string') setSourceReceipt(output.sourceReceipt);
       if (typeof output.transformReceipt === 'string') setTransformReceipt(output.transformReceipt);
       if (typeof output.artifactHash === 'string') setArtifactHash(output.artifactHash);
@@ -1016,6 +1044,8 @@ function ArenaAttemptModal({
 
   const kindLabel = payload.kind === 'GROUNDED_QA'
     ? 'SOURCE-VERIFIED DATA'
+    : payload.kind === 'DOCUMENT_RETRIEVAL'
+      ? 'PRIVATE CORPUS RETRIEVAL'
     : payload.kind === 'CODE_REPAIR'
       ? 'SANDBOXED CODE REPAIR'
       : 'ATTEMPT-SCOPED TOOL WORKFLOW';
@@ -1046,13 +1076,13 @@ function ArenaAttemptModal({
           submit();
         }}>
           <section className="arena-challenge-head">
-            <div><span>{kindLabel}</span><h3>{payload.kind === 'GROUNDED_QA' ? payload.question.prompt : payload.kind === 'CODE_REPAIR' ? `Repair ${payload.entrypoint}` : payload.goal}</h3></div>
+            <div><span>{kindLabel}</span><h3>{payload.kind === 'GROUNDED_QA' || payload.kind === 'DOCUMENT_RETRIEVAL' ? payload.question.prompt : payload.kind === 'CODE_REPAIR' ? `Repair ${payload.entrypoint}` : payload.goal}</h3></div>
             <dl><div><dt>Generator</dt><dd>{challenge.generatorVersion}</dd></div><div><dt>Commitment</dt><dd>{challenge.instanceCommitment.slice(0, 24)}...</dd></div></dl>
           </section>
           <section className="arena-document arena-document--legacy">
             <dl><div><dt>Issuer</dt><dd>PACT generator</dd></div><div><dt>UTC day</dt><dd>{challenge.dayKey}</dd></div><div><dt>Receipt</dt><dd>{challenge.instanceCommitment.slice(0, 22)}…</dd></div></dl>
             <div className="arena-document__legacy-copy">This challenge payload is sealed to this attempt. Use the source data above and complete the answer sheet below.</div>
-            <p className="arena-document__notice">{payload.kind === 'GROUNDED_QA' ? payload.dataset.notice : payload.kind === 'CODE_REPAIR' ? 'The submission runs in a network-isolated sandbox. Hidden tests stay on the server.' : payload.goal}</p>
+            <p className="arena-document__notice">{payload.kind === 'GROUNDED_QA' ? payload.dataset.notice : payload.kind === 'DOCUMENT_RETRIEVAL' ? payload.corpus.notice : payload.kind === 'CODE_REPAIR' ? 'The submission runs in a network-isolated sandbox. Hidden tests stay on the server.' : payload.goal}</p>
           </section>
           {payload.kind === 'GROUNDED_QA' ? <div className="arena-workspace arena-workspace--grounded">
             <section className="arena-dataset">
@@ -1064,6 +1094,32 @@ function ArenaAttemptModal({
               <label><span>Final answer</span><input required inputMode="decimal" value={answer} onChange={(event) => setAnswer(event.target.value)} /></label>
               <div className="field-row"><label><span>Evidence recordId</span><input required value={recordId} onChange={(event) => setRecordId(event.target.value)} /></label><label><span>Evidence field</span><input required value={field} onChange={(event) => setField(event.target.value)} /></label></div>
               <label><span>Reasoning</span><textarea required minLength={10} maxLength={4000} value={reasoning} onChange={(event) => setReasoning(event.target.value)} placeholder="Explain how the cited row supports the exact answer." /></label>
+            </section>
+          </div> : null}
+
+          {payload.kind === 'DOCUMENT_RETRIEVAL' ? <div className="arena-workspace arena-workspace--corpus">
+            <section className="arena-corpus-panel">
+              <header><div><span>SERVER-SIDE DOCUMENT INDEX</span><strong>{payload.corpus.name}</strong></div><small>{payload.corpus.documentCount} docs / {payload.corpus.chunkCount} chunks</small></header>
+              <div className="arena-corpus-search">
+                <label><span>Search private corpus</span><input required value={corpusQuery} onChange={(event) => setCorpusQuery(event.target.value)} placeholder="policy, case ID, exception…" /></label>
+                <button className="button button--primary" type="button" disabled={toolBusy !== null || corpusQuery.trim().length < 2} onClick={() => void callTool('search_corpus', { query: corpusQuery, maxResults: 6 })}>{toolBusy === 'search_corpus' ? <RefreshCcw className="spin" /> : <Zap />} Search</button>
+              </div>
+              <div className="arena-corpus-results">
+                {corpusMatches.length ? corpusMatches.map((match) => <article key={match.chunkId}>
+                  <div><span>{match.documentId}</span><strong>{match.title}</strong><p>{match.excerpt}</p><small>{match.chunkId}</small></div>
+                  <button className="button button--outline" type="button" disabled={toolBusy !== null} onClick={() => void callTool('read_evidence', { chunkId: match.chunkId })}>{toolBusy === 'read_evidence' ? <RefreshCcw className="spin" /> : 'Read'}</button>
+                </article>) : <p className="arena-corpus-empty">Search is attempt-scoped. Results expose an excerpt first; open the relevant evidence before citing it.</p>}
+              </div>
+              {toolLog.filter((entry) => entry.tool === 'read_evidence').length ? <div className="arena-corpus-read-log">{toolLog.filter((entry) => entry.tool === 'read_evidence').map((entry, index) => <pre key={`${entry.tool}-${index}`}>{JSON.stringify(entry.output, null, 2)}</pre>)}</div> : null}
+            </section>
+            <section className="arena-answer-panel">
+              <label><span>Final answer</span><input required value={documentAnswer} onChange={(event) => setDocumentAnswer(event.target.value)} placeholder="For example: 24 hours" /></label>
+              <div className="arena-citation-stack">
+                <span>Required citations ({payload.question.requiredCitations})</span>
+                {documentCitations.map((citation, index) => <div className="field-row" key={index}><label><span>Document ID</span><input required value={citation.documentId} onChange={(event) => setDocumentCitations((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, documentId: event.target.value } : item))} /></label><label><span>Chunk ID</span><input required value={citation.chunkId} onChange={(event) => setDocumentCitations((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, chunkId: event.target.value } : item))} /></label></div>)}
+              </div>
+              <label><span>Evidence reasoning</span><textarea required minLength={10} maxLength={4000} value={reasoning} onChange={(event) => setReasoning(event.target.value)} placeholder="Explain why the cited case exception controls over the baseline policy." /></label>
+              <div className="arena-mcp-note"><Server /><span><strong>External agent setup</strong>Use <code>search_corpus</code> then <code>read_evidence</code> through the attempt MCP endpoint. The corpus never enters the prompt.</span></div>
             </section>
           </div> : null}
 
@@ -2697,19 +2753,22 @@ export default function App() {
                     templates.length ? (
                       <>
                       <section className="task-grid">
-                        {templates.map((template) => (
-                          <article className="task-card task-card--training reveal" key={template.id}>
+                        {templates.map((template) => {
+                          const quest = trainingQuestMeta(template.kind);
+                          return (
+                          <article className="task-card task-card--training reveal" data-level={quest.level} key={template.id}>
                             <div className="task-card__content">
                               <header className="task-card__header">
-                                <span className="status-pill status-pill--neutral">TRAINING</span>
-                                <span className="mono">TRACK/{template.kind.replaceAll('_', '-')}</span>
+                                <span className="status-pill status-pill--neutral">LEVEL {quest.level}</span>
+                                <span className="mono">{quest.label}</span>
                               </header>
+                              <div className="training-quest-cue" aria-hidden="true"><span>PACT / AGENT QUEST</span><strong>{quest.cue}</strong></div>
                               <h3>{template.title}</h3>
                               <p>{template.description}</p>
                               <footer className="training-task-footer">
                               <dl className="task-card__facts">
                                 <div><dt>Reward</dt><dd>{template.rewardPoints} <small>PTS</small></dd></div>
-                                <div><dt>{t('Runs')}</dt><dd>{template.completedRuns} <small>/ {template.completionLimit}</small></dd></div>
+                                <div><dt>Brief</dt><dd>{template.expectedMinutes} <small>MIN</small></dd></div>
                               </dl>
                               <span className={template.remainingRuns > 0 ? 'training-task-access' : 'training-task-access training-task-access--full'}>{template.remainingRuns > 0 ? t('OPEN') : t('FULL')}</span>
                               </footer>
@@ -2721,7 +2780,8 @@ export default function App() {
                               </div>
                             </div>
                           </article>
-                        ))}
+                          );
+                        })}
                       </section>
                       </>
                     ) : <EmptyState icon={<Boxes />} title="No training templates" copy="Wait for the platform to add training tasks." />

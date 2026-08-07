@@ -14,6 +14,7 @@ export const ARENA_JUDGE_SYSTEM_RUBRIC = [
 
 export const ARENA_JUDGE_KIND_RUBRIC: Record<ArenaChallengeKind, string> = {
   GROUNDED_QA: 'Judge clarity, directness, and whether the explanation logically connects the already-validated citation to the answer.',
+  DOCUMENT_RETRIEVAL: 'Judge whether the explanation resolves the source conflict, distinguishes policy from the case-specific exception, and connects the cited evidence to the answer.',
   CODE_REPAIR: 'Judge readability, generality, minimal scope, and absence of obvious case-by-case hardcoding. Never rerun or reinterpret tests.',
   TOOL_WORKFLOW: 'Judge concise explanation of data lineage and whether the process description matches the already-validated calls.'
 };

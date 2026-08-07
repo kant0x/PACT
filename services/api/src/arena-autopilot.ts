@@ -260,6 +260,31 @@ export class ArenaAutopilot {
         reasoning: 'Filtered to settled records, calculated net exposure from the supplied fields, and cited the highest derived result.',
       };
     }
+    if (challenge.payload.kind === 'DOCUMENT_RETRIEVAL') {
+      const searched = this.options.store.executeArenaTool(challenge.attemptId, challenge.attemptToken, 'search_corpus', {
+        query: 'recovery window baseline policy approved exception',
+        maxResults: 6
+      }) as { matches?: Array<{ chunkId: string }> };
+      const evidence = (searched.matches ?? []).map((match) => this.options.store.executeArenaTool(
+        challenge.attemptId,
+        challenge.attemptToken,
+        'read_evidence',
+        { chunkId: match.chunkId }
+      ) as { documentId: string; chunkId: string; text: string });
+      const policy = evidence.find((chunk) => /baseline recovery window/i.test(chunk.text));
+      const exception = evidence.find((chunk) => /final recovery window/i.test(chunk.text));
+      const answer = exception?.text.match(/final recovery window to (\d+ hours)/i)?.[1];
+      if (!policy || !exception || !answer) throw new Error('Document-retrieval challenge did not return the required evidence');
+      return {
+        kind: 'DOCUMENT_RETRIEVAL',
+        answer,
+        citations: [
+          { documentId: policy.documentId, chunkId: policy.chunkId },
+          { documentId: exception.documentId, chunkId: exception.chunkId }
+        ],
+        reasoning: 'Retrieved the governing baseline and the signed case-specific exception, then applied the approved exception because it supersedes the general policy for this case.'
+      };
+    }
     if (challenge.payload.kind === 'CODE_REPAIR') {
       return {
         kind: 'CODE_REPAIR',

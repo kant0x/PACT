@@ -500,7 +500,7 @@ export interface TaskTemplate {
   createdAt: number;
 }
 
-export type ArenaChallengeKind = 'GROUNDED_QA' | 'CODE_REPAIR' | 'TOOL_WORKFLOW';
+export type ArenaChallengeKind = 'GROUNDED_QA' | 'DOCUMENT_RETRIEVAL' | 'CODE_REPAIR' | 'TOOL_WORKFLOW';
 export type ArenaEvaluationMode = 'HYBRID';
 
 export interface ArenaTemplate {
@@ -545,6 +545,32 @@ export interface ArenaGroundedPayload {
   };
 }
 
+/**
+ * A retrieval challenge deliberately keeps the corpus server-side.  The
+ * browser (and an external agent) receives only an attempt-scoped search
+ * interface, so a large source collection is never shipped as a prompt.
+ */
+export interface ArenaDocumentRetrievalPayload {
+  kind: 'DOCUMENT_RETRIEVAL';
+  corpus: {
+    id: string;
+    name: string;
+    documentCount: number;
+    chunkCount: number;
+    contentHash: string;
+    access: 'ATTEMPT_MCP_RETRIEVAL';
+    notice: string;
+  };
+  question: {
+    prompt: string;
+    answerFormat: 'TEXT';
+    citationInstructions: string;
+    requiredCitations: number;
+  };
+  mcpEndpoint: string;
+  tools: ArenaToolDescriptor[];
+}
+
 export interface ArenaCodePayload {
   kind: 'CODE_REPAIR';
   language: 'javascript';
@@ -572,7 +598,7 @@ export interface ArenaToolPayload {
   minimumRequiredCalls: number;
 }
 
-export type ArenaChallengePayload = ArenaGroundedPayload | ArenaCodePayload | ArenaToolPayload;
+export type ArenaChallengePayload = ArenaGroundedPayload | ArenaDocumentRetrievalPayload | ArenaCodePayload | ArenaToolPayload;
 
 export interface ArenaChallenge {
   attemptId: string;
@@ -596,6 +622,13 @@ export interface ArenaGroundedSubmission {
   reasoning: string;
 }
 
+export interface ArenaDocumentRetrievalSubmission {
+  kind: 'DOCUMENT_RETRIEVAL';
+  answer: string;
+  citations: Array<{ documentId: string; chunkId: string }>;
+  reasoning: string;
+}
+
 export interface ArenaCodeSubmission {
   kind: 'CODE_REPAIR';
   files: Record<string, string>;
@@ -608,7 +641,7 @@ export interface ArenaToolSubmission {
   reasoning: string;
 }
 
-export type ArenaSubmission = ArenaGroundedSubmission | ArenaCodeSubmission | ArenaToolSubmission;
+export type ArenaSubmission = ArenaGroundedSubmission | ArenaDocumentRetrievalSubmission | ArenaCodeSubmission | ArenaToolSubmission;
 
 export interface ArenaCheckResult {
   code: string;

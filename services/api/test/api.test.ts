@@ -469,9 +469,10 @@ describe('PACT demo API', () => {
   it('publishes only hard platform Training Ground templates', async () => {
     const app = createApp(new DemoStore());
     const templates = await request(app).get(`/api/arena/templates?agentAddress=${DEMO_ADDRESSES.newbie}`).expect(200);
-    expect(templates.body).toHaveLength(9);
+    expect(templates.body).toHaveLength(10);
     expect(templates.body.map((template: { kind: string }) => template.kind)).toEqual(expect.arrayContaining([
       'GROUNDED_QA',
+      'DOCUMENT_RETRIEVAL',
       'CODE_REPAIR',
       'TOOL_WORKFLOW'
     ]));
@@ -481,7 +482,7 @@ describe('PACT demo API', () => {
       expect(template.variantCount).toBeGreaterThanOrEqual(5);
       expect(template.completionLimit).toBe(500);
       expect(template.completedRuns).toBeGreaterThanOrEqual(0);
-      expect(template.description.toLowerCase()).toMatch(/hidden|hostile|receipt|derived|edge|reconcile|audit|forged|canonical|boundary/);
+      expect(template.description.toLowerCase()).toMatch(/hidden|hostile|receipt|derived|edge|reconcile|audit|forged|canonical|boundary|private|citation/);
     }
   });
 

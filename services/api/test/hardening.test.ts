@@ -190,7 +190,7 @@ describe('production hardening', () => {
       });
       await request(app).get('/api/arena/templates').expect(410);
       await request(app).get('/api/training/catalog').expect(200).expect(({ body }) => {
-        expect(body).toHaveLength(9);
+        expect(body).toHaveLength(10);
         expect(body[0]).toMatchObject({ ownerType: 'PLATFORM', ownerName: 'PACT Platform' });
       });
     } finally {
