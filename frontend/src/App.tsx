@@ -199,6 +199,7 @@ function LanguageSwitcher() {
 }
 
 type View = 'overview' | 'protocol' | 'dapp' | 'marketplace' | 'leaderboard' | 'agents' | 'disputes';
+type CabinetSection = 'overview' | 'agents' | 'orders' | 'assignments';
 type TaskCategory = 'CREATIVE' | 'SECURITY' | 'RESEARCH' | 'ENGINEERING';
 type MarketCategory = 'ALL' | TaskCategory | 'TRAINING';
 
@@ -1806,7 +1807,6 @@ function CabinetAgentCard({
         <span>PUBLIC DIRECTIONS / TASK MATCHING</span>
         <div>{capabilityLabels.length ? capabilityLabels.map((label) => <b key={label}>{label}</b>) : <small>Manifest pending</small>}</div>
       </div>
-      <p className="cabinet-agent-card__note">The selected direction tells PACT which work may match this profile. It does not train the model. PACT stores execution history and scores; learning or memory belongs to the connected runtime.</p>
       <div className="cabinet-agent-card__actions"><button className="button button--outline button--small" type="button" onClick={() => onFund(agent)}><WalletCards /> Fund USDC</button><button className="button button--primary button--small" type="button" onClick={() => onToggleTraining(agent, !automation?.enabled)}><Radio /> {automation?.enabled ? 'Pause self-training' : 'Start self-training'}</button></div>
     </article>
   );
@@ -1848,6 +1848,7 @@ function DappDashboard({
   onDismissCreatedAgent?: () => void;
 }) {
   const { t } = useLocale();
+  const [cabinetSection, setCabinetSection] = useState<CabinetSection>('overview');
   const connected = Boolean(connectedAddress);
   const controlledAgents = snapshot.agents.filter((agent) => connectedAddress && agent.wallet?.controllerAddress.toLowerCase() === connectedAddress.toLowerCase());
   const recentlyCreatedAgent = createdAgentNotice
@@ -1872,77 +1873,65 @@ function DappDashboard({
   const openOrders = snapshot.tasks.filter((task) => task.status === 'OPEN');
   const deliverablesByTask = new Map(snapshot.deliverables.map((deliverable) => [deliverable.taskId, deliverable]));
 
+  const cabinetTabs: Array<{ id: CabinetSection; label: string; count?: number }> = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'agents', label: 'Your agents', count: myAgents.length },
+    { id: 'orders', label: 'My work orders', count: myOrders.length },
+    { id: 'assignments', label: 'My agent assignments', count: myAssignments.length },
+  ];
+
   return (
-    <div className={`view-stack dapp-page ${connected && !myOrders.length ? 'dapp-page--empty' : ''}`}>
-      <section className="dapp-hero reveal">
-        <div className="dapp-hero__copy">
-          <div className="eyebrow">{t('Client dashboard')}</div>
-          <h1>{connected ? t('Run work from one wallet.') : t('Connect Wallet')}</h1>
-          <p>{connected ? 'Publish funded work, create agent profiles, hire agents, and approve results from this wallet.' : t('Connect a wallet to publish work, create an agent profile, and manage private records in one place.')}</p>
-          {!connected ? <button className="button button--primary" onClick={onConnect} type="button"><WalletCards /> {t('Connect Wallet')}</button> : <div className="dapp-identity"><span className="live-dot" /><span>{t('Your wallet')}</span><strong>{shortAddress(connectedAddress!)}</strong></div>}
+    <div className="view-stack dapp-page">
+      <section className="cabinet-header reveal">
+        <div>
+          <div className="eyebrow">YOUR PACT WORKSPACE</div>
+          <h1>Cabinet</h1>
+          <p>{connected ? 'Manage your agents and work from one wallet.' : t('Connect a wallet to publish work, create an agent profile, and manage private records in one place.')}</p>
         </div>
-        <aside className="dapp-hero__aside">
-          <div className="dapp-hero__status">
-            <span>{t('CLIENT STATUS')}</span>
-            <strong>{connected ? t('Connected') : t('Connect Wallet')}</strong>
-            <small>{connected ? `${myOrders.length} ${t(myOrders.length === 1 ? 'work order in your cabinet' : 'Orders in your cabinet')}` : t('Public task information only')}</small>
-          </div>
-          {connected ? <div className="dapp-hero__stats" aria-label={t('CLIENT STATUS')}>
-            <div><strong>{myOrders.length}</strong><span>{t('My work orders')}</span></div>
-            <div><strong>{activeOrders.length}</strong><span>{t('IN PROGRESS')}</span></div>
-          </div> : null}
-        </aside>
+        <div className="cabinet-header__actions">
+          {connected ? <div className="dapp-identity"><span className="live-dot" /><span>{t('Your wallet')}</span><strong>{shortAddress(connectedAddress!)}</strong></div> : <button className="button button--primary" onClick={onConnect} type="button"><WalletCards /> {t('Connect Wallet')}</button>}
+          {connected ? <><button className="button button--outline button--small" onClick={onCreateAgent} type="button"><Bot /> Create an agent</button><button className="button button--primary button--small" onClick={onPublish} type="button"><Plus /> Create task</button></> : null}
+        </div>
       </section>
 
       {createdAgentNotice ? (
-        <section className="agent-created-banner reveal" aria-live="polite">
+        <section className="agent-created-banner agent-created-banner--compact reveal" aria-live="polite">
           <div className="agent-created-banner__icon"><BadgeCheck /></div>
           <div className="agent-created-banner__copy">
-            <div className="eyebrow">AGENT CREATED / CABINET</div>
-            <h2>{createdAgentNotice.displayName} is now registered</h2>
-            <p>The Circle smart wallet was created and linked to this controller. The profile below is the record now visible in your Cabinet; connect a runtime when you are ready to execute work.</p>
+            <div className="eyebrow">AGENT CREATED</div>
+            <strong>{createdAgentNotice.displayName} is now registered</strong>
             <code>{createdAgentNotice.agentAddress}</code>
           </div>
           <button className="icon-button" type="button" onClick={onDismissCreatedAgent} aria-label="Dismiss agent created notice"><X /></button>
         </section>
       ) : null}
 
-      <section className="role-launcher reveal">
-        <header className="panel-heading panel-heading--wide">
-          <div><div className="eyebrow">{t('Quick start')}</div><h2>{t('What do you want to do?')}</h2></div>
-          <p className="role-launcher__note">{t('Run work from one wallet.')}</p>
-        </header>
-        <div className="role-launcher__grid">
-          <article className="role-launch-card role-launch-card--creator">
-            <span className="role-launch-card__number">01 / {t('CLIENT')}</span><Users />
-            <h3>{t('Create task')}</h3>
-            <p>{t('Fund a brief, set acceptance criteria, and invite or hire an agent to deliver it.')}</p>
-            <button className="button button--primary" onClick={onPublish} type="button"><Plus /> {t('Create task')}</button>
-          </article>
-          <article className="role-launch-card role-launch-card--developer">
-            <span className="role-launch-card__number">02 / {t('FOR AGENTS')}</span><Bot />
-            <h3>{t('Create your agent')}</h3>
-            <p>{t('Create the Circle wallet identity, declare skills, and set safe limits for eligible work.')}</p>
-            <button className="button button--outline" onClick={onCreateAgent} type="button"><Bot /> {t('Create an agent')}</button>
-          </article>
-        </div>
-      </section>
-
       {connected ? (
-        <>
-          <section className="cabinet-agents section-block reveal" aria-labelledby="cabinet-agents-title">
-            <header className="panel-heading panel-heading--wide">
-              <div><div className="eyebrow">AGENT IDENTITIES / YOUR CABINET</div><h2 id="cabinet-agents-title">Your agents</h2></div>
-              <div className="cabinet-agents__header-note"><strong>{myAgents.length}</strong><span>{myAgents.length === 1 ? 'registered profile' : 'registered profiles'}</span></div>
-            </header>
-            {myAgents.length ? <div className="cabinet-agents__grid">{myAgents.map((agent) => <CabinetAgentCard key={agent.agentAddress} agent={agent} automation={snapshot.agentAutomation?.[agent.agentAddress.toLowerCase()]} highlighted={agent.agentAddress.toLowerCase() === createdAgentNotice?.agentAddress.toLowerCase()} onFund={onFundAgent} onToggleTraining={onToggleTraining} />)}</div> : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title="No agent profiles in this cabinet yet" copy="Create an agent to see its Circle wallet address, public directions, runtime status, and reputation record here." /></div>}
-            <div className="agent-learning-note agent-learning-note--cabinet"><Radio /><div><strong>Learning boundary</strong><span>PACT does not self-train the model. It records receipts, outcomes, Trust Score, and Platform Points. Any memory or learning happens only inside your connected runtime if you build it.</span></div></div>
-          </section>
-          <section className="dapp-quick-grid reveal">
-            <button className="dapp-quick-card" onClick={() => onView('dapp')} type="button"><span><Boxes /></span><strong>{t('My work orders')}</strong><small>{myOrders.length} {t('owned')} · {activeOrders.length} {t('active')}</small><ArrowRight /></button>
-            <button className="dapp-quick-card" onClick={() => onView('marketplace')} type="button"><span><Zap /></span><strong>{t('Open task board')}</strong><small>{openOrders.length} {t(openOrders.length === 1 ? 'open order ready for an eligible agent' : 'orders ready for an eligible agent')}</small><ArrowRight /></button>
-          </section>
-          <section className="client-orders section-block reveal" aria-labelledby="client-orders-title">
+        <section className="cabinet-workspace reveal" aria-label="Cabinet workspace">
+          <nav className="cabinet-tabs" aria-label="Cabinet sections">
+            {cabinetTabs.map((tab) => <button className={cabinetSection === tab.id ? 'cabinet-tab cabinet-tab--active' : 'cabinet-tab'} type="button" key={tab.id} onClick={() => setCabinetSection(tab.id)} aria-pressed={cabinetSection === tab.id}><span>{tab.label}</span>{typeof tab.count === 'number' ? <b>{tab.count}</b> : null}</button>)}
+          </nav>
+
+          {cabinetSection === 'overview' ? (
+            <section className="cabinet-overview" aria-labelledby="cabinet-overview-title">
+              <header className="cabinet-section-header"><div><div className="eyebrow">MAIN SUMMARY</div><h2 id="cabinet-overview-title">Overview</h2></div><button className="button button--outline button--small" onClick={() => onView('marketplace')} type="button"><Zap /> Open task board <span>{openOrders.length}</span></button></header>
+              <div className="cabinet-overview__metrics">
+                <button type="button" onClick={() => setCabinetSection('agents')}><span>Your agents</span><strong>{myAgents.length}</strong><ArrowRight /></button>
+                <button type="button" onClick={() => setCabinetSection('orders')}><span>My work orders</span><strong>{myOrders.length}</strong><ArrowRight /></button>
+                <button type="button" onClick={() => setCabinetSection('orders')}><span>In progress</span><strong>{activeOrders.length}</strong><ArrowRight /></button>
+                <button type="button" onClick={() => setCabinetSection('assignments')}><span>My agent assignments</span><strong>{myAssignments.length}</strong><ArrowRight /></button>
+              </div>
+              {!myAgents.length && !myOrders.length ? <div className="cabinet-overview__empty"><span>Get started</span><strong>Create an agent or publish a work order.</strong><div><button className="button button--outline button--small" onClick={onCreateAgent} type="button"><Bot /> Create an agent</button><button className="button button--primary button--small" onClick={onPublish} type="button"><Plus /> Create task</button></div></div> : null}
+            </section>
+          ) : null}
+
+          {cabinetSection === 'agents' ? (
+            <section className="cabinet-agents cabinet-section-panel" aria-labelledby="cabinet-agents-title">
+              <header className="cabinet-section-header"><div><div className="eyebrow">AGENT IDENTITIES</div><h2 id="cabinet-agents-title">Your agents</h2></div><button className="button button--primary button--small" onClick={onCreateAgent} type="button"><Bot /> Create an agent</button></header>
+              {myAgents.length ? <div className="cabinet-agents__grid">{myAgents.map((agent) => <CabinetAgentCard key={agent.agentAddress} agent={agent} automation={snapshot.agentAutomation?.[agent.agentAddress.toLowerCase()]} highlighted={agent.agentAddress.toLowerCase() === createdAgentNotice?.agentAddress.toLowerCase()} onFund={onFundAgent} onToggleTraining={onToggleTraining} />)}</div> : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title="No agent profiles in this cabinet yet" copy="Create an agent to display its wallet and status here." /></div>}
+            </section>
+          ) : null}
+          {cabinetSection === 'orders' ? <section className="client-orders cabinet-section-panel" aria-labelledby="client-orders-title">
             <header className="panel-heading panel-heading--wide">
               <div><div className="eyebrow">{t('Wallet-owned work')}</div><h2 id="client-orders-title">{t('My work orders')}</h2></div>
               <button className="button button--outline button--small" onClick={onPublish} type="button"><Plus /> Publish a work order</button>
@@ -1969,8 +1958,8 @@ function DappDashboard({
                 })}
               </div>
             ) : <div className="dapp-empty-state"><EmptyState icon={<Boxes />} title={t('No work orders yet')} copy={t('Fund a brief, set acceptance criteria, and invite or hire an agent to deliver it.')} /></div>}
-          </section>
-          <section className="client-orders section-block reveal" aria-labelledby="agent-assignments-title">
+          </section> : null}
+          {cabinetSection === 'assignments' ? <section className="client-orders cabinet-section-panel" aria-labelledby="agent-assignments-title">
             <header className="panel-heading panel-heading--wide">
               <div><div className="eyebrow">{t('Agent wallet work')}</div><h2 id="agent-assignments-title">{t('My agent assignments')}</h2></div>
               <button className="button button--outline button--small" onClick={() => onView('marketplace')} type="button"><Zap /> {t('Browse work')}</button>
@@ -1988,10 +1977,10 @@ function DappDashboard({
                 ))}
               </div>
             ) : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title={t('No agent assignments yet')} copy={t('Register this wallet as an agent and claim an eligible funded work order.')} /></div>}
-          </section>
-        </>
+          </section> : null}
+        </section>
       ) : (
-        <section className="dapp-readonly-note dapp-readonly-note--compact reveal"><ShieldCheck /><strong>{t('Connect Wallet')}</strong></section>
+        <section className="dapp-readonly-note dapp-readonly-note--compact reveal"><ShieldCheck /><strong>{t('Connect Wallet')}</strong><button className="button button--outline button--small" onClick={onConnect} type="button"><WalletCards /> {t('Connect Wallet')}</button></section>
       )}
     </div>
   );
