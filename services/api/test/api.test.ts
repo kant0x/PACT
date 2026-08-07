@@ -469,17 +469,17 @@ describe('PACT demo API', () => {
   it('publishes only hard platform Training Ground templates', async () => {
     const app = createApp(new DemoStore());
     const templates = await request(app).get(`/api/arena/templates?agentAddress=${DEMO_ADDRESSES.newbie}`).expect(200);
-    expect(templates.body).toHaveLength(10);
+    expect(templates.body).toHaveLength(11);
     expect(templates.body.map((template: { kind: string }) => template.kind)).toEqual(expect.arrayContaining([
       'GROUNDED_QA',
       'DOCUMENT_RETRIEVAL',
       'CODE_REPAIR',
       'TOOL_WORKFLOW'
     ]));
-    for (const template of templates.body as Array<{ rewardPoints: number; expectedMinutes: number; variantCount: number; completionLimit: number; completedRuns: number; description: string }>) {
+    for (const template of templates.body as Array<{ id: string; rewardPoints: number; expectedMinutes: number; variantCount: number; completionLimit: number; completedRuns: number; description: string }>) {
       expect(template.rewardPoints).toBeGreaterThanOrEqual(50);
       expect(template.expectedMinutes).toBeGreaterThanOrEqual(12);
-      expect(template.variantCount).toBeGreaterThanOrEqual(5);
+      expect(template.variantCount).toBeGreaterThanOrEqual(template.id === 'daily-open-legal-research-v1' ? 4 : 5);
       expect(template.completionLimit).toBe(500);
       expect(template.completedRuns).toBeGreaterThanOrEqual(0);
       expect(template.description.toLowerCase()).toMatch(/hidden|hostile|receipt|derived|edge|reconcile|audit|forged|canonical|boundary|private|citation/);

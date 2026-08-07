@@ -9,6 +9,7 @@ import type {
   ArenaToolDescriptor,
   ArenaToolPayload
 } from '@pact/shared';
+import { OPEN_LEGAL_CORPUS_DOCUMENTS } from './open-legal-corpus.js';
 
 export const ARENA_GENERATOR_VERSION = 'pact-arena-generator-v3';
 export const ARENA_RUBRIC_VERSION = 'pact-arena-rubric-v3';
@@ -40,6 +41,7 @@ export interface DocumentEvidenceChunk {
   chunkId: string;
   title: string;
   text: string;
+  sourceUrl?: string;
 }
 
 export interface DocumentRetrievalPrivateInstance {
@@ -138,6 +140,18 @@ export const BUILT_IN_ARENA_TEMPLATES: ArenaTemplateRecord[] = [
     ownerName: 'PACT Platform',
     variantCount: 512,
     expectedMinutes: 26,
+    isActive: true
+  },
+  {
+    id: 'daily-open-legal-research-v1',
+    title: 'Open legal research: Supreme Court opinions',
+    description: 'Search primary-source Supreme Court opinion extracts, identify the controlling rule, and support the answer with two source citations.',
+    kind: 'DOCUMENT_RETRIEVAL',
+    rewardPoints: 95,
+    ownerType: 'PLATFORM',
+    ownerName: 'PACT Platform',
+    variantCount: 4,
+    expectedMinutes: 22,
     isActive: true
   },
   {
@@ -377,6 +391,58 @@ const makeDocumentRetrievalInstance = (seed: string, attemptId: string): Documen
   };
 };
 
+const makeOpenLegalRetrievalInstance = (seed: string, attemptId: string): DocumentRetrievalPrivateInstance => {
+  const selected = OPEN_LEGAL_CORPUS_DOCUMENTS[seededInt(seed, 'open-legal-document', 0, OPEN_LEGAL_CORPUS_DOCUMENTS.length - 1)]!;
+  const chunks: DocumentEvidenceChunk[] = OPEN_LEGAL_CORPUS_DOCUMENTS.flatMap((document) => document.chunks.map((chunk) => ({
+    documentId: document.documentId,
+    chunkId: chunk.chunkId,
+    title: `${document.title} / ${chunk.title}`,
+    text: chunk.text,
+    sourceUrl: document.sourceUrl
+  })));
+  const payload: ArenaDocumentRetrievalPayload = {
+    kind: 'DOCUMENT_RETRIEVAL',
+    corpus: {
+      id: 'open-legal-scotus-2025-seed',
+      name: 'Open Legal Research / U.S. Supreme Court opinions',
+      documentCount: OPEN_LEGAL_CORPUS_DOCUMENTS.length,
+      chunkCount: chunks.length,
+      contentHash: sha256(JSON.stringify(chunks)),
+      access: 'ATTEMPT_MCP_RETRIEVAL',
+      notice: 'Source-attributed evaluation extracts from official Supreme Court opinion PDFs. This is a research benchmark, not legal advice; follow the primary-source link for the complete opinion.'
+    },
+    question: {
+      prompt: selected.question,
+      answerFormat: 'TEXT',
+      citationInstructions: 'Cite both source chunks for the selected opinion. A citation is valid only after it has been retrieved through this attempt.',
+      requiredCitations: 2
+    },
+    mcpEndpoint: `/api/arena/attempts/${attemptId}/mcp`,
+    tools: [
+      {
+        name: 'search_corpus',
+        description: 'Search the source-attributed opinion index and receive evidence snippets with stable document and chunk identifiers.',
+        inputSchema: { type: 'object', properties: { query: { type: 'string', minLength: 2 }, maxResults: { type: 'integer', minimum: 1, maximum: 6 } }, required: ['query'] }
+      },
+      {
+        name: 'read_evidence',
+        description: 'Read a single opinion extract returned by search_corpus, including the official source URL.',
+        inputSchema: { type: 'object', properties: { chunkId: { type: 'string' } }, required: ['chunkId'] }
+      }
+    ]
+  };
+  return {
+    kind: 'DOCUMENT_RETRIEVAL',
+    payload,
+    chunks,
+    expectedAnswer: selected.answer,
+    expectedCitations: selected.chunks.map((chunk) => ({ documentId: selected.documentId, chunkId: chunk.chunkId })),
+    calls: [],
+    discoveredChunkIds: [],
+    openedChunkIds: []
+  };
+};
+
 const codeVariants: Array<Omit<CodePrivateInstance, 'kind' | 'payload'> & { source: string; publicTests: string[] }> = [
   {
     functionName: 'computeFee',
@@ -539,7 +605,9 @@ export const createArenaInstance = (input: {
   const instance = input.kind === 'GROUNDED_QA'
     ? makeGroundedInstance(seed)
     : input.kind === 'DOCUMENT_RETRIEVAL'
-      ? makeDocumentRetrievalInstance(seed, input.attemptId)
+      ? input.templateId === 'daily-open-legal-research-v1'
+        ? makeOpenLegalRetrievalInstance(seed, input.attemptId)
+        : makeDocumentRetrievalInstance(seed, input.attemptId)
       : input.kind === 'CODE_REPAIR'
         ? makeCodeInstance(seed)
         : makeToolInstance(seed, input.attemptId);

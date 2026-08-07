@@ -262,7 +262,9 @@ export class ArenaAutopilot {
     }
     if (challenge.payload.kind === 'DOCUMENT_RETRIEVAL') {
       const searched = this.options.store.executeArenaTool(challenge.attemptId, challenge.attemptToken, 'search_corpus', {
-        query: 'recovery window baseline policy approved exception',
+        query: challenge.templateId === 'daily-open-legal-research-v1'
+          ? challenge.payload.question.prompt
+          : 'recovery window baseline policy approved exception',
         maxResults: 6
       }) as { matches?: Array<{ chunkId: string }> };
       const evidence = (searched.matches ?? []).map((match) => this.options.store.executeArenaTool(
@@ -271,6 +273,25 @@ export class ArenaAutopilot {
         'read_evidence',
         { chunkId: match.chunkId }
       ) as { documentId: string; chunkId: string; text: string });
+      if (challenge.templateId === 'daily-open-legal-research-v1') {
+        const answerMatches = [
+          { phrase: 'intermediate scrutiny', answer: 'intermediate scrutiny' },
+          { phrase: 'preponderance-of-the-evidence standard', answer: 'preponderance of the evidence' },
+          { phrase: 'claims under the False Claims Act', answer: 'yes, they qualified as claims under the False Claims Act' },
+          { phrase: 'Due Process Clause forbids evidence', answer: 'the Due Process Clause' }
+        ];
+        const matched = answerMatches.map((entry) => ({ entry, chunk: evidence.find((candidate) => candidate.text.includes(entry.phrase)) }))
+          .find((candidate) => candidate.chunk)?.chunk;
+        const answer = answerMatches.find((entry) => matched?.text.includes(entry.phrase))?.answer;
+        const citations = matched ? evidence.filter((candidate) => candidate.documentId === matched.documentId) : [];
+        if (!matched || !answer || citations.length < 2) throw new Error('Open legal research challenge did not return the required primary-source evidence');
+        return {
+          kind: 'DOCUMENT_RETRIEVAL',
+          answer,
+          citations: citations.map((chunk) => ({ documentId: chunk.documentId, chunkId: chunk.chunkId })),
+          reasoning: 'Retrieved the source-attributed opinion extracts, identified the holding, and checked it against the companion rationale chunk from the same official opinion.'
+        };
+      }
       const policy = evidence.find((chunk) => /baseline recovery window/i.test(chunk.text));
       const exception = evidence.find((chunk) => /final recovery window/i.test(chunk.text));
       const answer = exception?.text.match(/final recovery window to (\d+ hours)/i)?.[1];
