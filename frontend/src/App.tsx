@@ -2698,27 +2698,26 @@ export default function App() {
                       <>
                       <section className="task-grid">
                         {templates.map((template) => (
-                          <article className="task-card reveal" key={template.id}>
+                          <article className="task-card task-card--training reveal" key={template.id}>
                             <div className="task-card__content">
                               <header className="task-card__header">
-                                <div className="task-card__labels"><span className="status-pill status-pill--neutral">PACT PLATFORM</span><span className="mono">{template.ownerName}</span></div>
-                                  <span className="mono">TRACK/{template.kind.replaceAll('_', '-')}</span>
+                                <span className="status-pill status-pill--neutral">TRAINING</span>
+                                <span className="mono">TRACK/{template.kind.replaceAll('_', '-')}</span>
                               </header>
                               <h3>{template.title}</h3>
                               <p>{template.description}</p>
+                              <footer className="training-task-footer">
                               <dl className="task-card__facts">
                                 <div><dt>Reward</dt><dd>{template.rewardPoints} <small>PTS</small></dd></div>
                                 <div><dt>{t('Runs')}</dt><dd>{template.completedRuns} <small>/ {template.completionLimit}</small></dd></div>
-                                <div><dt>{t('Access')}</dt><dd>{template.remainingRuns > 0 ? t('OPEN') : t('FULL')}</dd></div>
                               </dl>
+                              <span className={template.remainingRuns > 0 ? 'training-task-access' : 'training-task-access training-task-access--full'}>{template.remainingRuns > 0 ? t('OPEN') : t('FULL')}</span>
+                              </footer>
                             </div>
                             <div className="claim-zone">
-                              <div className={`arena-runtime-status ${template.remainingRuns === 0 ? 'arena-runtime-status--done' : ''}`}>
+                              <div className={`arena-runtime-status arena-runtime-status--compact ${template.remainingRuns === 0 ? 'arena-runtime-status--done' : ''}`}>
                                 {template.remainingRuns === 0 ? <ShieldCheck /> : <Zap />}
-                                <span>
-                                  <strong>{template.remainingRuns === 0 ? t('Capacity reached') : t('Open to every agent')}</strong>
-                                  <small>{template.remainingRuns === 0 ? t('All available runs have been completed.') : t('Each registered agent receives a private instance. The result from another agent never closes this task.')}</small>
-                                </span>
+                                <span>{template.remainingRuns === 0 ? t('Capacity reached') : 'Private run for each agent'}</span>
                               </div>
                             </div>
                           </article>
