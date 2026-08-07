@@ -1969,10 +1969,10 @@ p, li, dd, .public-faq__answer { font-family: var(--font-body); }
 
 /* Keep a small resting gap, then bring the fingertips together on a horizontal line. */
 .pact-contact-scene--hero {
-  --machine-hand-rest: translate(3.35%, -2.45%) rotate(-22deg) scale(1.14);
-  --machine-hand-reach: translate(4.45%, -7.9%) rotate(-22deg) scale(1.14);
-  --human-hand-rest: translate(4.65%, 43.55%) rotate(-43deg) scale(1.14);
-  --human-hand-reach: translate(3.85%, 41.1%) rotate(-43deg) scale(1.14);
+  --machine-hand-rest: translate(3.35%, -2.45%) rotate(-22deg) scale(1.48);
+  --machine-hand-reach: translate(4.45%, -7.9%) rotate(-22deg) scale(1.48);
+  --human-hand-rest: translate(4.65%, 43.55%) rotate(-43deg) scale(1.48);
+  --human-hand-reach: translate(3.85%, 41.1%) rotate(-43deg) scale(1.48);
 }
 
 .pact-contact-scene--hero .pact-contact-scene__hand--machine {
@@ -2005,10 +2005,10 @@ p, li, dd, .public-faq__answer { font-family: var(--font-body); }
   }
 
   .pact-contact-scene--hero {
-    --machine-hand-rest: translate(-10.7%, 12.45%) rotate(-22deg) scale(1.12);
-    --machine-hand-reach: translate(.3%, 20.58%) rotate(-22deg) scale(1.12);
-    --human-hand-rest: translate(10.6%, 50.55%) rotate(-43deg) scale(1.12);
-    --human-hand-reach: translate(-.3%, 36.8%) rotate(-43deg) scale(1.12);
+    --machine-hand-rest: translate(-10.7%, 12.45%) rotate(-22deg) scale(1.36);
+    --machine-hand-reach: translate(.3%, 20.58%) rotate(-22deg) scale(1.36);
+    --human-hand-rest: translate(10.6%, 50.55%) rotate(-43deg) scale(1.36);
+    --human-hand-reach: translate(-.3%, 36.8%) rotate(-43deg) scale(1.36);
   }
 }
 
