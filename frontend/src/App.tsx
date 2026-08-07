@@ -1937,7 +1937,7 @@ function DappDashboard({
               <button className="button button--outline button--small" onClick={onPublish} type="button"><Plus /> Publish a work order</button>
             </header>
             {myOrders.length ? (
-              <div className="client-orders__grid">
+              <><div className="cabinet-table-head" aria-hidden="true"><span>Status</span><span>Work order</span><span>Criteria / evidence</span><span>Agent & escrow</span><span>Action</span></div><div className="client-orders__grid">
                 {myOrders.map((task) => {
                   const deliverable = deliverablesByTask.get(task.id);
                   const assignedAgent = snapshot.agents.find((agent) => agent.agentAddress.toLowerCase() === task.agentAddress?.toLowerCase());
@@ -1956,7 +1956,7 @@ function DappDashboard({
                     </article>
                   );
                 })}
-              </div>
+              </div></>
             ) : <div className="dapp-empty-state"><EmptyState icon={<Boxes />} title={t('No work orders yet')} copy={t('Fund a brief, set acceptance criteria, and invite or hire an agent to deliver it.')} /></div>}
           </section> : null}
           {cabinetSection === 'assignments' ? <section className="client-orders cabinet-section-panel" aria-labelledby="agent-assignments-title">
@@ -1965,7 +1965,7 @@ function DappDashboard({
               <button className="button button--outline button--small" onClick={() => onView('marketplace')} type="button"><Zap /> {t('Browse work')}</button>
             </header>
             {myAssignments.length ? (
-              <div className="client-orders__grid">
+              <><div className="cabinet-table-head" aria-hidden="true"><span>Status</span><span>Assignment</span><span>Current requirement</span><span>Reward & collateral</span><span>Action</span></div><div className="client-orders__grid">
                 {myAssignments.map((task) => (
                   <article className="client-order-card" key={`agent-${task.id}`}>
                     <header><StatusPill status={task.status} /><span className="mono">{task.chainTaskId ? `ARC/${task.chainTaskId}` : task.id.slice(-8).toUpperCase()}</span></header>
@@ -1975,7 +1975,7 @@ function DappDashboard({
                     {task.status === 'ASSIGNED' ? <div className="client-order-card__decision"><strong>{t('Assignment reserved on Arc')}</strong><button className="button button--primary button--small" disabled={!onActivate} onClick={() => onActivate?.(task)} type="button"><ShieldCheck /> {t('Post collateral & start')}</button></div> : task.status === 'STREAMING' && isArcMode ? <div className="client-order-card__decision"><strong>{t('The payment stream is active. Submit evidence when the deliverable is ready.')}</strong><div><button className="button button--primary button--small" disabled={!onRunAgent} onClick={() => onRunAgent?.(task)} type="button"><Bot /> Run agent now</button><button className="button button--outline button--small" disabled={!onWithdraw} onClick={() => onWithdraw?.(task)} type="button"><WalletCards /> Withdraw accrued</button></div></div> : <small className="client-order-card__hint">{t('This assignment is recorded in the settlement ledger.')}</small>}
                   </article>
                 ))}
-              </div>
+              </div></>
             ) : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title={t('No agent assignments yet')} copy={t('Register this wallet as an agent and claim an eligible funded work order.')} /></div>}
           </section> : null}
         </section>
