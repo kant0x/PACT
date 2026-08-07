@@ -56,6 +56,7 @@ import {
   type ArenaLeaderboardEntry,
   type ArenaSubmission,
   type ArenaTemplate,
+  type ArenaTrainingReport,
   type Dispute,
   type DisputeVerdict,
   type MarketplaceTask,
@@ -1275,7 +1276,7 @@ function TrainingHubBoard({
 
       <div className="hub-table" role="table" aria-label="Available agent hubs">
         <div className="hub-table__head" role="row">
-          <span role="columnheader">RUN PROFILE</span><span role="columnheader">AGENT STATE</span><span role="columnheader">COMPLEXITY</span><span role="columnheader">OPEN SLOTS</span><span aria-hidden="true" />
+          <span role="columnheader">RUN PROFILE</span><span role="columnheader">YOUR AGENT</span><span role="columnheader">COMPLEXITY</span><span role="columnheader">OPEN SLOTS</span><span aria-hidden="true" />
         </div>
         <div className="hub-table__body" role="rowgroup">
           {visibleTemplates.map((template) => {
@@ -1283,14 +1284,20 @@ function TrainingHubBoard({
             const contract = agentRunContract(template.kind);
             const Icon = hub.icon;
             const status = template.remainingRuns > 0 ? 'Ready' : 'Full';
+            const lifecycleState = template.inProgressToday
+              ? 'Your agent is executing now'
+              : template.completedToday
+                ? 'Verified · report in Cabinet'
+                : 'Ready for your agent';
             return (
-              <article className="hub-row" key={template.id} role="row">
+              <article className={`hub-row ${template.inProgressToday ? 'hub-row--executing' : template.completedToday ? 'hub-row--verified' : ''}`} key={template.id} role="row">
                 <div className="hub-row__identity" role="cell">
                   <span className={`hub-row__icon hub-row__icon--${hub.level}`}><Icon aria-hidden="true" /></span>
                   <span><strong>{template.title}</strong><small>{contract.packet} / {template.expectedMinutes} MIN</small></span>
                 </div>
-                <div className="hub-lifecycle" role="cell" aria-label={`Agent state: ${template.inProgressToday ? 'executing' : template.completedToday ? 'verified' : 'allocated'}`}>
+                <div className="hub-lifecycle" role="cell" aria-label={`Agent state: ${lifecycleState}`}>
                   <span className={!template.inProgressToday && !template.completedToday ? 'hub-lifecycle__stage hub-lifecycle__stage--active' : 'hub-lifecycle__stage'}><i />Allocate</span><b /><span className={template.inProgressToday ? 'hub-lifecycle__stage hub-lifecycle__stage--active' : 'hub-lifecycle__stage'}><i />Execute</span><b /><span className={template.completedToday ? 'hub-lifecycle__stage hub-lifecycle__stage--active' : 'hub-lifecycle__stage'}><i />Verify</span>
+                  <em className={template.inProgressToday ? 'hub-lifecycle__state hub-lifecycle__state--live' : template.completedToday ? 'hub-lifecycle__state hub-lifecycle__state--verified' : 'hub-lifecycle__state'}><i />{lifecycleState}</em>
                 </div>
                 <div className="hub-difficulty" role="cell" aria-label={`${hub.difficulty} of 5 difficulty`}>
                   {Array.from({ length: 5 }, (_, index) => <i className={index < hub.difficulty ? 'hub-difficulty__dot hub-difficulty__dot--filled' : 'hub-difficulty__dot'} key={index} />)}
@@ -2028,8 +2035,55 @@ function CabinetAgentCard({
   );
 }
 
+function TrainingReportPanel({ reports }: { reports: ArenaTrainingReport[] }) {
+  if (!reports.length) return null;
+  return (
+    <section className="training-reports" aria-labelledby="training-reports-title">
+      <header className="training-reports__header">
+        <div><div className="eyebrow">AGENT TRAINING / VERIFIER REPORTS</div><h3 id="training-reports-title">Verified runs</h3></div>
+        <span>{reports.length} REPORT{reports.length === 1 ? '' : 'S'}</span>
+      </header>
+      <div className="training-reports__list">
+        {reports.map((report) => {
+          const peerDelta = report.comparison.deltaFromPeerAverage;
+          const reportTime = new Intl.DateTimeFormat(undefined, {
+            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC',
+          }).format(report.verifiedAt * 1_000);
+          return (
+            <article className={`training-report training-report--${report.status.toLowerCase()}`} key={report.attemptId}>
+              <header>
+                <div>
+                  <span className="training-report__status"><i />VERIFIED · {report.status}</span>
+                  <h4>{report.templateTitle}</h4>
+                  <small>{trainingHubMeta(report.kind).label} · {reportTime} UTC</small>
+                </div>
+                <strong>{report.score}<small>/100</small></strong>
+              </header>
+              <dl className="training-report__metrics">
+                <div><dt>VERIFIER</dt><dd>{report.deterministicScore}</dd></div>
+                <div><dt>JUDGE</dt><dd>{report.qualityScore}</dd></div>
+                <div><dt>TOOLS</dt><dd>{report.execution.toolCalls}</dd></div>
+                <div><dt>PEERS</dt><dd>{report.comparison.cohortSize > 1 ? `#${report.comparison.rank}/${report.comparison.cohortSize}` : '—'}</dd></div>
+                <div><dt>VS PEERS</dt><dd className={peerDelta === null ? '' : peerDelta < 0 ? 'training-report__metric--down' : 'training-report__metric--up'}>{peerDelta === null ? 'No baseline' : `${peerDelta > 0 ? '+' : ''}${peerDelta}`}</dd></div>
+              </dl>
+              <div className="training-report__feedback">
+                <section><span>JUDGE RECEIPT</span><p>{report.judge.reasoning}</p></section>
+                <section><span>WHAT TO IMPROVE</span><ul>{report.recommendations.map((recommendation) => <li key={recommendation}>{recommendation}</li>)}</ul></section>
+              </div>
+              <div className="training-report__checks" aria-label="Verifier checks">
+                {report.checks.map((check) => <span className={check.passed ? 'training-report__check training-report__check--pass' : 'training-report__check training-report__check--fail'} key={check.code}><i />{check.code}</span>)}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function DappDashboard({
   snapshot,
+  trainingReports,
   connectedAddress,
   onConnect,
   onPublish,
@@ -2047,6 +2101,7 @@ function DappDashboard({
   onDismissCreatedAgent,
 }: {
   snapshot: DashboardSnapshot;
+  trainingReports: ArenaTrainingReport[];
   connectedAddress?: string;
   onConnect: () => void;
   onPublish: () => void;
@@ -2085,6 +2140,7 @@ function DappDashboard({
       || controlledAgentAddresses.has(task.agentAddress.toLowerCase())
     ))
     : [];
+  const myTrainingReports = trainingReports.filter((report) => controlledAgentAddresses.has(report.agentAddress.toLowerCase()));
   const activeOrders = myOrders.filter((task) => ['ASSIGNED', 'STREAMING', 'PAUSED', 'DISPUTED'].includes(task.status));
   const openOrders = snapshot.tasks.filter((task) => task.status === 'OPEN');
   const deliverablesByTask = new Map(snapshot.deliverables.map((deliverable) => [deliverable.taskId, deliverable]));
@@ -2102,7 +2158,7 @@ function DappDashboard({
     { id: 'overview', label: 'Overview' },
     { id: 'agents', label: 'Your agents', count: myAgents.length },
     { id: 'orders', label: 'My work orders', count: myOrders.length },
-    { id: 'assignments', label: 'My agent assignments', count: myAssignments.length },
+    { id: 'assignments', label: 'My agent assignments', count: myAssignments.length + myTrainingReports.length },
   ];
 
   return (
@@ -2144,7 +2200,7 @@ function DappDashboard({
                 <button type="button" onClick={() => setCabinetSection('agents')}><span>Your agents</span><strong>{myAgents.length}</strong><ArrowRight /></button>
                 <button type="button" onClick={() => setCabinetSection('orders')}><span>My work orders</span><strong>{myOrders.length}</strong><ArrowRight /></button>
                 <button type="button" onClick={() => setCabinetSection('orders')}><span>In progress</span><strong>{activeOrders.length}</strong><ArrowRight /></button>
-                <button type="button" onClick={() => setCabinetSection('assignments')}><span>My agent assignments</span><strong>{myAssignments.length}</strong><ArrowRight /></button>
+                <button type="button" onClick={() => setCabinetSection('assignments')}><span>My agent assignments</span><strong>{myAssignments.length + myTrainingReports.length}</strong><ArrowRight /></button>
               </div>
               {myAgents.length ? <section className="cabinet-agent-performance" aria-labelledby="agent-performance-title"><header><div><span>AGENT PERFORMANCE</span><strong id="agent-performance-title">{myAgents.length === 1 ? myAgents[0].displayName : `${myAgents.length} agent profiles`}</strong></div><button className="button button--outline button--small" onClick={() => setCabinetSection('agents')} type="button">Your agents <ArrowRight /></button></header><div className="cabinet-agent-performance__metrics"><div><span>TRUST SCORE</span><strong>{averageTrustScore}<small>/1000</small></strong></div><div><span>SETTLED TASKS</span><strong>{completedAgentTasks}</strong></div><div><span>SUCCESS RATE</span><strong>{totalAgentOutcomes ? `${Math.round((completedAgentTasks / totalAgentOutcomes) * 100)}%` : '—'}</strong></div><div><span>PLATFORM POINTS</span><strong>{totalPlatformPoints}</strong></div><div><span>AUTOPILOT</span><strong>{activeAutomations}/{myAgents.length}</strong></div><div><span>RUNTIME ONLINE</span><strong>{connectedRuntimes}/{myAgents.length}</strong></div></div></section> : null}
               {!myAgents.length && !myOrders.length ? <div className="cabinet-overview__empty"><span>Get started</span><strong>Create an agent or publish a work order.</strong><div><button className="button button--outline button--small" onClick={onCreateAgent} type="button"><Bot /> Create an agent</button><button className="button button--primary button--small" onClick={onPublish} type="button"><Plus /> Create task</button></div></div> : null}
@@ -2190,6 +2246,7 @@ function DappDashboard({
               <div><div className="eyebrow">{t('Agent wallet work')}</div><h2 id="agent-assignments-title">{t('My agent assignments')}</h2></div>
               <button className="button button--outline button--small" onClick={() => onView('marketplace')} type="button"><Zap /> {t('Browse work')}</button>
             </header>
+            <TrainingReportPanel reports={myTrainingReports} />
             {myAssignments.length ? (
               <><div className="cabinet-table-head" aria-hidden="true"><span>Status</span><span>Assignment</span><span>Current requirement</span><span>Reward & collateral</span><span>Action</span></div><div className="client-orders__grid">
                 {myAssignments.map((task) => (
@@ -2202,7 +2259,7 @@ function DappDashboard({
                   </article>
                 ))}
               </div></>
-            ) : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title={t('No agent assignments yet')} copy={t('Register this wallet as an agent and claim an eligible funded work order.')} /></div>}
+            ) : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title={myTrainingReports.length ? 'No paid assignments yet' : t('No agent activity yet')} copy={myTrainingReports.length ? 'Verified training reports are shown above. Funded work assignments will appear here when your agent claims one.' : 'Run a Training profile. After Verify, this page will show the score, verifier checks, judge feedback, and peer comparison.'} /></div>}
           </section> : null}
         </section>
       ) : (
@@ -2467,6 +2524,7 @@ export default function App() {
 
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [templates, setTemplates] = useState<ArenaTemplate[]>([]);
+  const [trainingReports, setTrainingReports] = useState<ArenaTrainingReport[]>([]);
   const [arenaLeaderboard, setArenaLeaderboard] = useState<ArenaLeaderboardEntry[]>([]);
   const [arenaChallenge, setArenaChallenge] = useState<ArenaChallenge | null>(null);
   const [arenaResult, setArenaResult] = useState<ArenaEvaluationResult | null>(null);
@@ -2503,6 +2561,11 @@ export default function App() {
       return null;
     }
   });
+
+  const hubAgent = activeAddress
+    ? snapshot?.agents.find((agent) => agent.agentAddress.toLowerCase() === activeAddress.toLowerCase() || agent.wallet?.controllerAddress.toLowerCase() === activeAddress.toLowerCase())
+    : undefined;
+  const trainingAgentAddress = hubAgent?.agentAddress;
 
   const handleDisconnect = useCallback(() => {
     if (isConnected) disconnect();
@@ -2567,11 +2630,29 @@ export default function App() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void api.trainingCatalog(controller.signal)
-      .then(setTemplates)
-      .catch(() => setTemplates([]));
-    return () => controller.abort();
-  }, []);
+    let active = true;
+    const loadTemplates = () => void api.arenaTemplates(trainingAgentAddress, controller.signal)
+      .then((next) => { if (active) setTemplates(next); })
+      .catch(() => { if (active) setTemplates([]); });
+    loadTemplates();
+    const timer = window.setInterval(loadTemplates, 5_000);
+    return () => { active = false; controller.abort(); window.clearInterval(timer); };
+  }, [trainingAgentAddress]);
+
+  useEffect(() => {
+    if (!trainingAgentAddress) {
+      setTrainingReports([]);
+      return undefined;
+    }
+    const controller = new AbortController();
+    let active = true;
+    const loadReports = () => void api.arenaReports(trainingAgentAddress, controller.signal)
+      .then((next) => { if (active) setTrainingReports(next); })
+      .catch(() => { if (active) setTrainingReports([]); });
+    loadReports();
+    const timer = window.setInterval(loadReports, 5_000);
+    return () => { active = false; controller.abort(); window.clearInterval(timer); };
+  }, [trainingAgentAddress]);
 
   useEffect(() => {
     clearWalletSession(connectedAddress);
@@ -2686,9 +2767,6 @@ export default function App() {
   }, [arcPublicClient, chainId, connectedAddress, fundingAgent, perform, signMessageAsync, switchChainAsync]);
 
   const currentAgent = snapshot?.agents.find((agent) => agent.agentAddress === selectedAgent) ?? snapshot?.agents[0];
-  const hubAgent = activeAddress
-    ? snapshot?.agents.find((agent) => agent.agentAddress.toLowerCase() === activeAddress.toLowerCase() || agent.wallet?.controllerAddress.toLowerCase() === activeAddress.toLowerCase())
-    : undefined;
   const openTasks = snapshot?.tasks.filter((task) => task.status === 'OPEN') ?? [];
   const visibleOpenTasks = marketCategory === 'ALL' || marketCategory === 'TRAINING' ? openTasks : openTasks.filter((task) => taskCategory(task) === marketCategory);
   const trainingView = marketCategory === 'TRAINING';
@@ -2811,7 +2889,7 @@ export default function App() {
             <>
               {view === 'overview' ? <Overview snapshot={snapshot} onView={changeView} /> : null}
               {view === 'protocol' ? <AgentProtocol onView={changeView} /> : null}
-              {view === 'dapp' ? <DappDashboard snapshot={snapshot} connectedAddress={activeAddress} onConnect={connectAgent} onPublish={() => requestPublish()} onCreateAgent={requestCreateAgent} onView={changeView} onFundAgent={setFundingAgent} onToggleTraining={toggleAgentTraining} onRunAgent={runAgentTask} createdAgentNotice={createdAgentNotice} onDismissCreatedAgent={() => setCreatedAgentNotice(null)} onAccept={(deliverable) => void perform(`accept:${deliverable.taskId}`, 'Result accepted. Settlement and reputation are finalized.', async () => {
+              {view === 'dapp' ? <DappDashboard snapshot={snapshot} trainingReports={trainingReports} connectedAddress={activeAddress} onConnect={connectAgent} onPublish={() => requestPublish()} onCreateAgent={requestCreateAgent} onView={changeView} onFundAgent={setFundingAgent} onToggleTraining={toggleAgentTraining} onRunAgent={runAgentTask} createdAgentNotice={createdAgentNotice} onDismissCreatedAgent={() => setCreatedAgentNotice(null)} onAccept={(deliverable) => void perform(`accept:${deliverable.taskId}`, 'Result accepted. Settlement and reputation are finalized.', async () => {
                 if (!isArcMode) return api.acceptDeliverable(deliverable.id);
                 const task = tasksById.get(deliverable.taskId);
                 if (!task?.chainTaskId) throw new Error('The work order has no Arc task ID.');

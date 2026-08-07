@@ -13,6 +13,7 @@ import type {
   ArenaCheckResult,
   ArenaEvaluationResult,
   ArenaLeaderboardEntry,
+  ArenaTrainingReport,
   ArenaSubmission,
   ArenaTemplate,
   DashboardSnapshot,
@@ -960,6 +961,76 @@ export class DemoStore {
       };
     }).sort((left, right) => right.platformPoints - left.platformPoints || right.averageScore - left.averageScore || left.agentAddress.localeCompare(right.agentAddress));
     return rows.map((row, index) => ({ ...row, rank: index + 1 }));
+  }
+
+  arenaReports(agentAddress: string): ArenaTrainingReport[] {
+    const normalizedAddress = agentAddress.trim().toLowerCase();
+    this.reputation(normalizedAddress);
+    const finalized = [...this.arenaAttempts.values()]
+      .filter((attempt) => attempt.status === 'SUBMITTED' && attempt.result);
+
+    return finalized
+      .filter((attempt) => attempt.agentAddress.toLowerCase() === normalizedAddress)
+      .map((attempt) => {
+        const result = attempt.result!;
+        const template = this.arenaTemplates.get(attempt.templateId);
+        const cohort = finalized
+          .filter((candidate) => candidate.templateId === attempt.templateId)
+          .sort((left, right) => (right.result!.score - left.result!.score)
+            || ((left.submittedAt ?? 0) - (right.submittedAt ?? 0))
+            || left.id.localeCompare(right.id));
+        const peers = cohort.filter((candidate) => candidate.agentAddress.toLowerCase() !== attempt.agentAddress.toLowerCase());
+        const peerAverageScore = peers.length
+          ? Math.round(peers.reduce((total, candidate) => total + candidate.result!.score, 0) / peers.length)
+          : null;
+        const bestPeerScore = peers.length
+          ? Math.max(...peers.map((candidate) => candidate.result!.score))
+          : null;
+        const rank = Math.max(1, cohort.findIndex((candidate) => candidate.id === attempt.id) + 1);
+        const failedChecks = result.checks.filter((check) => !check.passed);
+        const recommendations = [
+          ...failedChecks.map((check) => `${check.code}: ${check.detail}`),
+          ...(failedChecks.length === 0 && result.qualityScore < 80
+            ? ['Improve the evidence-bound explanation: the verifier accepted the core result, but the quality judge reduced the final score.']
+            : []),
+          ...(result.efficiencyScore !== null && result.efficiencyScore < 75
+            ? ['Reduce unnecessary tool calls before submitting the final receipt.']
+            : []),
+          ...(peerAverageScore !== null && result.score < peerAverageScore
+            ? [`This run is ${peerAverageScore - result.score} points below the peer average for this profile.`]
+            : []),
+          ...(failedChecks.length === 0 && result.qualityScore >= 80 && (result.efficiencyScore === null || result.efficiencyScore >= 75)
+            ? ['No verifier check failed. Keep this evidence and execution pattern for the next run.']
+            : [])
+        ].slice(0, 4);
+        return {
+          attemptId: attempt.id,
+          templateId: attempt.templateId,
+          templateTitle: template?.title ?? attempt.templateId,
+          kind: result.kind,
+          agentAddress: attempt.agentAddress,
+          status: result.status,
+          startedAt: attempt.startedAt,
+          verifiedAt: result.submittedAt,
+          score: result.score,
+          deterministicScore: result.deterministicScore,
+          qualityScore: result.qualityScore,
+          efficiencyScore: result.efficiencyScore,
+          pointsAwarded: result.pointsAwarded,
+          checks: structuredClone(result.checks),
+          judge: structuredClone(result.judge),
+          execution: structuredClone(result.execution),
+          comparison: {
+            cohortSize: cohort.length,
+            peerAverageScore,
+            bestPeerScore,
+            rank,
+            deltaFromPeerAverage: peerAverageScore === null ? null : result.score - peerAverageScore,
+          },
+          recommendations,
+        };
+      })
+      .sort((left, right) => right.verifiedAt - left.verifiedAt);
   }
 
   private averageArenaTrack(attempts: ArenaAttemptRecord[], kind: ArenaEvaluationResult['kind']) {

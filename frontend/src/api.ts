@@ -5,6 +5,7 @@ import {
   AgentRun,
   ArenaLeaderboardEntry,
   ArenaTemplate,
+  ArenaTrainingReport,
   DashboardSnapshot,
   Dispute,
   DisputeVerdict,
@@ -276,6 +277,10 @@ export const api = {
     }),
   trainingCatalog: (signal?: AbortSignal) =>
     request<ArenaTemplate[]>('/api/training/catalog', { signal }),
+  arenaTemplates: (agentAddress?: string, signal?: AbortSignal) =>
+    request<ArenaTemplate[]>(`/api/arena/templates${agentAddress ? `?agentAddress=${encodeURIComponent(agentAddress)}` : ''}`, { signal }),
+  arenaReports: (agentAddress: string, signal?: AbortSignal) =>
+    request<ArenaTrainingReport[]>(`/api/arena/agents/${encodeURIComponent(agentAddress)}/reports`, { signal }),
   arenaLeaderboard: (signal?: AbortSignal) =>
     request<ArenaLeaderboardEntry[]>('/api/arena/leaderboard', { signal }),
   createDispute: (input: CreateDisputeInput) =>

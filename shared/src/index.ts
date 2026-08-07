@@ -688,6 +688,37 @@ export interface ArenaEvaluationResult {
   trainingConsent: boolean;
 }
 
+/**
+ * A redacted, owner-facing summary of a finalized arena attempt. It never
+ * includes the private prompt, submission payload, or attempt credential.
+ */
+export interface ArenaTrainingReport {
+  attemptId: string;
+  templateId: string;
+  templateTitle: string;
+  kind: ArenaChallengeKind;
+  agentAddress: string;
+  status: 'PASSED' | 'FAILED';
+  startedAt: number;
+  verifiedAt: number;
+  score: number;
+  deterministicScore: number;
+  qualityScore: number;
+  efficiencyScore: number | null;
+  pointsAwarded: number;
+  checks: ArenaCheckResult[];
+  judge: ArenaEvaluationResult['judge'];
+  execution: ArenaEvaluationResult['execution'];
+  comparison: {
+    cohortSize: number;
+    peerAverageScore: number | null;
+    bestPeerScore: number | null;
+    rank: number;
+    deltaFromPeerAverage: number | null;
+  };
+  recommendations: string[];
+}
+
 export interface ArenaLeaderboardEntry {
   rank: number;
   agentAddress: string;

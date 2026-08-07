@@ -645,6 +645,11 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
       response.json(store.arenaLeaderboard());
     }
   });
+  // Reports expose verdict metadata only: no prompt, private packet,
+  // submission payload, or attempt credential leaves the arena store.
+  app.get('/api/arena/agents/:agentAddress/reports', (request, response) => {
+    response.json(store.arenaReports(text(request.params.agentAddress)));
+  });
   app.get('/api/arena/runtime', (_request, response) => response.json({
     generator: 'private deterministic HMAC instances',
     qualityJudge: arenaQualityJudge.provider,

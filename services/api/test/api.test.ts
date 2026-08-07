@@ -443,6 +443,18 @@ describe('PACT demo API', () => {
     expect(awards[0]).toMatchObject({ agentAddress: DEMO_ADDRESSES.newbie, attemptId: challenge.body.attemptId });
     const leaderboard = await request(app).get('/api/arena/leaderboard').expect(200);
     expect(leaderboard.body.find((row: { agentAddress: string }) => row.agentAddress.toLowerCase() === DEMO_ADDRESSES.newbie.toLowerCase())).toMatchObject({ platformPoints: result.body.pointsAwarded });
+    const reports = await request(app).get(`/api/arena/agents/${DEMO_ADDRESSES.newbie}/reports`).expect(200);
+    expect(reports.body).toHaveLength(1);
+    expect(reports.body[0]).toMatchObject({
+      attemptId: challenge.body.attemptId,
+      templateId: template.id,
+      status: 'PASSED',
+      score: result.body.score,
+      comparison: { cohortSize: 1, peerAverageScore: null, rank: 1 },
+      recommendations: expect.any(Array),
+    });
+    expect(reports.body[0]).not.toHaveProperty('submission');
+    expect(reports.body[0]).not.toHaveProperty('attemptToken');
     const afterSubmit = await request(app).get(`/api/arena/templates?agentAddress=${DEMO_ADDRESSES.newbie}`).expect(200);
     expect(afterSubmit.body.find((item: { id: string }) => item.id === template.id)).toMatchObject({ completedToday: true, inProgressToday: false, availableToday: false });
     const publicAfterSubmit = await request(app).get('/api/arena/templates').expect(200);
