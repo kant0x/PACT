@@ -76,7 +76,7 @@ For the browser, set the matching `VITE_*` values during development or the
 public configuration; private keys and Circle credentials never belong in the
 frontend.
 
-The deployment recorded in `docs/arc-testnet-deployments.json` predates these
-four new contracts. Do not point production at the new React actions until a
-fresh deployment has been verified and its addresses copied into runtime
-configuration.
+The active Arc Testnet deployment, including AgentRegistry, MilestoneEscrow,
+SubscriptionVault, and RewardVault, is recorded in
+`docs/arc-testnet-deployments.json`. Keep the API environment and public
+runtime configuration aligned with that record before releasing the UI.

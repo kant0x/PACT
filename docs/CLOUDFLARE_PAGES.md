@@ -25,18 +25,20 @@ operator tokens, Circle secrets, database credentials, or OpenAI keys in a
 
 ```text
 NODE_VERSION=22
-VITE_API_URL=https://pact-api-635470212898.europe-west1.run.app
+VITE_API_URL=https://api.arc.pact.kant0x.xyz
 VITE_ARC_RPC_URL=https://rpc.testnet.arc.network
-VITE_STREAMING_VAULT_ADDRESS=0x...
-VITE_AGENT_REGISTRY_ADDRESS=0x...
-VITE_MILESTONE_ESCROW_ADDRESS=0x...
-VITE_SUBSCRIPTION_VAULT_ADDRESS=0x...
-VITE_REWARD_VAULT_ADDRESS=0x...
+VITE_STREAMING_VAULT_ADDRESS=0xC0f329E3a8DEC77c4687dFdEa0F695BA28a9c0e4
+VITE_AGENT_REGISTRY_ADDRESS=0x99FFbb952dA204225F9e35767ff05cEa4c035562
+VITE_MILESTONE_ESCROW_ADDRESS=0x10F2aBf609469a3e3D761f8Dc85ecD8fa9809b4a
+VITE_SUBSCRIPTION_VAULT_ADDRESS=0x5A846F583C27ef135dEd541D0071763F41684630
+VITE_REWARD_VAULT_ADDRESS=0x08d493d7B297f80A8c23Eff96E5De7c25C9Da3f3
 VITE_USDC_ADDRESS=0x3600000000000000000000000000000000000000
 ```
 
-These values are public at build time. The API must already be running in its
-Arc/PostgreSQL profile, with the verified StreamingVault address above.
+These values are public at build time. `frontend/public/pact-config.js` carries
+the same public runtime values for Pages deployments; keep both sources in sync.
+The API must already be running in its Arc/PostgreSQL profile, with the verified
+StreamingVault address above.
 
 ## Custom domain
 

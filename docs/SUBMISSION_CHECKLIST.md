@@ -8,9 +8,9 @@ Deadline: Sunday, 2 August 2026, 23:59 in the organizer's stated timezone. Submi
 | --- | --- | --- | --- |
 | Live frontend | https://arc.pact.kant0x.xyz/#overview | Custom domain configured; verify HTTPS and every live path after the final deployment |
 | Cloudflare fallback | https://pact-protocol.pages.dev | Public fallback URL | Keep available if custom-domain certificate provisioning is delayed |
-| API health | https://pact-api-635470212898.europe-west1.run.app/api/health | Must be public HTTP 200 with `mode: arc`, `persistence: postgres` | Recheck after the Arc/PostgreSQL deployment |
+| API health | https://api.arc.pact.kant0x.xyz/api/health | Must be public HTTP 200 with `mode: arc`, `persistence: postgres` | Served by the active Google Compute deployment; recheck after every release |
 | Source repository | https://github.com/kant0x/PACT | Public HTTP 200 | Commit and push the untracked frontend and final docs |
-| Arc deployment evidence | `docs/arc-testnet-deployments.json` | Chain ID 5042002; non-empty bytecode at all three addresses | Keep public and include the explorer links in the submission |
+| Arc deployment evidence | `docs/arc-testnet-deployments.json` | Chain ID 5042002; seven active protocol contract addresses | Keep public and include the explorer links in the submission |
 | Demo video | TBD | Not uploaded | Record from `docs/DEMO_SCRIPT.md`, upload, and test incognito |
 | Presentation | TBD public share link | `docs/submission/PACT-judge-deck.pptx` is the canonical local deck | Upload this file and set "anyone with the link can view" |
 | Hackathon application | Organizer portal | Not verifiable from this repository | Submit first; save confirmation and timestamp |
