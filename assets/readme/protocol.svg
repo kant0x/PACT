@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200" height="360" viewBox="0 0 1200 360"
+     role="img" aria-labelledby="title desc">
+  <title id="title">PACT protocol path</title>
+  <desc id="desc">A four-stage original diagram showing a funded outcome moving through definition, proof, decision, and a final commercial record.</desc>
+
+  <defs>
+    <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+      <path d="M44 0H0V44" fill="none" stroke="#F5F4F3" stroke-opacity="0.028"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="360" rx="24" fill="#0E0D0C"/>
+  <rect width="1200" height="360" rx="24" fill="url(#grid)"/>
+  <text x="56" y="58" fill="#CB673F" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="600" letter-spacing="2.4">THE RECORD / FROM PROOF TO SETTLEMENT</text>
+  <text x="56" y="91" fill="#F5F4F3" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="23">Four moments. One auditable outcome.</text>
+
+  <path d="M110 176H1090" stroke="#914425" stroke-width="2"/>
+  <path d="M110 176H1090" stroke="#CB673F" stroke-width="2" stroke-dasharray="2 22"/>
+
+  <g transform="translate(56 132)">
+    <circle cx="54" cy="44" r="34" fill="#CB673F"/>
+    <text x="39" y="51" fill="#080808" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="700">01</text>
+    <text x="0" y="112" fill="#F5F4F3" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="25" font-weight="700">DEFINE</text>
+    <text x="0" y="140" fill="#A39D99" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="18">brief + criteria</text>
+  </g>
+
+  <g transform="translate(340 132)">
+    <circle cx="54" cy="44" r="34" fill="#171310" stroke="#CB673F" stroke-width="2"/>
+    <text x="39" y="51" fill="#E58A61" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="700">02</text>
+    <text x="0" y="112" fill="#F5F4F3" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="25" font-weight="700">PROVE</text>
+    <text x="0" y="140" fill="#A39D99" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="18">deliverable + receipt</text>
+  </g>
+
+  <g transform="translate(624 132)">
+    <circle cx="54" cy="44" r="34" fill="#171310" stroke="#CB673F" stroke-width="2"/>
+    <text x="39" y="51" fill="#E58A61" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="700">03</text>
+    <text x="0" y="112" fill="#F5F4F3" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="25" font-weight="700">DECIDE</text>
+    <text x="0" y="140" fill="#A39D99" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="18">bounded verdict</text>
+  </g>
+
+  <g transform="translate(908 132)">
+    <circle cx="54" cy="44" r="34" fill="#251C18" stroke="#CB673F" stroke-width="2"/>
+    <path d="M43 45L51 53L66 36" fill="none" stroke="#E58A61" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="0" y="112" fill="#F5F4F3" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="25" font-weight="700">RECORD</text>
+    <text x="0" y="140" fill="#E58A61" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="18">settlement + Trust Score</text>
+  </g>
+
+  <path d="M56 318H1144" stroke="#914425"/>
+  <text x="56" y="341" fill="#A39D99" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" letter-spacing="1.2">JUDGE REVIEWS EVIDENCE</text>
+  <text x="472" y="341" fill="#CB673F" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" letter-spacing="1.2">SETTLEMENT APPLIES POLICY</text>
+  <text x="892" y="341" fill="#A39D99" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" letter-spacing="1.2">REPUTATION MOVES LAST</text>
+</svg>

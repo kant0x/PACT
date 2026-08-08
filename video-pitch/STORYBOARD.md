@@ -2,7 +2,7 @@
 format: 1920x1080
 duration: 180s
 message: "PACT turns an agent's promised outcome into a funded, provable, and reputation-bearing contract on Arc."
-arc: "Promise gap → PACT lifecycle → public product surface → Arc evidence → inspect and build"
+arc: "Live product overview → public market data → source code → Cabinet → staged Arena demo → Arc evidence"
 audience: "Arc ecosystem reviewers, agent builders, and prospective clients"
 mode: autonomous
 music: none
@@ -25,7 +25,7 @@ screensaver-like floating motion.
 
 ## Frame 1 — More than a prompt
 
-- scene: A human hand and a machine hand approach across a sparse rust-orange contract field.
+- scene: The current deployed PACT overview shows the real product surface: Hire agents. Pay for results.
 - voiceover: "An agent can write code, research, and execute. But when work carries a budget, deadline, and real consequence, a prompt is not a contract."
 - duration: 9.728s
 - transition_in: cut
@@ -35,7 +35,7 @@ screensaver-like floating motion.
 - persuasion: Pain validation
 - beat: tension
 - blueprint: kinetic-type-beats
-- asset_candidates: assets/pact-human-hand.png — official human hand artwork; assets/pact-machine-hand.png — official machine hand artwork
+- asset_candidates: assets/site-captures/live-overview-top.png — current deployed PACT overview capture
 
 narrativeRole: Name the viewer's trust problem before naming the product.
 keyMessage: Valuable agent work needs an accountable outcome, not just an instruction.
@@ -54,7 +54,7 @@ Scene 3 (7.5–12.0s): "not a contract" arrives as the lone oversized ink statem
 
 ## Frame 2 — The promise gap
 
-- scene: Three disconnected words — scope, proof, settlement — collide and refuse to align.
+- scene: The current deployed market section shows $650B market, $5.1B platform volume, and the Upwork/Fiverr benchmark links.
 - voiceover: "Clients need a result they can inspect. Agents need clear acceptance criteria. And both sides need to know what happens when the work is accepted, challenged, or unfinished."
 - duration: 11.541s
 - transition_in: push-slide RIGHT
@@ -64,7 +64,7 @@ Scene 3 (7.5–12.0s): "not a contract" arrives as the lone oversized ink statem
 - persuasion: Friction reduction
 - beat: frustration
 - blueprint: overwhelm-surround
-- asset_candidates:
+- asset_candidates: assets/site-captures/live-market-benchmarks-final.png — current deployed market benchmark section
 
 narrativeRole: Make the operational gap concrete for both sides of the marketplace.
 keyMessage: Scope, proof, and settlement must connect before autonomous work can be trusted.
@@ -83,7 +83,7 @@ Scene 3 (9.0–15.0s): Scope, proof, and settlement resolve as three stacked ora
 
 ## Frame 3 — The PACT
 
-- scene: The PACT mark locks into a seven-step pathway, with the value statement filling the frame.
+- scene: Real repository code shows the StreamingVault settlement functions and the three-judge arbitration quorum.
 - voiceover: "PACT closes that gap. It turns a promised outcome into a funded work order, a visible proof trail, a settlement decision, and a reputation record that changes only after finality."
 - duration: 12.224s
 - transition_in: zoom-through
@@ -93,7 +93,7 @@ Scene 3 (9.0–15.0s): Scope, proof, and settlement resolve as three stacked ora
 - persuasion: Category creation
 - beat: relief + clarity
 - blueprint: logo-assemble-lockup
-- asset_candidates: assets/pact-logo.png — official PACT mark; assets/pact-hero-graphic.svg — official PACT hero artwork
+- asset_candidates: contracts/src/StreamingVault.sol; services/api/src/arbitration.ts — source snippets used in the code cutaway
 
 narrativeRole: Land the core promise by the second value beat and introduce PACT as the bridge.
 keyMessage: PACT makes autonomous work accountable from brief to final record.
@@ -151,7 +151,7 @@ Scene 3 (10.0–15.0s): Deadline and dispute policy populate last, then a rust "
 - persuasion: Feature-to-benefit translation
 - beat: confidence
 - blueprint: constellation-hub
-- asset_candidates: assets/pact-human-agent-touch-orange.png — official human-and-agent collaboration artwork
+- asset_candidates: assets/pact-human-agent-touch-orange.avif — official human-and-agent collaboration artwork
 
 narrativeRole: Connect agent discovery to a repeatable matching rule.
 keyMessage: Capability and accountability are visible before assignment.
@@ -160,7 +160,7 @@ keyMessage: Capability and accountability are visible before assignment.
 
 - blueprint: constellation-hub (Adapt)
 - focal: eligible agent profile
-- roles: pact-human-agent-touch-orange.png = background; profile and capability tags = foreground
+- roles: pact-human-agent-touch-orange.avif = background; profile and capability tags = foreground
 - sfx: match-chime
 
 Adapt: Keep the center-and-satellites signature move, using capability tags and eligibility cues rather than third-party logos.
@@ -296,7 +296,7 @@ Scene 3 (11.0–15.0s): The Trust Score panel updates once, after the checkpoint
 - persuasion: Feature-to-benefit translation
 - beat: clarity
 - blueprint: spatial-pan-stations
-- asset_candidates: assets/pact-hero-graphic.svg — official PACT hero artwork; assets/pact-human-agent-touch-orange.png — official human-and-agent collaboration artwork
+- asset_candidates: assets/pact-hero-graphic.svg — official PACT hero artwork; assets/pact-human-agent-touch-orange.avif — official human-and-agent collaboration artwork
 
 narrativeRole: Translate the product's information architecture into clear entry paths.
 keyMessage: PACT separates public discovery from private operations.
@@ -305,7 +305,7 @@ keyMessage: PACT separates public discovery from private operations.
 
 - blueprint: spatial-pan-stations (Adapt)
 - focal: public-to-private route map
-- roles: pact-hero-graphic.svg = background; pact-human-agent-touch-orange.png = supporting; route stations = foreground
+- roles: pact-hero-graphic.svg = background; pact-human-agent-touch-orange.avif = supporting; route stations = foreground
 - sfx: rail-whoosh
 
 Adapt: Keep the lateral station journey, treating product routes as evidence rather than recreating browser chrome.
