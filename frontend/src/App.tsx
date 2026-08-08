@@ -362,12 +362,12 @@ interface CreatedAgentNotice {
 const PUBLIC_NAV_ITEMS: Array<{ id: View; label: string; icon: typeof LayoutDashboard }> = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'protocol', label: 'How it works', icon: Bot },
-  { id: 'marketplace', label: 'Arena', icon: Boxes },
+  { id: 'marketplace', label: 'Hub', icon: Boxes },
 ];
 
 const DAPP_NAV_ITEMS: Array<{ id: View; label: string; icon: typeof LayoutDashboard }> = [
   { id: 'dapp', label: 'Cabinet', icon: LayoutDashboard },
-  { id: 'marketplace', label: 'Arena', icon: Boxes },
+  { id: 'marketplace', label: 'Hub', icon: Boxes },
 ];
 
 // Disputes remains routable for an authenticated task participant, but is intentionally
@@ -1113,7 +1113,7 @@ function ArenaAttemptModal({
       : 'ATTEMPT-SCOPED TOOL WORKFLOW';
 
   return (
-    <Modal className="modal--arena" eyebrow={`Daily arena / ${challenge.dayKey}`} title={challenge.templateTitle} onClose={close}>
+    <Modal className="modal--arena" eyebrow={`Daily hub / ${challenge.dayKey}`} title={challenge.templateTitle} onClose={close}>
       {result ? (
         <div className={result.status === 'PASSED' ? 'arena-result arena-result--passed' : 'arena-result arena-result--failed'}>
           <header><Trophy /><span>{result.status}</span><strong>{result.score}<small>/100</small></strong></header>
@@ -1374,7 +1374,7 @@ function TrainingHubModal({
         </section>
         <div className="hub-detail__agent"><Bot /><span>{agent ? <><strong>Assign to {agent.displayName}</strong><small>Starting the runtime lets this agent claim every compatible open profile, including this one.</small></> : <><strong>Choose an agent first</strong><small>Create or open an agent in Cabinet, then return here to start its runtime.</small></>}</span></div>
         <div className="modal__actions">
-          <button className="button button--ghost" type="button" onClick={onClose}>Back to Arena</button>
+          <button className="button button--ghost" type="button" onClick={onClose}>Back to Hub</button>
           {agent ? <button className="button button--primary" type="button" disabled={busy || !hasCapacity} onClick={onStart}>{busy ? <RefreshCcw className="spin" /> : <Zap />}{hasCapacity ? `Start ${agent.displayName}` : 'Capacity reached'}</button> : <button className="button button--primary" type="button" onClick={onOpenCabinet}><LayoutDashboard /> Open Cabinet</button>}
         </div>
       </div>
@@ -3059,7 +3059,7 @@ export default function App() {
               {view === 'marketplace' ? (
                 <div className={`view-stack marketplace-page ${trainingBoardVisible ? 'marketplace-page--hubs' : ''}`}>
                   <section className={`page-intro marketplace-intro reveal ${trainingBoardVisible ? 'marketplace-intro--training' : ''}`}>
-                    <div>{trainingView ? <><div className="eyebrow">PACT / AUTONOMOUS AGENT ARENA</div><h1>Agent Arena</h1><p>Run profiles are machine protocols: each agent receives a newly generated private packet, invokes its runtime, and returns a verifier-bound receipt.</p></> : allTasksView ? <><div className="eyebrow">AGENT TASKS / TRAINING + FUNDED WORK</div><h1>Agent tasks</h1><p>Start a private training profile now. Funded public work appears here too when it is available.</p></> : <><div className="eyebrow">FUNDED WORK ORDERS / VERIFIABLE DELIVERY</div><h1>Open work orders</h1><p>Browse funded tasks that agents can claim. Every order has a clear result, escrow, acceptance criteria, and proof requirements.</p></>}</div>
+                    <div>{trainingView ? <><div className="eyebrow">PACT / AUTONOMOUS AGENT HUB</div><h1>Agent Hub</h1><p>Run profiles are machine protocols: each agent receives a newly generated private packet, invokes its runtime, and returns a verifier-bound receipt.</p></> : allTasksView ? <><div className="eyebrow">AGENT TASKS / TRAINING + FUNDED WORK</div><h1>Agent tasks</h1><p>Start a private training profile now. Funded public work appears here too when it is available.</p></> : <><div className="eyebrow">FUNDED WORK ORDERS / VERIFIABLE DELIVERY</div><h1>Open work orders</h1><p>Browse funded tasks that agents can claim. Every order has a clear result, escrow, acceptance criteria, and proof requirements.</p></>}</div>
                     {!trainingView && marketCategory !== 'ALL' ? <div className="marketplace-intro__action"><span><strong>${compactMoney(openEscrow)}</strong><small>OPEN ESCROW</small></span><button className="button button--primary" onClick={() => requestPublish()} type="button"><WalletCards /> {activeIsConnected ? t('Publish a task') : 'Connect to publish'}</button><small className="marketplace-intro__gate">Creator wallet required</small></div> : null}
                   </section>
                   <section className="market-summary reveal">
