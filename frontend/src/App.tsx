@@ -272,83 +272,6 @@ type CabinetSection = 'overview' | 'agents' | 'orders' | 'assignments';
 type TaskCategory = 'CREATIVE' | 'SECURITY' | 'RESEARCH' | 'ENGINEERING';
 type MarketCategory = 'ALL' | TaskCategory | 'TRAINING';
 
-const AGENT_STARTER_KITS = [
-  {
-    id: 'research',
-    label: 'Research scout',
-    specialty: 'Research & analysis',
-    summary: 'Investigate, compare sources, and return cited findings.',
-    description: 'Autonomous AI agent for source-led research, analysis, and technical verification.',
-    inputTypes: 'task brief, URLs, source documents',
-    outputTypes: 'cited report, structured findings',
-    tools: 'HTTPS, web research, document parser',
-    evidenceMethods: 'source manifest, citations, SHA-256 artifact hash',
-    icon: FileWarning,
-  },
-  {
-    id: 'data',
-    label: 'Data operator',
-    specialty: 'Data & documents',
-    summary: 'Extract, reconcile, and validate structured information.',
-    description: 'Autonomous AI agent for document extraction, data reconciliation, and reproducible analysis.',
-    inputTypes: 'CSV, spreadsheet, PDF, task brief',
-    outputTypes: 'validated table, reconciliation report, JSON',
-    tools: 'document parser, Python sandbox, HTTPS',
-    evidenceMethods: 'source manifest, row-level checks, artifact hash',
-    icon: Gauge,
-  },
-  {
-    id: 'builder',
-    label: 'Code builder',
-    specialty: 'Engineering & code',
-    summary: 'Plan, implement, test, and return an auditable patch.',
-    description: 'Autonomous AI agent for scoped engineering work, code changes, and test-backed delivery.',
-    inputTypes: 'repository URL, issue brief, acceptance criteria',
-    outputTypes: 'patch, test report, implementation notes',
-    tools: 'repository sandbox, test runner, HTTPS',
-    evidenceMethods: 'commit hash, test receipt, artifact hash',
-    icon: Server,
-  },
-  {
-    id: 'security',
-    label: 'Security reviewer',
-    specialty: 'Security & policy',
-    summary: 'Review risk, controls, and evidence without deploying changes.',
-    description: 'Autonomous AI agent for security reviews, policy analysis, and actionable risk reports.',
-    inputTypes: 'policy, configuration, repository URL, task brief',
-    outputTypes: 'risk report, control matrix, remediation plan',
-    tools: 'static analyzer, policy parser, HTTPS',
-    evidenceMethods: 'finding log, source manifest, artifact hash',
-    icon: ShieldCheck,
-  },
-  {
-    id: 'creative',
-    label: 'Creative producer',
-    specialty: 'Creative & media',
-    summary: 'Turn a clear brief into ready-to-review creative assets.',
-    description: 'Autonomous AI agent for editorial planning, creative production, and structured handoff.',
-    inputTypes: 'creative brief, references, brand rules',
-    outputTypes: 'script, storyboard, content pack',
-    tools: 'asset planner, document parser, HTTPS',
-    evidenceMethods: 'source manifest, delivery checklist, artifact hash',
-    icon: Clapperboard,
-  },
-  {
-    id: 'operator',
-    label: 'General operator',
-    specialty: 'Operations & coordination',
-    summary: 'Triage a well-defined brief and coordinate a documented result.',
-    description: 'Autonomous AI agent for task triage, operational analysis, and structured handoff.',
-    inputTypes: 'task brief, URLs, acceptance criteria',
-    outputTypes: 'execution plan, status report, structured findings',
-    tools: 'HTTPS, document parser, sandboxed worker',
-    evidenceMethods: 'execution log, source manifest, artifact hash',
-    icon: Bot,
-  },
-] as const;
-
-type AgentStarterKit = (typeof AGENT_STARTER_KITS)[number];
-
 interface ToastState {
   tone: 'success' | 'error';
   message: string;
@@ -806,7 +729,6 @@ function RegisterAgentModal({
   const [setupStep, setSetupStep] = useState<'runtime' | 'profile'>('runtime');
   const runtimeKind = 'EXTERNAL_API' as const;
   const [gatewayUrl, setGatewayUrl] = useState('');
-  const [starterKitId, setStarterKitId] = useState<AgentStarterKit['id']>(AGENT_STARTER_KITS[0].id);
   const [form, setForm] = useState({
     displayName: '',
     specialty: 'Research & analysis',
@@ -835,18 +757,6 @@ function RegisterAgentModal({
 
   const update = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm((current) => ({ ...current, [key]: value }));
   const splitList = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
-  const applyStarterKit = (kit: AgentStarterKit) => {
-    setStarterKitId(kit.id);
-    setForm((current) => ({
-      ...current,
-      specialty: kit.specialty,
-      description: kit.description,
-      inputTypes: kit.inputTypes,
-      outputTypes: kit.outputTypes,
-      tools: kit.tools,
-      evidenceMethods: kit.evidenceMethods,
-    }));
-  };
 
   const continueToProfile = () => {
     const normalizedGatewayUrl = gatewayUrl.trim();
@@ -931,28 +841,11 @@ function RegisterAgentModal({
   };
 
   return (
-    <Modal className="modal--agent-register" eyebrow="Agent setup / command kits" title={setupStep === 'runtime' ? 'Start with a ready work kit' : 'Configure the agent'} onClose={onClose}>
+    <Modal className="modal--agent-register" eyebrow="Agent setup" title={setupStep === 'runtime' ? 'Connect the runtime' : 'Configure the agent'} onClose={onClose}>
       {setupStep === 'runtime' ? (
         <div className="agent-setup-flow">
-          <div className="agent-setup-progress"><span className="agent-setup-progress__active">01 Command kit</span><span>02 Profile &amp; limits</span><span>03 Circle wallet</span></div>
-          <div className="form-note field--wide"><Bot /><span>Choose a default operating kit. It fills the public capability manifest, so the agent starts ready for the matching tasks instead of requiring a long manual form.</span></div>
-          <div className="runtime-choice-grid runtime-choice-grid--kits" aria-label="Agent command kits">
-            {AGENT_STARTER_KITS.map((kit, index) => {
-              const Icon = kit.icon;
-              const active = starterKitId === kit.id;
-              return <button className={active ? 'runtime-choice runtime-choice--active' : 'runtime-choice'} key={kit.id} type="button" aria-pressed={active} onClick={() => applyStarterKit(kit)}>
-                <span className="runtime-choice__index">0{index + 1}</span><Icon /><span><strong>{kit.label}</strong><small>{kit.summary}</small></span>{active ? <BadgeCheck /> : <ChevronRight />}
-              </button>;
-            })}
-          </div>
-          <section className="agent-kit-explainer" aria-label="What the command kit changes">
-            <header><div className="eyebrow">WHY THIS CHOICE MATTERS</div><strong>Direction controls task matching, not model training.</strong></header>
-            <div className="agent-kit-explainer__grid">
-              <article><span>01</span><strong>Task matching</strong><p>PACT compares this public profile with task categories, required capabilities, inputs, tools, and evidence.</p></article>
-              <article><span>02</span><strong>Ready-made profile</strong><p>The kit fills the manifest that creators see. You can change the description, limits, and evidence before signing.</p></article>
-              <article><span>03</span><strong>No model change</strong><p>This does not select or retrain an AI model. The connected runtime remains responsible for execution and any private memory.</p></article>
-            </div>
-          </section>
+          <div className="agent-setup-progress"><span className="agent-setup-progress__active">01 Runtime <small>optional</small></span><span>02 Profile &amp; limits</span><span>03 Circle wallet</span></div>
+          <div className="form-note field--wide"><Bot /><span>A runtime callback is optional. You can create the agent and its Circle wallet now, then connect your worker later.</span></div>
           <section className="runtime-setup-card runtime-setup-card--compact">
             <header><div><div className="eyebrow">EXTERNAL API / SIGNED ONBOARDING</div><h3>Connect the runtime when ready</h3></div><KeyRound /></header>
             <p>PACT can create the agent and its Circle wallet without an external server. Add a callback only when your own worker is online and ready to receive work.</p>
@@ -966,9 +859,9 @@ function RegisterAgentModal({
         </div>
       ) : (
       <form className="form-grid" onSubmit={submit}>
-        <div className="agent-setup-progress field--wide"><button type="button" onClick={() => setSetupStep('runtime')}><ArrowRight /> Command kit</button><span className="agent-setup-progress__active">02 Profile &amp; limits</span><span>03 Circle wallet</span></div>
+        <div className="agent-setup-progress field--wide"><button type="button" onClick={() => setSetupStep('runtime')}><ArrowRight /> Runtime</button><span className="agent-setup-progress__active">02 Profile &amp; limits</span><span>03 Circle wallet</span></div>
         <div className="form-note field--wide"><Bot /><span>Your connected wallet remains the controller. PACT creates a separate Circle smart wallet for the agent after confirmation.</span></div>
-        <div className="registration-section field--wide"><span>01 / AGENT IDENTITY</span><strong>Name the agent and set its operating envelope</strong><small>The selected work kit already filled the capability manifest. Change only the values you need here.</small></div>
+        <div className="registration-section field--wide"><span>01 / AGENT IDENTITY</span><strong>Name the agent and set its operating envelope</strong><small>Define the public capability manifest that creators use to match work to this agent.</small></div>
         <div className="wallet-mode wallet-mode--active field--wide"><span><strong>Circle smart wallet <em>Required</em></strong><small>A dedicated Circle Arc smart-contract account is created for this agent. Your connected wallet remains its authenticated controller.</small></span><ShieldCheck /></div>
         <label className="field">
           <span>{t('Display name')}</span>
@@ -999,7 +892,7 @@ function RegisterAgentModal({
           <input min="1" step="1" type="number" value={form.humanApprovalAboveUsdc} placeholder="Leave empty for none" onChange={(event) => update('humanApprovalAboveUsdc', event.target.value)} />
         </label>
         <details className="agent-manifest-advanced field--wide">
-          <summary><span>Advanced manifest</span><small>Edit commands, inputs, evidence, and transaction preparation only if the starter kit needs changing.</small></summary>
+          <summary><span>Advanced manifest</span><small>Edit commands, inputs, evidence, and transaction preparation when the default fields need more detail.</small></summary>
           <div className="agent-manifest-advanced__fields">
             <label className="field field--wide"><span>Capability description</span><textarea required minLength={20} maxLength={500} rows={3} value={form.description} placeholder="What can this agent reliably do, and where does it stop?" onChange={(event) => update('description', event.target.value)} /></label>
             <label className="field"><span>Accepted inputs</span><input required value={form.inputTypes} placeholder="PDF, URLs, task brief" onChange={(event) => update('inputTypes', event.target.value)} /></label>
@@ -2153,6 +2046,33 @@ function DappDashboard({
   const { t } = useLocale();
   const [cabinetSection, setCabinetSection] = useState<CabinetSection>('overview');
   const connected = Boolean(connectedAddress);
+
+  if (!connected) {
+    return (
+      <div className="view-stack dapp-page">
+        <section className="cabinet-connect-gate reveal" aria-labelledby="cabinet-connect-title">
+          <div className="cabinet-connect-gate__lead">
+            <div className="cabinet-connect-gate__mark" aria-hidden="true"><WalletCards /></div>
+            <div>
+              <div className="eyebrow">PRIVATE PACT WORKSPACE</div>
+              <h1 id="cabinet-connect-title">Enter your Cabinet.</h1>
+              <p>Connect the Arc wallet that controls your agents. Each agent keeps its own Circle Smart Wallet and USDC balance.</p>
+              <button className="button button--primary" onClick={onConnect} type="button"><WalletCards /> Connect wallet <ArrowRight /></button>
+            </div>
+          </div>
+          <aside className="cabinet-connect-gate__details" aria-label="What becomes available after connecting">
+            <span>AFTER CONNECTION</span>
+            <ul>
+              <li><ShieldCheck /> Create and manage agent identities</li>
+              <li><WalletCards /> Fund each agent's USDC wallet</li>
+              <li><Plus /> Publish and settle work orders</li>
+            </ul>
+          </aside>
+        </section>
+      </div>
+    );
+  }
+
   const controlledAgents = snapshot.agents.filter((agent) => connectedAddress && agent.wallet?.controllerAddress.toLowerCase() === connectedAddress.toLowerCase());
   const recentlyCreatedAgent = createdAgentNotice
     ? snapshot.agents.find((agent) => agent.agentAddress.toLowerCase() === createdAgentNotice.agentAddress.toLowerCase())
@@ -2202,8 +2122,8 @@ function DappDashboard({
           <p>{connected ? 'Manage your agents and work from one wallet.' : t('Connect a wallet to publish work, create an agent profile, and manage private records in one place.')}</p>
         </div>
         <div className="cabinet-header__actions">
-          {connected ? <div className="dapp-identity"><span className="live-dot" /><span>{t('Your wallet')}</span><strong>{shortAddress(connectedAddress!)}</strong></div> : <button className="button button--primary" onClick={onConnect} type="button"><WalletCards /> {t('Connect Wallet')}</button>}
-          {connected ? <><button className="button button--outline button--small" onClick={onCreateAgent} type="button"><Bot /> Create an agent</button><button className="button button--primary button--small" onClick={onPublish} type="button"><Plus /> Create task</button></> : null}
+          <div className="dapp-identity"><span className="live-dot" /><span>{t('Your wallet')}</span><strong>{shortAddress(connectedAddress!)}</strong></div>
+          <><button className="button button--outline button--small" onClick={onCreateAgent} type="button"><Bot /> Create an agent</button><button className="button button--primary button--small" onClick={onPublish} type="button"><Plus /> Create task</button></>
         </div>
       </section>
 
@@ -2219,8 +2139,7 @@ function DappDashboard({
         </section>
       ) : null}
 
-      {connected ? (
-        <section className="cabinet-workspace reveal" aria-label="Cabinet workspace">
+      <section className="cabinet-workspace reveal" aria-label="Cabinet workspace">
           <nav className="cabinet-tabs" aria-label="Cabinet sections">
             {cabinetTabs.map((tab) => <button className={cabinetSection === tab.id ? 'cabinet-tab cabinet-tab--active' : 'cabinet-tab'} type="button" key={tab.id} onClick={() => setCabinetSection(tab.id)} aria-pressed={cabinetSection === tab.id}><span>{tab.label}</span>{typeof tab.count === 'number' ? <b>{tab.count}</b> : null}</button>)}
           </nav>
@@ -2294,9 +2213,6 @@ function DappDashboard({
             ) : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title={myTrainingReports.length ? 'No paid assignments yet' : t('No agent activity yet')} copy={myTrainingReports.length ? 'Verified training reports are shown above. Funded work assignments will appear here when your agent claims one.' : 'Run a Training profile. After Verify, this page will show the score, verifier checks, judge feedback, and peer comparison.'} /></div>}
           </section> : null}
         </section>
-      ) : (
-        <section className="dapp-readonly-note dapp-readonly-note--compact reveal"><ShieldCheck /><strong>{t('Connect Wallet')}</strong><button className="button button--outline button--small" onClick={onConnect} type="button"><WalletCards /> {t('Connect Wallet')}</button></section>
-      )}
     </div>
   );
 }
@@ -2855,7 +2771,6 @@ export default function App() {
   };
 
   const isDappView = workspaceMode;
-  const walletConnectionRequired = view === 'dapp' && !activeIsConnected;
   const visibleNavItems = isDappView ? DAPP_NAV_ITEMS : PUBLIC_NAV_ITEMS;
   const viewTitle = view === 'disputes' ? 'Private disputes' : t(visibleNavItems.find((item) => item.id === view)?.label ?? 'Overview');
 
@@ -2864,7 +2779,7 @@ export default function App() {
       <div className="noise" aria-hidden="true" />
       {isDappView ? <aside className={mobileNav ? 'sidebar sidebar--open' : 'sidebar'}>
         <div className="brand">
-          <div className="brand__mark"><img src="/pact-icon.svg" alt="" /></div>
+          <img className="brand__logo" src="/pact-logo.png" alt="PACT" />
           <div><strong>PACT</strong><small>AGENT WORK SETTLEMENT</small></div>
         </div>
         <nav className="primary-nav" aria-label={isDappView ? 'DApp navigation' : 'Public navigation'}>
@@ -2891,7 +2806,7 @@ export default function App() {
             <div className="topbar__title"><span>PACT /</span><strong>{viewTitle}</strong></div>
           </> : <>
             <button className="public-brand" onClick={() => changeView('overview')} type="button" aria-label={t('PACT overview')}>
-              <span className="public-brand__mark"><img src="/pact-icon.svg" alt="" /></span>
+              <img className="public-brand__logo" src="/pact-logo.png" alt="" />
               <span className="public-brand__copy"><strong>PACT</strong><small>AGENT WORK SETTLEMENT</small></span>
             </button>
             <nav className="public-topnav" aria-label="Public navigation">
@@ -2906,7 +2821,7 @@ export default function App() {
             {isDappView ? <button className="icon-button icon-button--top" disabled={busyKey !== null} onClick={() => void loadDashboard()} type="button" aria-label="Refresh dashboard"><RefreshCcw className={loading ? 'spin' : ''} /></button> : null}
             <LanguageSwitcher />
             {!isDappView ? <button className="button button--small button--workspace-entry" onClick={() => changeView('dapp')} type="button"><LayoutDashboard /> <span>{t('Cabinet')}</span></button> : null}
-            {isDappView ? <WalletHeader activeAddress={activeAddress} activeIsConnected={activeIsConnected} agentAddress={hubAgent?.agentAddress} canDeposit={Boolean(hubAgent)} onOpenConnectModal={() => setWalletModalOpen(true)} onDeposit={() => { if (hubAgent) setFundingAgent(hubAgent); }} onDisconnect={handleDisconnect} /> : null}
+            {isDappView && activeIsConnected ? <WalletHeader activeAddress={activeAddress} activeIsConnected={activeIsConnected} agentAddress={hubAgent?.agentAddress} canDeposit={Boolean(hubAgent)} onOpenConnectModal={() => setWalletModalOpen(true)} onDeposit={() => { if (hubAgent) setFundingAgent(hubAgent); }} onDisconnect={handleDisconnect} /> : null}
           </div>
         </header>
 
@@ -2917,20 +2832,6 @@ export default function App() {
               <div><strong>Control API unavailable</strong><span>{error} · Expected at {API_BASE}</span></div>
               <button className="button button--small" onClick={() => void loadDashboard()} type="button">Retry</button>
             </div>
-          ) : null}
-
-          {walletConnectionRequired ? (
-            <section className="wallet-connect-banner" role="status" aria-label="Wallet connection required">
-              <WalletCards aria-hidden="true" />
-              <div>
-                <span>Wallet connection required</span>
-                <strong>Connect your Arc wallet to enter the agent workspace.</strong>
-                <small>Your wallet is the authenticated controller. Every agent receives its own Circle Smart Wallet.</small>
-              </div>
-              <button className="button button--primary" type="button" onClick={() => setWalletModalOpen(true)}>
-                <WalletCards /> Connect wallet
-              </button>
-            </section>
           ) : null}
 
           {loading && !snapshot ? (
@@ -3059,7 +2960,7 @@ export default function App() {
               {view === 'marketplace' ? (
                 <div className={`view-stack marketplace-page ${trainingBoardVisible ? 'marketplace-page--hubs' : ''}`}>
                   <section className={`page-intro marketplace-intro reveal ${trainingBoardVisible ? 'marketplace-intro--training' : ''}`}>
-                    <div>{trainingView ? <><div className="eyebrow">PACT / AUTONOMOUS AGENT HUB</div><h1>Agent Hub</h1><p>Run profiles are machine protocols: each agent receives a newly generated private packet, invokes its runtime, and returns a verifier-bound receipt.</p></> : allTasksView ? <><div className="eyebrow">AGENT TASKS / TRAINING + FUNDED WORK</div><h1>Agent tasks</h1><p>Start a private training profile now. Funded public work appears here too when it is available.</p></> : <><div className="eyebrow">FUNDED WORK ORDERS / VERIFIABLE DELIVERY</div><h1>Open work orders</h1><p>Browse funded tasks that agents can claim. Every order has a clear result, escrow, acceptance criteria, and proof requirements.</p></>}</div>
+          <div>{trainingView ? <><div className="eyebrow">PACT / AUTONOMOUS AGENT HUB</div><h1>Agent Hub</h1><p>Run profiles are machine protocols: each agent receives a newly generated private packet, invokes its runtime, and returns a verifier-bound receipt.</p></> : allTasksView ? <><div className="eyebrow">AGENT TASKS / TRAINING + FUNDED WORK</div><h1>Agent tasks</h1><p>Start a private training profile now. Funded public work appears here too when it is available.</p></> : <><div className="eyebrow">FUNDED WORK ORDERS / VERIFIABLE DELIVERY</div><h1>Open work orders</h1><p>Browse funded tasks that agents can claim. Every order has a clear result, escrow, acceptance criteria, and proof requirements.</p></>}</div>
                     {!trainingView && marketCategory !== 'ALL' ? <div className="marketplace-intro__action"><span><strong>${compactMoney(openEscrow)}</strong><small>OPEN ESCROW</small></span><button className="button button--primary" onClick={() => requestPublish()} type="button"><WalletCards /> {activeIsConnected ? t('Publish a task') : 'Connect to publish'}</button><small className="marketplace-intro__gate">Creator wallet required</small></div> : null}
                   </section>
                   <section className="market-summary reveal">

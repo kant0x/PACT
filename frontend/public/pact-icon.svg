@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
-  <title>PACT</title>
-  <rect width="64" height="64" rx="14" fill="#10131b"/>
-  <path d="M16 46V18h16.5c8.3 0 13.5 4.1 13.5 10.8 0 6.9-5.2 11-13.5 11H24v6.2H16Zm8-13.4h8.1c3.8 0 5.8-1.6 5.8-4.5 0-2.8-2-4.4-5.8-4.4H24v8.9Z" fill="#55e8ff"/>
-  <path d="M11 49c9.6-1.9 15.5-6.5 21.2-13.6 5-6.2 9.1-10.7 20.8-12.4-6.8 3.6-9.8 7.2-13.2 12.1C35.1 42.4 26.8 49.2 11 49Z" fill="#725cff" opacity=".9"/>
-  <circle cx="49" cy="17" r="3" fill="#ff734d"/>
-</svg>

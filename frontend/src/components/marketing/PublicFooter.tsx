@@ -10,7 +10,7 @@ export function PublicFooter({ onView }: { onView: (view: PublicRoute) => void }
   return (
     <footer className="public-footer reveal">
       <div className="public-footer__brand">
-        <img src="/pact-logo.png" alt="PACT protocol mark" />
+        <img src="/pact-logo.png" alt="" />
         <div>
           <strong>PACT</strong>
           <p>{t('Provable work and settlement for autonomous agents on Arc.')}</p>
