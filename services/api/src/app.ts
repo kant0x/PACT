@@ -19,7 +19,7 @@ import {
 } from './security.js';
 import { AgentRuntime, DeterministicAgentProvider, OpenAIAgentProvider, type AgentModelProvider } from './agent-runtime.js';
 import { createArcSponsoredWallet, getCircleTransaction, submitArcContractCall } from './integrations/circle.js';
-import { encodeFunctionData, getAddress, parseAbi, parseUnits, verifyMessage } from 'viem';
+import { encodeFunctionData, getAddress, keccak256, parseAbi, parseUnits, stringToHex, verifyMessage } from 'viem';
 import { defaultExternalManifest, validateCapabilityManifest } from './capability-validation.js';
 import { defaultWorkOrderForTask, validateWorkOrderSpec } from './work-order-validation.js';
 import { createX402RuntimeIntegration } from './integrations/x402.js';
@@ -44,10 +44,26 @@ const CIRCLE_AGENT_VAULT_ABI = parseAbi([
   'function postCollateral(uint256 taskId)',
   'function withdrawStreamed(uint256 taskId)',
   'function pauseForDispute(uint256 taskId)',
+  'function submitResultProof(uint256 taskId, bytes32 proofHash)',
+]);
+const CIRCLE_AGENT_REGISTRY_ABI = parseAbi([
+  'function registerAgent(bytes32 profileHash, bytes32 capabilitiesHash)',
+  'function updateAgentProfile(bytes32 profileHash, bytes32 capabilitiesHash)',
+]);
+const CIRCLE_AGENT_MILESTONE_ABI = parseAbi([
+  'function submitProof(uint256 planId, uint256 milestoneId, bytes32 proofHash)',
+  'function claimMilestone(uint256 planId, uint256 milestoneId)',
+]);
+const CIRCLE_AGENT_SUBSCRIPTION_ABI = parseAbi([
+  'function claimPeriod(uint256 subscriptionId, bytes32 proofHash)',
+]);
+const CIRCLE_AGENT_REWARD_ABI = parseAbi([
+  'function claimReward(uint256 rewardId)',
 ]);
 const CIRCLE_AGENT_ERC20_ABI = parseAbi([
   'function approve(address spender, uint256 amount) returns (bool)',
 ]);
+const BYTES32 = /^0x[a-fA-F0-9]{64}$/;
 
 const hashSecret = (value: string) => createHash('sha256').update(value).digest('hex');
 
@@ -914,6 +930,30 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
         circleWalletId: provisioned.wallet.id,
         circleWalletSetId: provisioned.walletSetId,
       };
+      let onchainRegistration: { id: string; state: string } | null = null;
+      const agentRegistryAddress = process.env.PACT_AGENT_REGISTRY_ADDRESS ?? process.env.AGENT_REGISTRY_ADDRESS;
+      if (agentRegistryAddress) {
+        if (!ETHEREUM_ADDRESS.test(agentRegistryAddress)) {
+          throw new ApiProblem(503, 'AGENT_REGISTRY_UNAVAILABLE', 'Configured AgentRegistry address is invalid');
+        }
+        const profileHash = keccak256(stringToHex(JSON.stringify({
+          agent: agent.agentAddress,
+          displayName: agent.displayName,
+          version: 1,
+        })));
+        const capabilitiesHash = keccak256(stringToHex(JSON.stringify(agent.capabilityManifest)));
+        const registration = await submitArcContractCall({
+          walletId: agent.circleWalletId,
+          contractAddress: getAddress(agentRegistryAddress),
+          callData: encodeFunctionData({
+            abi: CIRCLE_AGENT_REGISTRY_ABI,
+            functionName: 'registerAgent',
+            args: [profileHash, capabilitiesHash],
+          }),
+          refId: `PACT:REGISTER_AGENT:${agent.agentAddress}`,
+        });
+        onchainRegistration = { id: registration.id, state: registration.state };
+      }
       await agentRepository.create(agent);
       // Live agents are never auto-solved by the server. A registered agent
       // must use its own runtime/API key or an explicitly integrated worker.
@@ -926,6 +966,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
           circleWalletId: undefined,
           circleWalletSetId: undefined,
         },
+        onchainRegistration,
         automation,
       });
     } catch (e) { next(e); }
@@ -949,67 +990,129 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
 
       const action = text(request.body?.action).trim().toUpperCase();
       const taskId = text(request.body?.taskId).trim();
-      if (!['CLAIM_TASK', 'APPROVE_COLLATERAL', 'POST_COLLATERAL', 'WITHDRAW_STREAM', 'PAUSE_DISPUTE'].includes(action)) {
+      const protocolResourceId = text(request.body?.resourceId || request.body?.taskId).trim();
+      const taskActions = new Set(['CLAIM_TASK', 'APPROVE_COLLATERAL', 'POST_COLLATERAL', 'WITHDRAW_STREAM', 'PAUSE_DISPUTE', 'SUBMIT_RESULT_PROOF']);
+      const protocolActions = new Set([
+        'REGISTER_AGENT',
+        'UPDATE_AGENT_PROFILE',
+        'SUBMIT_MILESTONE_PROOF',
+        'CLAIM_MILESTONE',
+        'CLAIM_SUBSCRIPTION',
+        'CLAIM_REWARD',
+      ]);
+      if (!taskActions.has(action) && !protocolActions.has(action)) {
         throw new ApiProblem(400, 'CIRCLE_ACTION_INVALID', 'Unsupported Circle agent action');
       }
-      const task = await taskRepository.findById(taskId);
-      if (!task) throw new ApiProblem(404, 'TASK_NOT_FOUND', 'Task not found');
-      if (!task.chainTaskId || !/^[1-9][0-9]*$/.test(task.chainTaskId)) {
-        throw new ApiProblem(409, 'TASK_NOT_FUNDED_ONCHAIN', 'Work order has no Arc StreamingVault task');
-      }
-      if (action === 'CLAIM_TASK') {
-        if (task.status !== 'OPEN') throw new ApiProblem(409, 'TASK_NOT_OPEN', 'Only an open work order can be claimed');
-        if (task.preferredAgentAddress && task.preferredAgentAddress !== agentAddress) {
-          throw new ApiProblem(403, 'AGENT_INVITE_ONLY', 'This work order is reserved for another agent');
+      let task: any = null;
+      if (taskActions.has(action)) {
+        task = await taskRepository.findById(taskId);
+        if (!task) throw new ApiProblem(404, 'TASK_NOT_FOUND', 'Task not found');
+        if (!task.chainTaskId || !/^[1-9][0-9]*$/.test(task.chainTaskId)) {
+          throw new ApiProblem(409, 'TASK_NOT_FUNDED_ONCHAIN', 'Work order has no Arc StreamingVault task');
         }
-      } else if (task.agentAddress !== agentAddress) {
-        throw new ApiProblem(403, 'AGENT_TASK_MISMATCH', 'The Circle wallet can act only on work assigned to this agent');
-      }
-      if (action === 'WITHDRAW_STREAM' && task.status !== 'STREAMING') {
-        throw new ApiProblem(409, 'STREAM_NOT_ACTIVE', 'Only an active stream can be withdrawn');
-      }
-      if (action === 'PAUSE_DISPUTE' && task.status !== 'STREAMING') {
-        throw new ApiProblem(409, 'STREAM_NOT_ACTIVE', 'Only an active stream can be paused for dispute');
-      }
-      if ((action === 'APPROVE_COLLATERAL' || action === 'POST_COLLATERAL') && task.status !== 'ASSIGNED') {
-        throw new ApiProblem(409, 'COLLATERAL_NOT_DUE', 'Collateral is available only after the claim receipt is recorded');
+        if (action === 'CLAIM_TASK') {
+          if (task.status !== 'OPEN') throw new ApiProblem(409, 'TASK_NOT_OPEN', 'Only an open work order can be claimed');
+          if (task.preferredAgentAddress && task.preferredAgentAddress !== agentAddress) {
+            throw new ApiProblem(403, 'AGENT_INVITE_ONLY', 'This work order is reserved for another agent');
+          }
+        } else if (task.agentAddress !== agentAddress) {
+          throw new ApiProblem(403, 'AGENT_TASK_MISMATCH', 'The Circle wallet can act only on work assigned to this agent');
+        }
+        if (action === 'WITHDRAW_STREAM' && task.status !== 'STREAMING') {
+          throw new ApiProblem(409, 'STREAM_NOT_ACTIVE', 'Only an active stream can be withdrawn');
+        }
+        if (action === 'PAUSE_DISPUTE' && task.status !== 'STREAMING') {
+          throw new ApiProblem(409, 'STREAM_NOT_ACTIVE', 'Only an active stream can be paused for dispute');
+        }
+        if (action === 'SUBMIT_RESULT_PROOF' && !['STREAMING', 'PAUSED'].includes(task.status)) {
+          throw new ApiProblem(409, 'STREAM_NOT_ACTIVE', 'A result proof can be submitted only for an active or paused stream');
+        }
+        if ((action === 'APPROVE_COLLATERAL' || action === 'POST_COLLATERAL') && task.status !== 'ASSIGNED') {
+          throw new ApiProblem(409, 'COLLATERAL_NOT_DUE', 'Collateral is available only after the claim receipt is recorded');
+        }
       }
 
-      const vaultAddress = process.env.PACT_STREAMING_VAULT_ADDRESS ?? process.env.STREAMING_VAULT_ADDRESS ?? process.env.VAULT_ADDRESS;
-      if (!vaultAddress || !ETHEREUM_ADDRESS.test(vaultAddress)) {
-        throw new ApiProblem(503, 'STREAMING_VAULT_UNAVAILABLE', 'StreamingVault address is not configured');
-      }
-      const chainTaskId = BigInt(task.chainTaskId);
-      let contractAddress = getAddress(vaultAddress);
-      let callData: `0x${string}`;
-      if (action === 'CLAIM_TASK') {
-        callData = encodeFunctionData({ abi: CIRCLE_AGENT_VAULT_ABI, functionName: 'claimOpenTask', args: [chainTaskId] });
-      } else if (action === 'APPROVE_COLLATERAL') {
-        const usdcAddress = process.env.ARC_USDC_ADDRESS;
-        if (!usdcAddress || !ETHEREUM_ADDRESS.test(usdcAddress)) {
-          throw new ApiProblem(503, 'ARC_USDC_UNAVAILABLE', 'ARC_USDC_ADDRESS is not configured');
+      const configuredProtocolAddress = (name: string) => {
+        const value = process.env[`PACT_${name}_ADDRESS`] ?? process.env[`${name}_ADDRESS`];
+        if (!value || !ETHEREUM_ADDRESS.test(value)) {
+          throw new ApiProblem(503, `${name}_UNAVAILABLE`, `${name} address is not configured`);
         }
-        contractAddress = getAddress(usdcAddress);
+        return getAddress(value);
+      };
+      let contractAddress: `0x${string}`;
+      let callData: `0x${string}`;
+      if (taskActions.has(action)) {
+        const vaultAddress = configuredProtocolAddress('STREAMING_VAULT');
+        const chainTaskId = BigInt(task!.chainTaskId!);
+        contractAddress = vaultAddress;
+        if (action === 'CLAIM_TASK') {
+          callData = encodeFunctionData({ abi: CIRCLE_AGENT_VAULT_ABI, functionName: 'claimOpenTask', args: [chainTaskId] });
+        } else if (action === 'APPROVE_COLLATERAL') {
+          const usdcAddress = process.env.ARC_USDC_ADDRESS;
+          if (!usdcAddress || !ETHEREUM_ADDRESS.test(usdcAddress)) {
+            throw new ApiProblem(503, 'ARC_USDC_UNAVAILABLE', 'ARC_USDC_ADDRESS is not configured');
+          }
+          contractAddress = getAddress(usdcAddress);
+          callData = encodeFunctionData({
+            abi: CIRCLE_AGENT_ERC20_ABI,
+            functionName: 'approve',
+            args: [vaultAddress, parseUnits(task!.collateralLocked, 6)],
+          });
+        } else if (action === 'POST_COLLATERAL') {
+          callData = encodeFunctionData({ abi: CIRCLE_AGENT_VAULT_ABI, functionName: 'postCollateral', args: [chainTaskId] });
+        } else if (action === 'WITHDRAW_STREAM') {
+          callData = encodeFunctionData({ abi: CIRCLE_AGENT_VAULT_ABI, functionName: 'withdrawStreamed', args: [chainTaskId] });
+        } else if (action === 'SUBMIT_RESULT_PROOF') {
+          const proofHash = text(request.body?.proofHash).trim();
+          if (!BYTES32.test(proofHash)) throw new ApiProblem(400, 'PROOF_HASH_REQUIRED', 'proofHash must be a bytes32 value');
+          callData = encodeFunctionData({ abi: CIRCLE_AGENT_VAULT_ABI, functionName: 'submitResultProof', args: [chainTaskId, proofHash as `0x${string}`] });
+        } else {
+          callData = encodeFunctionData({ abi: CIRCLE_AGENT_VAULT_ABI, functionName: 'pauseForDispute', args: [chainTaskId] });
+        }
+      } else if (action === 'REGISTER_AGENT' || action === 'UPDATE_AGENT_PROFILE') {
+        const profileHash = text(request.body?.profileHash).trim();
+        const capabilitiesHash = text(request.body?.capabilitiesHash).trim();
+        if (!BYTES32.test(profileHash) || !BYTES32.test(capabilitiesHash)) {
+          throw new ApiProblem(400, 'AGENT_PROFILE_HASH_REQUIRED', 'profileHash and capabilitiesHash must be bytes32 values');
+        }
+        contractAddress = configuredProtocolAddress('AGENT_REGISTRY');
         callData = encodeFunctionData({
-          abi: CIRCLE_AGENT_ERC20_ABI,
-          functionName: 'approve',
-          args: [getAddress(vaultAddress), parseUnits(task.collateralLocked, 6)],
+          abi: CIRCLE_AGENT_REGISTRY_ABI,
+          functionName: action === 'REGISTER_AGENT' ? 'registerAgent' : 'updateAgentProfile',
+          args: [profileHash as `0x${string}`, capabilitiesHash as `0x${string}`],
         });
-      } else if (action === 'POST_COLLATERAL') {
-        callData = encodeFunctionData({ abi: CIRCLE_AGENT_VAULT_ABI, functionName: 'postCollateral', args: [chainTaskId] });
-      } else if (action === 'WITHDRAW_STREAM') {
-        callData = encodeFunctionData({ abi: CIRCLE_AGENT_VAULT_ABI, functionName: 'withdrawStreamed', args: [chainTaskId] });
+      } else if (action === 'SUBMIT_MILESTONE_PROOF' || action === 'CLAIM_MILESTONE') {
+        if (!/^[1-9][0-9]*$/.test(protocolResourceId) || !/^[0-9]+$/.test(text(request.body?.milestoneId))) {
+          throw new ApiProblem(400, 'MILESTONE_ID_REQUIRED', 'resourceId and milestoneId must be valid integers');
+        }
+        contractAddress = configuredProtocolAddress('MILESTONE_ESCROW');
+        if (action === 'SUBMIT_MILESTONE_PROOF') {
+          const proofHash = text(request.body?.proofHash).trim();
+          if (!BYTES32.test(proofHash)) throw new ApiProblem(400, 'PROOF_HASH_REQUIRED', 'proofHash must be a bytes32 value');
+          callData = encodeFunctionData({ abi: CIRCLE_AGENT_MILESTONE_ABI, functionName: 'submitProof', args: [BigInt(protocolResourceId), BigInt(request.body.milestoneId), proofHash as `0x${string}`] });
+        } else {
+          callData = encodeFunctionData({ abi: CIRCLE_AGENT_MILESTONE_ABI, functionName: 'claimMilestone', args: [BigInt(protocolResourceId), BigInt(request.body.milestoneId)] });
+        }
+      } else if (action === 'CLAIM_SUBSCRIPTION') {
+        const proofHash = text(request.body?.proofHash).trim();
+        if (!/^[1-9][0-9]*$/.test(protocolResourceId) || !BYTES32.test(proofHash)) {
+          throw new ApiProblem(400, 'SUBSCRIPTION_CLAIM_REQUIRED', 'resourceId must be an integer and proofHash must be bytes32');
+        }
+        contractAddress = configuredProtocolAddress('SUBSCRIPTION_VAULT');
+        callData = encodeFunctionData({ abi: CIRCLE_AGENT_SUBSCRIPTION_ABI, functionName: 'claimPeriod', args: [BigInt(protocolResourceId), proofHash as `0x${string}`] });
       } else {
-        callData = encodeFunctionData({ abi: CIRCLE_AGENT_VAULT_ABI, functionName: 'pauseForDispute', args: [chainTaskId] });
+        if (!/^[1-9][0-9]*$/.test(protocolResourceId)) throw new ApiProblem(400, 'REWARD_ID_REQUIRED', 'resourceId must be a positive integer');
+        contractAddress = configuredProtocolAddress('REWARD_VAULT');
+        callData = encodeFunctionData({ abi: CIRCLE_AGENT_REWARD_ABI, functionName: 'claimReward', args: [BigInt(protocolResourceId)] });
       }
 
       const transaction = await submitArcContractCall({
         walletId: agent.circleWalletId,
         contractAddress,
         callData,
-        refId: `PACT:${action}:${task.id}`,
+        refId: `PACT:${action}:${(task?.id ?? protocolResourceId) || agentAddress}`,
       });
-      response.status(202).json({ id: transaction.id, state: transaction.state, action, taskId: task.id });
+      response.status(202).json({ id: transaction.id, state: transaction.state, action, taskId: task?.id ?? null, resourceId: protocolResourceId || null });
     } catch (error) { next(error); }
   });
 
@@ -1656,10 +1759,23 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
           throw new ApiProblem(400, 'COMPLETION_TX_REQUIRED', 'Complete the work order in StreamingVault before accepting the deliverable');
         }
         try {
+          const expectedProofHash = keccak256(stringToHex(JSON.stringify({
+            deliverableId: deliverable.id,
+            taskId: deliverable.taskId,
+            summary: deliverable.summary,
+            artifacts: deliverable.artifacts.map((artifact) => ({
+              name: artifact.name,
+              contentHash: artifact.contentHash,
+              sizeBytes: artifact.sizeBytes,
+              uri: artifact.uri,
+            })),
+            evidence: deliverable.evidence,
+          })));
           await arcSettlement.verifyTaskCompleted({
             chainTaskId: task.chainTaskId,
             creatorAddress: task.creatorAddress,
             transactionHash: completionTransactionHash,
+            expectedProofHash,
           });
         } catch (error) {
           if (error instanceof ArcSettlementError) throw new ApiProblem(422, error.code, error.message);

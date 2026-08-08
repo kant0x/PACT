@@ -21,8 +21,15 @@
       "explorer": "https://testnet.arcscan.app/address/0xE9FaBC9Ca489B03B06DBa3d9094df6a307229A0E"
     }
   },
+  "pendingExpandedProtocolDeployment": [
+    "AgentRegistry",
+    "MilestoneEscrow",
+    "SubscriptionVault",
+    "RewardVault"
+  ],
   "notes": [
     "The current deployment returned non-empty bytecode through eth_getCode on 2026-08-03.",
-    "PlatformPoints: 0xE9FaBC9Ca489B03B06DBa3d9094df6a307229A0E. StreamingVault is authorized as a ReputationRegistry writer, and the DisputeModule is configured to use the current StreamingVault."
+    "PlatformPoints: 0xE9FaBC9Ca489B03B06DBa3d9094df6a307229A0E. StreamingVault is authorized as a ReputationRegistry writer, and the DisputeModule is configured to use the current StreamingVault.",
+    "The expanded protocol contracts are compiled and tested locally but are not represented by deployed addresses in this historical deployment record."
   ]
 }

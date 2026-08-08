@@ -24,6 +24,7 @@ import {
   Scale,
   Search,
   ShieldCheck,
+  Square,
   SquareArrowOutUpRight,
   Trophy,
   Users,
@@ -75,7 +76,8 @@ import { getWalletClient } from 'wagmi/actions';
 import { PublicFaq } from './components/marketing/PublicFaq';
 import { PublicFooter } from './components/marketing/PublicFooter';
 import { PactContactScene } from './components/marketing/PactContactScene';
-import { cancelArcTask, claimArcTask, completeArcTask, ERC20_ABI, fundAgentWallet, fundOpenOrder, lockAgentCollateral, pauseArcTaskForDispute, withdrawArcStream } from './arc';
+import { cancelArcTask, claimArcTask, completeArcTask, ERC20_ABI, fundAgentWallet, fundOpenOrder, lockAgentCollateral, pauseArcTaskForDispute, submitResultProof, withdrawArcStream } from './arc';
+import { hashProtocolDocument } from './protocol';
 import { ARC_USDC_ADDRESS, isArcMode } from './runtime';
 import { config } from './wagmi';
 
@@ -147,15 +149,34 @@ async function waitForCircleTransaction(
 function WalletHeader({
   activeAddress,
   activeIsConnected,
+  agentAddress,
+  canDeposit,
   onOpenConnectModal,
+  onDeposit,
   onDisconnect,
 }: {
   activeAddress?: string;
   activeIsConnected: boolean;
+  agentAddress?: string;
+  canDeposit: boolean;
   onOpenConnectModal: () => void;
+  onDeposit: () => void;
   onDisconnect: () => void;
 }) {
   const { t } = useLocale();
+  const { data: rawAgentBalance, isLoading: agentBalanceLoading } = useReadContract({
+    address: ARC_USDC_ADDRESS as `0x${string}`,
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+    args: agentAddress ? [agentAddress as `0x${string}`] : undefined,
+    chainId: 5042002,
+    query: { enabled: isArcMode && Boolean(agentAddress) },
+  });
+  const agentBalanceLabel = !agentAddress
+    ? '—'
+    : typeof rawAgentBalance === 'bigint'
+      ? Number(formatUnits(rawAgentBalance, 6)).toLocaleString('en-US', { maximumFractionDigits: 2 })
+      : agentBalanceLoading ? '…' : '—';
 
   if (activeIsConnected && activeAddress) {
     return (
@@ -165,6 +186,13 @@ function WalletHeader({
           <span className="operator__state"><i /> {t('Connected')}</span>
           <strong className="mono" title={activeAddress}>{shortAddress(activeAddress)}</strong>
         </span>
+        <span className="operator__balance" title={agentAddress ? `Agent wallet ${agentAddress}` : 'No agent wallet connected'}>
+          <span>AGENT USDC</span>
+          <strong>{agentBalanceLabel}</strong>
+        </span>
+        <button className="button button--small button--primary operator__deposit" disabled={!canDeposit} onClick={onDeposit} type="button">
+          <WalletCards size={13} /> <span className="operator__deposit-label">Deposit</span>
+        </button>
         <button className="button button--small button--outline operator__disconnect" onClick={onDisconnect} type="button" aria-label="Disconnect wallet">
           {t('Disconnect')}
         </button>
@@ -1980,12 +2008,14 @@ function CabinetAgentCard({
   agent,
   highlighted,
   automation,
+  busy = false,
   onFund,
   onToggleTraining,
 }: {
   agent: ReputationSnapshot;
   highlighted: boolean;
   automation?: AgentAutomationSnapshot;
+  busy?: boolean;
   onFund: (agent: ReputationSnapshot) => void;
   onToggleTraining: (agent: ReputationSnapshot, enabled: boolean) => void;
 }) {
@@ -2030,7 +2060,7 @@ function CabinetAgentCard({
         <span>PUBLIC DIRECTIONS / TASK MATCHING</span>
         <div>{capabilityLabels.length ? capabilityLabels.map((label) => <b key={label}>{label}</b>) : <small>Manifest pending</small>}</div>
       </div>
-      <div className="cabinet-agent-card__actions"><button className="button button--outline button--small" type="button" onClick={() => onFund(agent)}><WalletCards /> Fund USDC</button><button className="button button--primary button--small" type="button" onClick={() => onToggleTraining(agent, !automation?.enabled)}><Radio /> {automation?.enabled ? 'Pause self-training' : 'Start self-training'}</button></div>
+      <div className="cabinet-agent-card__actions"><button className="button button--outline button--small" type="button" onClick={() => onFund(agent)}><WalletCards /> Fund USDC</button><button className="button button--primary button--small" type="button" disabled={busy} aria-live="polite" onClick={() => onToggleTraining(agent, !automation?.enabled)}>{busy ? <RefreshCcw className="spin" /> : automation?.enabled ? <Square /> : <Radio />} {automation?.enabled ? 'Stop self-training' : 'Start self-training'}</button></div>
     </article>
   );
 }
@@ -2097,6 +2127,7 @@ function DappDashboard({
   onRunAgent,
   onFundAgent,
   onToggleTraining,
+  trainingBusyAgentAddress,
   createdAgentNotice,
   onDismissCreatedAgent,
 }: {
@@ -2115,6 +2146,7 @@ function DappDashboard({
   onRunAgent?: (task: MarketplaceTask) => void;
   onFundAgent: (agent: ReputationSnapshot) => void;
   onToggleTraining: (agent: ReputationSnapshot, enabled: boolean) => void;
+  trainingBusyAgentAddress?: string;
   createdAgentNotice?: CreatedAgentNotice | null;
   onDismissCreatedAgent?: () => void;
 }) {
@@ -2210,7 +2242,7 @@ function DappDashboard({
           {cabinetSection === 'agents' ? (
             <section className="cabinet-agents cabinet-section-panel" aria-labelledby="cabinet-agents-title">
               <header className="cabinet-section-header"><div><div className="eyebrow">AGENT IDENTITIES</div><h2 id="cabinet-agents-title">Your agents</h2></div><button className="button button--primary button--small" onClick={onCreateAgent} type="button"><Bot /> Create an agent</button></header>
-              {myAgents.length ? <div className="cabinet-agents__grid">{myAgents.map((agent) => <CabinetAgentCard key={agent.agentAddress} agent={agent} automation={snapshot.agentAutomation?.[agent.agentAddress.toLowerCase()]} highlighted={agent.agentAddress.toLowerCase() === createdAgentNotice?.agentAddress.toLowerCase()} onFund={onFundAgent} onToggleTraining={onToggleTraining} />)}</div> : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title="No agent profiles in this cabinet yet" copy="Create an agent to display its wallet and status here." /></div>}
+              {myAgents.length ? <div className="cabinet-agents__grid">{myAgents.map((agent) => <CabinetAgentCard key={agent.agentAddress} agent={agent} automation={snapshot.agentAutomation?.[agent.agentAddress.toLowerCase()]} busy={trainingBusyAgentAddress?.toLowerCase() === agent.agentAddress.toLowerCase()} highlighted={agent.agentAddress.toLowerCase() === createdAgentNotice?.agentAddress.toLowerCase()} onFund={onFundAgent} onToggleTraining={onToggleTraining} />)}</div> : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title="No agent profiles in this cabinet yet" copy="Create an agent to display its wallet and status here." /></div>}
             </section>
           ) : null}
           {cabinetSection === 'orders' ? <section className="client-orders cabinet-section-panel" aria-labelledby="client-orders-title">
@@ -2382,7 +2414,23 @@ function Overview({
           <div className="overview-live__columns overview-live__columns--work-only">
             <section className="overview-feed overview-feed--work" aria-labelledby="overview-work-title">
               <header><div><span>{t('OPEN WORK ORDERS')}</span><h3 id="overview-work-title">{t('What agents can take')}</h3></div><button className="text-link" onClick={() => onView('marketplace')} type="button">{t('See all work')} <ArrowRight /></button></header>
-              {featuredTasks.length ? <div className="overview-feed__items">{featuredTasks.map((task) => <button className="overview-feed__item" key={task.id} onClick={() => onView('marketplace')} type="button"><span className="overview-feed__tag">{taskCategory(task)}</span><div className="overview-feed__copy"><strong>{task.title}</strong><small>{task.successCriteria || t('Acceptance criteria are defined in the work order.')}</small></div><b>${money(task.totalAmount)} <em>USDC</em></b><ArrowRight className="overview-feed__arrow" aria-hidden="true" /></button>)}</div> : <div className="overview-feed__empty"><Boxes /><span>{t('No open work orders yet.')}</span><button className="text-link" onClick={() => onView('dapp')} type="button">{t('Open the client dashboard')} <ArrowRight /></button></div>}
+              {featuredTasks.length ? <div className="overview-feed__items">{featuredTasks.map((task) => <button className="overview-feed__item" key={task.id} onClick={() => onView('marketplace')} type="button"><span className="overview-feed__tag">{taskCategory(task)}</span><div className="overview-feed__copy"><strong>{task.title}</strong><small>{task.successCriteria || t('Acceptance criteria are defined in the work order.')}</small></div><b>${money(task.totalAmount)} <em>USDC</em></b><ArrowRight className="overview-feed__arrow" aria-hidden="true" /></button>)}</div> : (
+                <div className="overview-feed__empty overview-feed__empty--orders">
+                  <div className="overview-feed__empty-main">
+                    <div className="overview-feed__empty-icon"><Boxes /></div>
+                    <div className="overview-feed__empty-copy">
+                      <span>{t('No open work orders yet.')}</span>
+                      <strong>{t('Fund an outcome, lock the terms, verify the evidence, and settle with finality. PACT turns autonomous execution into work people can actually trust.')}</strong>
+                    </div>
+                    <button className="button button--primary button--small" onClick={() => onView('dapp')} type="button"><Plus /> {t('Create a work order')} <ArrowRight /></button>
+                  </div>
+                  <div className="overview-feed__empty-steps" aria-label={t('How a work order runs')}>
+                    <div><b>01</b><span>{t('Define success before execution starts. Payment moves only after evidence and acceptance.')}</span></div>
+                    <div><b>02</b><span>{t('Funded from the start')}</span></div>
+                    <div><b>03</b><span>{t('Review the delivered evidence. Funds are released after you accept the result.')}</span></div>
+                  </div>
+                </div>
+              )}
             </section>
             <section className="overview-feed overview-feed--agents" aria-labelledby="overview-agents-title">
               <header><div><span>{t('PUBLIC PROFILES')}</span><h3 id="overview-agents-title">{t('Agents with a track record')}</h3></div><button className="text-link" onClick={() => onView('agents')} type="button">{t('See registry')} <ArrowRight /></button></header>
@@ -2816,7 +2864,7 @@ export default function App() {
       <div className="noise" aria-hidden="true" />
       {isDappView ? <aside className={mobileNav ? 'sidebar sidebar--open' : 'sidebar'}>
         <div className="brand">
-          <div className="brand__mark"><img src="/pact-logo.png" alt="" /></div>
+          <div className="brand__mark"><img src="/pact-icon.svg" alt="" /></div>
           <div><strong>PACT</strong><small>AGENT WORK SETTLEMENT</small></div>
         </div>
         <nav className="primary-nav" aria-label={isDappView ? 'DApp navigation' : 'Public navigation'}>
@@ -2843,7 +2891,7 @@ export default function App() {
             <div className="topbar__title"><span>PACT /</span><strong>{viewTitle}</strong></div>
           </> : <>
             <button className="public-brand" onClick={() => changeView('overview')} type="button" aria-label={t('PACT overview')}>
-              <span className="public-brand__mark"><img src="/pact-logo.png" alt="" /></span>
+              <span className="public-brand__mark"><img src="/pact-icon.svg" alt="" /></span>
               <span className="public-brand__copy"><strong>PACT</strong><small>AGENT WORK SETTLEMENT</small></span>
             </button>
             <nav className="public-topnav" aria-label="Public navigation">
@@ -2858,7 +2906,7 @@ export default function App() {
             {isDappView ? <button className="icon-button icon-button--top" disabled={busyKey !== null} onClick={() => void loadDashboard()} type="button" aria-label="Refresh dashboard"><RefreshCcw className={loading ? 'spin' : ''} /></button> : null}
             <LanguageSwitcher />
             {!isDappView ? <button className="button button--small button--workspace-entry" onClick={() => changeView('dapp')} type="button"><LayoutDashboard /> <span>{t('Cabinet')}</span></button> : null}
-            {isDappView ? <WalletHeader activeAddress={activeAddress} activeIsConnected={activeIsConnected} onOpenConnectModal={() => setWalletModalOpen(true)} onDisconnect={handleDisconnect} /> : null}
+            {isDappView ? <WalletHeader activeAddress={activeAddress} activeIsConnected={activeIsConnected} agentAddress={hubAgent?.agentAddress} canDeposit={Boolean(hubAgent)} onOpenConnectModal={() => setWalletModalOpen(true)} onDeposit={() => { if (hubAgent) setFundingAgent(hubAgent); }} onDisconnect={handleDisconnect} /> : null}
           </div>
         </header>
 
@@ -2891,7 +2939,7 @@ export default function App() {
             <>
               {view === 'overview' ? <Overview snapshot={snapshot} onView={changeView} /> : null}
               {view === 'protocol' ? <AgentProtocol onView={changeView} /> : null}
-              {view === 'dapp' ? <DappDashboard snapshot={snapshot} trainingReports={trainingReports} connectedAddress={activeAddress} onConnect={connectAgent} onPublish={() => requestPublish()} onCreateAgent={requestCreateAgent} onView={changeView} onFundAgent={setFundingAgent} onToggleTraining={toggleAgentTraining} onRunAgent={runAgentTask} createdAgentNotice={createdAgentNotice} onDismissCreatedAgent={() => setCreatedAgentNotice(null)} onAccept={(deliverable) => void perform(`accept:${deliverable.taskId}`, 'Result accepted. Settlement and reputation are finalized.', async () => {
+              {view === 'dapp' ? <DappDashboard snapshot={snapshot} trainingReports={trainingReports} connectedAddress={activeAddress} onConnect={connectAgent} onPublish={() => requestPublish()} onCreateAgent={requestCreateAgent} onView={changeView} onFundAgent={setFundingAgent} onToggleTraining={toggleAgentTraining} trainingBusyAgentAddress={busyKey?.startsWith('training:') ? busyKey.slice('training:'.length) : undefined} onRunAgent={runAgentTask} createdAgentNotice={createdAgentNotice} onDismissCreatedAgent={() => setCreatedAgentNotice(null)} onAccept={(deliverable) => void perform(`accept:${deliverable.taskId}`, 'Result accepted. Settlement and reputation are finalized.', async () => {
                 if (!isArcMode) return api.acceptDeliverable(deliverable.id);
                 const task = tasksById.get(deliverable.taskId);
                 if (!task?.chainTaskId) throw new Error('The work order has no Arc task ID.');
@@ -2905,6 +2953,36 @@ export default function App() {
                   await switchChainAsync({ chainId: 5042002 });
                 }
                 setToast({ tone: 'success', message: 'Approve final settlement in your wallet…' });
+                const assignedAgent = task.agentAddress
+                  ? snapshot.agents.find((agent) => agent.agentAddress.toLowerCase() === task.agentAddress!.toLowerCase())
+                  : undefined;
+                const proofHash = hashProtocolDocument({
+                  deliverableId: deliverable.id,
+                  taskId: deliverable.taskId,
+                  summary: deliverable.summary,
+                  artifacts: deliverable.artifacts.map((artifact) => ({
+                    name: artifact.name,
+                    contentHash: artifact.contentHash,
+                    sizeBytes: artifact.sizeBytes,
+                    uri: artifact.uri,
+                  })),
+                  evidence: deliverable.evidence,
+                });
+                if (task.agentAddress && assignedAgent?.wallet?.provider === 'CIRCLE') {
+                  setToast({ tone: 'success', message: 'The Circle agent is anchoring the deliverable proof…' });
+                  const proofRequest = await api.submitCircleAgentAction(task.agentAddress, task.id, 'SUBMIT_RESULT_PROOF', { proofHash });
+                  await waitForCircleTransaction(task.agentAddress, proofRequest.id, (message) => setToast({ tone: 'success', message }));
+                } else if (connectedAddress.toLowerCase() === task.agentAddress?.toLowerCase()) {
+                  await submitResultProof({
+                    account: connectedAddress,
+                    chainTaskId: task.chainTaskId,
+                    proofHash,
+                    publicClient: arcPublicClient,
+                    walletClient: await getWalletClient(config, { chainId: 5042002 }),
+                  });
+                } else {
+                  throw new Error('The assigned agent wallet must submit the deliverable proof before settlement.');
+                }
                 const walletClient = await getWalletClient(config, { chainId: 5042002 });
                 const completionTransactionHash = await completeArcTask({
                   account: connectedAddress,

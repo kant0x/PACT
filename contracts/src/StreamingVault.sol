@@ -75,6 +75,8 @@ contract StreamingVault {
     mapping(uint256 => address) public preferredAgents;
     mapping(uint256 => mapping(address => uint256)) public underwrittenCollateral;
     mapping(uint256 => address[]) private taskUnderwriters;
+    /// @notice Hash of the final deliverable/evidence packet submitted by the agent.
+    mapping(uint256 => bytes32) public resultProofHashes;
 
     mapping(address => uint256) public nonces;
 
@@ -121,6 +123,7 @@ contract StreamingVault {
     );
     event StreamStarted(uint256 indexed taskId, uint256 ratePerSecond, uint256 timestamp);
     event StreamWithdrawn(uint256 indexed taskId, address indexed agent, uint256 amount);
+    event ResultProofSubmitted(uint256 indexed taskId, address indexed agent, bytes32 proofHash);
     event StreamPaused(uint256 indexed taskId, uint256 accruedAmount, uint256 timestamp);
     event StreamResumed(uint256 indexed taskId, uint256 timestamp);
     event TaskCompleted(uint256 indexed taskId, uint256 paidToAgent, uint256 collateralReturned);
@@ -148,6 +151,8 @@ contract StreamingVault {
     error AgentNotAssigned();
     error AgentAlreadyAssigned();
     error NotPreferredAgent();
+    error EmptyProof();
+    error ProofRequired();
 
     constructor(
         address usdcAddress,
@@ -526,6 +531,20 @@ contract StreamingVault {
         emit StreamResumed(taskId, block.timestamp);
     }
 
+    /// @notice Anchors the final off-chain deliverable before settlement.
+    /// @dev The contract stores only a hash; the evidence packet stays private
+    ///      in PACT storage and can be verified against this receipt.
+    function submitResultProof(uint256 taskId, bytes32 proofHash) external {
+        Task storage task = tasks[taskId];
+        if (msg.sender != task.agent) revert Unauthorized();
+        if (task.status != TaskStatus.STREAMING && task.status != TaskStatus.PAUSED) {
+            revert InvalidState(task.status);
+        }
+        if (proofHash == bytes32(0)) revert EmptyProof();
+        resultProofHashes[taskId] = proofHash;
+        emit ResultProofSubmitted(taskId, msg.sender, proofHash);
+    }
+
     /// @notice Mirrors the published PACT collateral tiers using only canonical
     ///         reputation data available to every Arc participant.
     function requiredCollateralPctForAgent(address agent) public view returns (uint256) {
@@ -542,6 +561,7 @@ contract StreamingVault {
         if (task.status != TaskStatus.STREAMING && task.status != TaskStatus.PAUSED) {
             revert InvalidState(task.status);
         }
+        if (resultProofHashes[taskId] == bytes32(0)) revert ProofRequired();
 
         uint256 underwriterFee = _underwriterFeeAt(task, task.totalAmount);
         uint256 agentTotalPayout = task.totalAmount - underwriterFee;

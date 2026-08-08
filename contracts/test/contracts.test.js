@@ -81,6 +81,14 @@ describe("PACT contracts", () => {
     await (await vault.connect(agent).postCollateral(taskId)).wait();
   }
 
+  async function submitResultProof(taskId = 1n, label = "deliverable-proof") {
+    await (
+      await vault
+        .connect(agent)
+        .submitResultProof(taskId, keccak256(toUtf8Bytes(`${label}-${taskId}`)))
+    ).wait();
+  }
+
   async function advance(seconds) {
     await provider.send("evm_increaseTime", [seconds]);
     await provider.send("evm_mine", []);
@@ -101,6 +109,7 @@ describe("PACT contracts", () => {
     expect(afterWithdrawal.withdrawnAmount).toBeGreaterThan(0n);
     expect(afterWithdrawal.withdrawnAmount).toBeLessThan(totalAmount);
 
+    await submitResultProof();
     await (await vault.connect(creator).completeTask(1)).wait();
     const completed = await vault.tasks(1);
     expect(completed.status).toBe(5n);
@@ -187,6 +196,7 @@ describe("PACT contracts", () => {
 
     await postCollateral();
     expect((await vault.tasks(1)).status).toBe(3n);
+    await submitResultProof();
     await (await vault.connect(creator).completeTask(1)).wait();
 
     const completed = await vault.tasks(1);
@@ -310,6 +320,7 @@ describe("PACT contracts", () => {
     expect(funded.collateralLocked).toBe(parseUnits("1000", 6));
 
     await (await vault.connect(creator).startStream(1, ONE_USDC)).wait();
+    await submitResultProof(1, "underwritten-deliverable");
     await (await vault.connect(creator).completeTask(1)).wait();
 
     // 2% of the stream, weighted by 500/1000 of collateral = 10 USDC.

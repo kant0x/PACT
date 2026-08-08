@@ -25,6 +25,7 @@ export const STREAMING_VAULT_ABI = parseAbi([
   'event TaskCancelled(uint256 indexed taskId, uint256 refundedToCreator)',
   'function tasks(uint256 taskId) view returns (address creator, address agent, uint256 totalAmount, uint256 requiredCollateral, uint256 collateralLocked, uint256 ratePerSecond, uint256 accruedAmount, uint256 withdrawnAmount, uint64 collateralDeadline, uint64 lastAccrualTimestamp, uint8 status, uint256 agentCollateral, uint256 totalUnderwritten, uint256 agentPayoutPaid)',
   'function preferredAgents(uint256 taskId) view returns (address)',
+  'function resultProofHashes(uint256 taskId) view returns (bytes32)',
   'function claimOpenTask(uint256 taskId)',
   'function pauseForDispute(uint256 taskId)',
 ]);
@@ -73,6 +74,7 @@ export interface ArcSettlementGateway {
     chainTaskId: string;
     creatorAddress: string;
     transactionHash: string;
+    expectedProofHash?: string;
   }): Promise<Hash>;
   verifyTaskCancelled(input: {
     chainTaskId: string;
@@ -317,6 +319,7 @@ export class ViemArcSettlementGateway implements ArcSettlementGateway {
     chainTaskId: string;
     creatorAddress: string;
     transactionHash: string;
+    expectedProofHash?: string;
   }): Promise<Hash> {
     const taskId = parseChainTaskId(input.chainTaskId);
     if (!isAddress(input.creatorAddress)) {
@@ -347,14 +350,30 @@ export class ViemArcSettlementGateway implements ArcSettlementGateway {
     if (!events.some((event) => event.args.taskId === taskId)) {
       throw new ArcSettlementError('COMPLETION_EVENT_MISMATCH', 'Transaction does not contain the expected completion receipt');
     }
-    const task = await this.publicClient.readContract({
-      address: this.vaultAddress,
-      abi: STREAMING_VAULT_ABI,
-      functionName: 'tasks',
-      args: [taskId],
-    });
-    if (getAddress(task[0]) !== creator || task[10] !== 5) {
+    const [task, proofHash] = await Promise.all([
+      this.publicClient.readContract({
+        address: this.vaultAddress,
+        abi: STREAMING_VAULT_ABI,
+        functionName: 'tasks',
+        args: [taskId],
+      }),
+      this.publicClient.readContract({
+        address: this.vaultAddress,
+        abi: STREAMING_VAULT_ABI,
+        functionName: 'resultProofHashes',
+        args: [taskId],
+      }),
+    ]);
+    if (getAddress(task[0]) !== creator || task[10] !== 5 || proofHash === `0x${'0'.repeat(64)}`) {
       throw new ArcSettlementError('COMPLETION_STATE_MISMATCH', 'StreamingVault completion state does not match the receipt');
+    }
+    if (input.expectedProofHash) {
+      if (!/^0x[a-fA-F0-9]{64}$/.test(input.expectedProofHash)) {
+        throw new ArcSettlementError('INVALID_PROOF_HASH', 'Expected deliverable proof hash is invalid');
+      }
+      if (proofHash.toLowerCase() !== input.expectedProofHash.toLowerCase()) {
+        throw new ArcSettlementError('PROOF_HASH_MISMATCH', 'The on-chain result proof does not match the accepted deliverable');
+      }
     }
     return hash;
   }

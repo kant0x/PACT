@@ -95,6 +95,10 @@ async function main() {
   const vaultArtifact = loadContract('StreamingVault');
   const disputeModuleArtifact = loadContract('DisputeModule');
   const platformPointsArtifact = loadContract('PlatformPoints');
+  const agentRegistryArtifact = loadContract('AgentRegistry');
+  const milestoneEscrowArtifact = loadContract('MilestoneEscrow');
+  const subscriptionVaultArtifact = loadContract('SubscriptionVault');
+  const rewardVaultArtifact = loadContract('RewardVault');
 
   let disputeModuleContract = null;
   let disputeModuleAddress = CONFIGURED_DISPUTE_MODULE_ADDRESS;
@@ -226,6 +230,55 @@ async function main() {
     awarderReceipts.push({ awarder, txHash: awarderTx.hash });
   }
 
+  console.log('\nDeploying AgentRegistry...');
+  const AgentRegistryFactory = new ethers.ContractFactory(
+    agentRegistryArtifact.abi,
+    agentRegistryArtifact.bytecode,
+    wallet
+  );
+  const agentRegistryContract = await AgentRegistryFactory.deploy();
+  await agentRegistryContract.waitForDeployment();
+  const agentRegistryAddress = await agentRegistryContract.getAddress();
+  console.log(`AgentRegistry deployed at: ${agentRegistryAddress}`);
+
+  console.log('\nDeploying MilestoneEscrow...');
+  const MilestoneEscrowFactory = new ethers.ContractFactory(
+    milestoneEscrowArtifact.abi,
+    milestoneEscrowArtifact.bytecode,
+    wallet
+  );
+  const milestoneEscrowContract = await MilestoneEscrowFactory.deploy(USDC_ADDRESS);
+  await milestoneEscrowContract.waitForDeployment();
+  const milestoneEscrowAddress = await milestoneEscrowContract.getAddress();
+  console.log(`MilestoneEscrow deployed at: ${milestoneEscrowAddress}`);
+
+  console.log('\nDeploying SubscriptionVault...');
+  const SubscriptionVaultFactory = new ethers.ContractFactory(
+    subscriptionVaultArtifact.abi,
+    subscriptionVaultArtifact.bytecode,
+    wallet
+  );
+  const subscriptionVaultContract = await SubscriptionVaultFactory.deploy(USDC_ADDRESS);
+  await subscriptionVaultContract.waitForDeployment();
+  const subscriptionVaultAddress = await subscriptionVaultContract.getAddress();
+  console.log(`SubscriptionVault deployed at: ${subscriptionVaultAddress}`);
+
+  console.log('\nDeploying RewardVault...');
+  const RewardVaultFactory = new ethers.ContractFactory(
+    rewardVaultArtifact.abi,
+    rewardVaultArtifact.bytecode,
+    wallet
+  );
+  const rewardVaultContract = await RewardVaultFactory.deploy(USDC_ADDRESS, wallet.address);
+  await rewardVaultContract.waitForDeployment();
+  const rewardVaultAddress = await rewardVaultContract.getAddress();
+  const rewardIssuerTx = await rewardVaultContract.setAuthorizedIssuer(wallet.address, true);
+  await rewardIssuerTx.wait();
+  if (!(await rewardVaultContract.authorizedIssuers(wallet.address))) {
+    throw new Error('RewardVault issuer authorization did not persist');
+  }
+  console.log(`RewardVault deployed at: ${rewardVaultAddress}`);
+
   // Save deployment info
   const deploymentInfo = {
     network: network.chainId === 5042002n ? 'arc-testnet' : 'custom-evm',
@@ -240,10 +293,16 @@ async function main() {
     contracts: {
       ReputationRegistry: reputationAddress,
       StreamingVault: vaultAddress,
-      PlatformPoints: platformPointsAddress
+      PlatformPoints: platformPointsAddress,
+      AgentRegistry: agentRegistryAddress,
+      MilestoneEscrow: milestoneEscrowAddress,
+      SubscriptionVault: subscriptionVaultAddress,
+      RewardVault: rewardVaultAddress
     },
     platformPointsAwarder: platformPointsAwarderAddress,
     platformPointsAwarderAuthorizationTx: awarderReceipts,
+    rewardVaultIssuer: wallet.address,
+    rewardVaultIssuerAuthorizationTx: rewardIssuerTx.hash,
     deployedAt: new Date().toISOString()
   };
 

@@ -96,6 +96,16 @@ export const STREAMING_VAULT_ABI = [
     inputs: [{ name: 'taskId', type: 'uint256' }],
     outputs: [],
   },
+  {
+    type: 'function',
+    name: 'submitResultProof',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'taskId', type: 'uint256' },
+      { name: 'proofHash', type: 'bytes32' },
+    ],
+    outputs: [],
+  },
 ] as const;
 
 interface FundOpenOrderInput {
@@ -312,6 +322,29 @@ export async function withdrawArcStream(input: {
   });
   const receipt = await input.publicClient.waitForTransactionReceipt({ hash });
   if (receipt.status !== 'success') throw new Error('Stream withdrawal reverted on Arc Testnet.');
+  return hash;
+}
+
+export async function submitResultProof(input: {
+  account: `0x${string}`;
+  chainTaskId: string;
+  proofHash: `0x${string}`;
+  publicClient: PublicClient;
+  walletClient: WalletClient;
+}): Promise<`0x${string}`> {
+  const vaultAddress = requireStreamingVaultAddress();
+  if (!/^[1-9][0-9]*$/.test(input.chainTaskId)) throw new Error('The work order has no valid Arc task ID.');
+  if (!/^0x[a-fA-F0-9]{64}$/.test(input.proofHash)) throw new Error('The deliverable proof hash is invalid.');
+  const hash = await input.walletClient.writeContract({
+    account: input.account,
+    chain: input.publicClient.chain,
+    address: vaultAddress,
+    abi: STREAMING_VAULT_ABI,
+    functionName: 'submitResultProof',
+    args: [BigInt(input.chainTaskId), input.proofHash],
+  });
+  const receipt = await input.publicClient.waitForTransactionReceipt({ hash });
+  if (receipt.status !== 'success') throw new Error('Result proof submission reverted on Arc Testnet.');
   return hash;
 }
 

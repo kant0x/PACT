@@ -213,7 +213,27 @@ export interface TrustModel {
   safeguards: string[];
 }
 
-export type CircleAgentAction = 'CLAIM_TASK' | 'APPROVE_COLLATERAL' | 'POST_COLLATERAL' | 'WITHDRAW_STREAM' | 'PAUSE_DISPUTE';
+export type CircleAgentAction =
+  | 'CLAIM_TASK'
+  | 'APPROVE_COLLATERAL'
+  | 'POST_COLLATERAL'
+  | 'WITHDRAW_STREAM'
+  | 'PAUSE_DISPUTE'
+  | 'SUBMIT_RESULT_PROOF'
+  | 'REGISTER_AGENT'
+  | 'UPDATE_AGENT_PROFILE'
+  | 'SUBMIT_MILESTONE_PROOF'
+  | 'CLAIM_MILESTONE'
+  | 'CLAIM_SUBSCRIPTION'
+  | 'CLAIM_REWARD';
+
+export interface CircleProtocolActionInput {
+  resourceId?: string;
+  milestoneId?: string;
+  proofHash?: `0x${string}`;
+  profileHash?: `0x${string}`;
+  capabilitiesHash?: `0x${string}`;
+}
 
 export interface CircleTransactionStatus {
   id: string;
@@ -251,10 +271,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ agentAddress, assignmentTransactionHash }),
     }),
-  submitCircleAgentAction: (agentAddress: string, taskId: string, action: CircleAgentAction) =>
-    request<{ id: string; state: string; action: CircleAgentAction; taskId: string }>(`/api/agents/pg/${encodeURIComponent(agentAddress)}/circle/actions`, {
+  submitCircleAgentAction: (agentAddress: string, taskId: string, action: CircleAgentAction, protocol?: CircleProtocolActionInput) =>
+    request<{ id: string; state: string; action: CircleAgentAction; taskId: string | null; resourceId: string | null }>(`/api/agents/pg/${encodeURIComponent(agentAddress)}/circle/actions`, {
       method: 'POST',
-      body: JSON.stringify({ taskId, action }),
+      body: JSON.stringify({ taskId, action, ...protocol }),
     }),
   circleTransaction: (agentAddress: string, transactionId: string) =>
     request<CircleTransactionStatus>(`/api/agents/pg/${encodeURIComponent(agentAddress)}/circle/transactions/${encodeURIComponent(transactionId)}`),

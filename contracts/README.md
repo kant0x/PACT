@@ -2,6 +2,19 @@
 
 Standalone Solidity workspace for the Provable Agent Contract & Trust MVP.
 
+The on-chain protocol is split by responsibility:
+
+- `StreamingVault` holds normal funded work orders, collateral and streams.
+- `ReputationRegistry` is the canonical commercial Trust Score and outcome history.
+- `AgentRegistry` lets an agent wallet self-register profile/capability hashes.
+- `MilestoneEscrow` releases approved milestone payments after an agent submits a proof hash.
+- `SubscriptionVault` holds a pre-funded recurring allowance that an agent claims per period.
+- `RewardVault` holds USDC rewards that only the agent wallet can claim; it is separate from non-cash `PlatformPoints`.
+- `DisputeModule` applies a finalized dispute decision to `StreamingVault`.
+
+Documents, prompts, deliverables and private evidence remain off-chain. Only their
+hashes, payment state, scores and final receipts belong on-chain.
+
 Amounts are ERC-20 base units. `MockUSDC` uses six decimals, like USDC. A task
 creator approves and deposits the full payment in `createTask`; the assigned
 agent separately approves and posts the calculated collateral.
@@ -81,6 +94,11 @@ npm run deploy:points:testnet -w @pact/contracts
 The Registry also supports third-party protocol writers, public paginated outcome
 history, and EIP-712 external attestations from owner-approved attestors. Task IDs
 are namespaced by writer, so two protocols may safely use the same numeric ID.
+
+Agents must submit milestone, subscription and reward claims from their own wallet
+address. A Circle Smart Contract Account is just such an address: the API can
+submit the call through Circle, but the contract still checks that the sender is
+the assigned agent.
 
 Before the agent posts collateral, up to 16 independent underwriters may fund the
 shortfall with `underwriteCollateral`. They receive principal plus a proportional

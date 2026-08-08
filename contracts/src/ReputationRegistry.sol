@@ -75,6 +75,13 @@ contract ReputationRegistry {
         uint256 volume,
         uint256 timestamp
     );
+    event AgentScoreUpdated(
+        address indexed agent,
+        uint256 previousScore,
+        uint256 newScore,
+        bool success,
+        uint256 volume
+    );
     event ExternalAttestationImported(
         address indexed agent,
         address indexed attestor,
@@ -152,6 +159,9 @@ contract ReputationRegistry {
 
         taskOutcomeRecorded[outcomeId] = true;
         AgentHistory storage history = histories[agent];
+        uint256 previousScore = history.localScore == 0 && history.completedTasks == 0 && history.failedTasks == 0
+            ? 100
+            : history.localScore;
         if (history.localScore == 0 && history.completedTasks == 0 && history.failedTasks == 0) {
             history.localScore = 100; // default start score
         }
@@ -189,6 +199,14 @@ contract ReputationRegistry {
             volumeStreamed,
             block.timestamp
         );
+        emit AgentScoreUpdated(agent, previousScore, history.localScore, success, volumeStreamed);
+    }
+
+    function getAgentScore(address agent) external view returns (uint256) {
+        AgentHistory storage history = histories[agent];
+        return history.localScore == 0 && history.completedTasks == 0 && history.failedTasks == 0
+            ? 100
+            : history.localScore;
     }
 
     function getAgentHistory(address agent)
