@@ -117,18 +117,6 @@ const agentRunContract = (kind: ArenaTemplate['kind']) => {
   };
 };
 
-const isHttpCallbackUrl = (value: string) => {
-  try {
-    const url = new URL(value);
-    return (url.protocol === 'https:' || url.protocol === 'http:')
-      && Boolean(url.hostname)
-      && !url.username
-      && !url.password;
-  } catch {
-    return false;
-  }
-};
-
 async function waitForCircleTransaction(
   agentAddress: string,
   transactionId: string,
@@ -593,6 +581,7 @@ function PublishModal({
     },
   });
   const [formError, setFormError] = useState<string | null>(null);
+  const [activeStep, setActiveStep] = useState(1);
 
   const updateWorkOrder = (patch: Partial<WorkOrderSpec>) => {
     setForm((current) => ({ ...current, workOrder: normalizeWorkOrderSpec({ ...current.workOrder, ...patch }) }));
@@ -622,18 +611,51 @@ function PublishModal({
     }));
   };
 
+  const validateStep = (step: number) => {
+    const workOrder = normalizeWorkOrderSpec(form.workOrder);
+
+    if (step === 1) {
+      if (form.title.trim().length < 12) return 'Give the task a clear title of at least 12 characters.';
+      if (form.description.trim().length < 40) return 'Add enough context for an agent to understand the task.';
+      if (workOrder.sourceUrl && !/^https?:\/\//i.test(workOrder.sourceUrl)) return 'Source URL must begin with https:// or http://.';
+    }
+    if (step === 2) {
+      if (workOrder.inputRequirements.trim().length < 20) return 'Describe the inputs the agent receives in at least 20 characters.';
+      if (workOrder.deliverableFormat.trim().length < 20) return 'Describe the required deliverable in at least 20 characters.';
+    }
+    if (step === 3) {
+      if (form.successCriteria.trim().length < 20) return 'Describe the acceptance decision in at least 20 characters.';
+      if (workOrder.acceptanceChecklist.length < 2) return 'Add at least two separate acceptance checks so the result can be reviewed fairly.';
+    }
+    if (step === 4) {
+      if (!Number.isFinite(Number(form.totalAmount)) || Number(form.totalAmount) <= 0) return 'Task budget must be greater than zero.';
+      if (workOrder.apiExpensePolicy === 'X402_SEPARATE' && (!Number.isFinite(Number(workOrder.maxApiExpenseUsdc)) || Number(workOrder.maxApiExpenseUsdc) <= 0)) return 'Set a positive ceiling for separate API expenses.';
+    }
+    return null;
+  };
+
+  const advance = () => {
+    const error = validateStep(activeStep);
+    if (error) {
+      setFormError(error);
+      return;
+    }
+    setFormError(null);
+    setActiveStep((step) => Math.min(4, step + 1));
+  };
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setFormError(null);
+    for (let step = 1; step <= 4; step += 1) {
+      const error = validateStep(step);
+      if (error) {
+        setActiveStep(step);
+        setFormError(error);
+        return;
+      }
+    }
     const workOrder = normalizeWorkOrderSpec(form.workOrder);
-    if (workOrder.acceptanceChecklist.length < 2) {
-      setFormError('Add at least two separate acceptance checks so the result can be reviewed fairly.');
-      return;
-    }
-    if (workOrder.sourceUrl && !/^https?:\/\//i.test(workOrder.sourceUrl)) {
-      setFormError('Source URL must begin with https:// or http://.');
-      return;
-    }
     try {
       const signedForm = { ...form, workOrder };
       await authenticateWallet(creatorAddress as `0x${string}`, (message) => signMessageAsync({ message }));
@@ -646,21 +668,50 @@ function PublishModal({
 
   return (
     <Modal eyebrow="New work order / creator workspace" title="Publish a work order agents can actually execute" onClose={onClose} className="modal--publish">
-      <form className="form-grid" onSubmit={submit}>
+      <form className="form-grid publish-form" onSubmit={submit}>
+        <div className="publish-setup-progress field--wide" aria-label="Work order creation progress">
+          {[
+            ['01', 'Brief'],
+            ['02', 'Handoff'],
+            ['03', 'Review'],
+            ['04', 'Budget'],
+          ].map(([number, label], index) => {
+            const step = index + 1;
+            const isPast = step < activeStep;
+            const isActive = step === activeStep;
+            return (
+              <button
+                key={number}
+                className={isActive ? 'publish-setup-progress__active' : isPast ? 'publish-setup-progress__complete' : ''}
+                type="button"
+                disabled={!isPast}
+                onClick={() => setActiveStep(step)}
+              >
+                <small>{number}</small>{label}
+              </button>
+            );
+          })}
+        </div>
+
+        {activeStep === 1 ? (
         <div className="publish-form__section field--wide">
           <div className="publish-form__section-head"><span>01 / WORK ENVELOPE</span><strong>Tell the agent what success means</strong></div>
           <label className="field field--wide"><span>Task title</span><input required minLength={12} maxLength={255} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="e.g. Reconcile the Q2 treasury ledger" /></label>
           <label className="field field--wide"><span>Brief / context</span><textarea required minLength={40} maxLength={50000} rows={4} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="What should be investigated, why it matters, and what the agent must not assume?" /></label>
           <div className="field-row"><label className="field"><span>{t('Task type')}</span><select value={form.workOrder.templateId ?? ''} onChange={(event) => applyTemplate(event.target.value as WorkOrderTemplateId | '')}><option value="">{t('Custom brief')}</option>{WORK_ORDER_TEMPLATES.map((template) => <option value={template.id} key={template.id}>{t(template.label)}</option>)}</select></label><label className="field"><span>Source / document URL <small>optional</small></span><input type="url" value={form.workOrder.sourceUrl ?? ''} onChange={(event) => updateWorkOrder({ sourceUrl: event.target.value || null })} placeholder="https://source.example/report" /></label></div>
         </div>
+        ) : null}
 
+        {activeStep === 2 ? (
         <div className="publish-form__section field--wide">
           <div className="publish-form__section-head"><span>02 / INPUT → OUTPUT</span><strong>Make the handoff reproducible</strong></div>
           <label className="field field--wide"><span>Inputs the agent receives</span><textarea required minLength={20} rows={3} value={form.workOrder.inputRequirements} onChange={(event) => updateWorkOrder({ inputRequirements: event.target.value })} placeholder="List files, URLs, data fields, credentials boundaries, and the allowed source of truth." /></label>
           <label className="field field--wide"><span>Required deliverable</span><textarea required minLength={20} rows={3} value={form.workOrder.deliverableFormat} onChange={(event) => updateWorkOrder({ deliverableFormat: event.target.value })} placeholder="Name the exact files, formats, hashes, citations, or API response the agent must return." /></label>
           <label className="field field--wide"><span>Required capabilities <small>one per line or comma-separated</small></span><input value={form.workOrder.requiredCapabilities.join(', ')} onChange={(event) => updateWorkOrder({ requiredCapabilities: event.target.value.split(/[,\n]/).map((item) => item.trim()).filter(Boolean) })} placeholder="e.g. financial analysis, Python, source verification" /></label>
         </div>
+        ) : null}
 
+        {activeStep === 3 ? (
         <div className="publish-form__section field--wide">
           <div className="publish-form__section-head"><span>03 / ACCEPTANCE GATE</span><strong>Turn review into explicit checks</strong></div>
           <label className="field field--wide"><span>Acceptance summary</span><textarea required minLength={20} rows={3} value={form.successCriteria} onChange={(event) => setForm({ ...form, successCriteria: event.target.value })} placeholder="Describe the final decision in plain language." /></label>
@@ -668,7 +719,9 @@ function PublishModal({
           <div className="criteria-preview"><Check /><div><strong>{form.workOrder.acceptanceChecklist.filter(Boolean).length} checks will be shown to the reviewer</strong><span>{form.workOrder.templateId ? 'This recipe gives the judge a fixed, repeatable decision frame. The judge returns only a fault classification; settlement and Trust Score remain separate.' : 'The judge returns only a fault classification. Settlement and Trust Score remain separate layers.'}</span></div></div>
           {form.workOrder.templateId ? <div className="arbitration-checklist" aria-label="Arbitration checks"><span>{t('Judge checks')}</span>{form.workOrder.acceptanceChecklist.map((criterion, index) => <div key={`${criterion}-${index}`}><b>{index + 1}</b><p>{criterion}</p></div>)}</div> : null}
         </div>
+        ) : null}
 
+        {activeStep === 4 ? (
         <div className="publish-form__section field--wide">
           <div className="publish-form__section-head"><span>04 / COMMERCIAL TERMS</span><strong>Set the boundary before funding</strong></div>
           {preferredAgent ? <div className="hire-invite-panel"><div className="hire-invite-panel__mark"><AgentMark agent={preferredAgent} /></div><div><span className="eyebrow">DIRECT INVITATION</span><strong>Offer this work to {preferredAgent.displayName}</strong><p>The task stays open until this registered agent accepts it. Other agents cannot claim an invited order.</p></div><div className="hire-invite-panel__score"><strong>{preferredAgent.score}</strong><span>TRUST SCORE</span></div></div> : null}
@@ -698,16 +751,17 @@ function PublishModal({
           </section>
           <div className="publish-terms-preview"><div><span>CREATOR APPROVAL</span><strong>Wallet signature</strong><small>Signs the exact work envelope above</small></div><div><span>ESCROW</span><strong>${money(form.totalAmount)} USDC</strong><small>{isArcMode ? 'Transferred to StreamingVault before the order is published' : 'StreamingVault is primary; funds lock after an eligible claim'}</small></div><div><span>AGENT COLLATERAL</span><strong>Calculated at claim</strong><small>Based on finalized Trust Score terms</small></div></div>
         </div>
-        <div className="form-note field--wide">
+        ) : null}
+        {activeStep === 4 ? <div className="form-note field--wide">
           <ShieldCheck /> {isArcMode ? 'Your wallet will authenticate, approve USDC if needed, and fund StreamingVault on Arc Testnet before this order becomes visible.' : 'Creator wallet signature required. StreamingVault is the primary contract escrow. Circle Spending Policy is only an additional mainnet-wide wallet limit, not task collateral.'}
-        </div>
+        </div> : null}
         {formError ? <div className="form-error field--wide" role="alert"><AlertTriangle /> {formError}</div> : null}
         <div className="modal__actions field--wide">
-          <button className="button button--ghost" type="button" onClick={onClose}>Cancel</button>
-          <button className="button button--primary" type="submit" disabled={busy}>
+          <button className="button button--ghost" type="button" onClick={activeStep === 1 ? onClose : () => { setFormError(null); setActiveStep((step) => step - 1); }}>{activeStep === 1 ? 'Cancel' : 'Back'}</button>
+          {activeStep < 4 ? <button className="button button--primary" type="button" onClick={advance}>Continue <ArrowRight /></button> : <button className="button button--primary" type="submit" disabled={busy}>
             {busy ? <RefreshCcw className="spin" /> : <Plus />}
             {isArcMode ? 'Fund & publish' : 'Publish task'}
-          </button>
+          </button>}
         </div>
       </form>
     </Modal>
@@ -726,9 +780,6 @@ function RegisterAgentModal({
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const { t } = useLocale();
-  const [setupStep, setSetupStep] = useState<'runtime' | 'profile'>('runtime');
-  const runtimeKind = 'EXTERNAL_API' as const;
-  const [gatewayUrl, setGatewayUrl] = useState('');
   const [form, setForm] = useState({
     displayName: '',
     specialty: 'Research & analysis',
@@ -737,36 +788,14 @@ function RegisterAgentModal({
     outputTypes: 'cited report, structured findings',
     tools: 'HTTPS, document parser, sandboxed worker',
     evidenceMethods: 'source manifest, SHA-256 artifact hash',
-    maxConcurrentTasks: '1',
     perTaskLimitUsdc: '500',
     humanApprovalAboveUsdc: '100',
     allowTransactionPreparation: false,
   });
   const [formError, setFormError] = useState<string | null>(null);
 
-  const returnToRuntime = (message: string) => {
-    setSetupStep('runtime');
-    setFormError(message);
-  };
-
-  const continueWithoutCallback = () => {
-    setGatewayUrl('');
-    setFormError(null);
-    setSetupStep('profile');
-  };
-
   const update = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm((current) => ({ ...current, [key]: value }));
   const splitList = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
-
-  const continueToProfile = () => {
-    const normalizedGatewayUrl = gatewayUrl.trim();
-    if (normalizedGatewayUrl && !isHttpCallbackUrl(normalizedGatewayUrl)) {
-      returnToRuntime('The callback is optional. Enter a complete https:// URL, or choose “Continue without callback”.');
-      return;
-    }
-    setFormError(null);
-    setSetupStep('profile');
-  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -776,15 +805,9 @@ function RegisterAgentModal({
     const outputTypes = splitList(form.outputTypes);
     const tools = splitList(form.tools);
     const evidenceMethods = splitList(form.evidenceMethods);
-    const normalizedGatewayUrl = gatewayUrl.trim() || null;
-    const maxConcurrentTasks = Number(form.maxConcurrentTasks);
     const perTaskLimitUsdc = form.perTaskLimitUsdc.trim();
     const humanApprovalAboveUsdc = form.humanApprovalAboveUsdc.trim();
     setFormError(null);
-    if (normalizedGatewayUrl && !isHttpCallbackUrl(normalizedGatewayUrl)) {
-      returnToRuntime('The callback is optional. Enter a complete https:// URL, or choose “Continue without callback”.');
-      return;
-    }
     if (description.length < 20) {
       setFormError('Describe the agent in at least 20 characters so creators can judge fit before assigning work.');
       return;
@@ -793,8 +816,8 @@ function RegisterAgentModal({
       setFormError('Add at least one item to inputs, outputs, tools, and evidence methods. Separate items with commas.');
       return;
     }
-    if (!Number.isInteger(maxConcurrentTasks) || maxConcurrentTasks < 1 || maxConcurrentTasks > 32 || !Number.isFinite(Number(perTaskLimitUsdc)) || Number(perTaskLimitUsdc) <= 0) {
-      setFormError('Concurrency must be 1–32 and the per-task wallet limit must be greater than zero.');
+    if (!Number.isFinite(Number(perTaskLimitUsdc)) || Number(perTaskLimitUsdc) <= 0) {
+      setFormError('The per-task wallet limit must be greater than zero.');
       return;
     }
     if (humanApprovalAboveUsdc && (!Number.isFinite(Number(humanApprovalAboveUsdc)) || Number(humanApprovalAboveUsdc) <= 0)) {
@@ -815,7 +838,7 @@ function RegisterAgentModal({
       }],
       tools,
       evidenceMethods,
-      maxConcurrentTasks,
+      maxConcurrentTasks: 1,
       walletPolicy: {
         allowedChains: ['ARC-TESTNET'],
         allowedActions: ['CLAIM_TASK', 'WITHDRAW_STREAM', ...(form.allowTransactionPreparation ? ['PREPARE_TRANSACTION'] : [])],
@@ -823,8 +846,8 @@ function RegisterAgentModal({
         requiresHumanApprovalAboveUsdc: humanApprovalAboveUsdc || null,
       },
       runtime: {
-        kind: runtimeKind,
-        gatewayUrl: normalizedGatewayUrl,
+        kind: 'EXTERNAL_API',
+        gatewayUrl: null,
         sandboxRequired: false,
       },
       updatedAt: Math.floor(Date.now() / 1000),
@@ -841,25 +864,9 @@ function RegisterAgentModal({
   };
 
   return (
-    <Modal className="modal--agent-register" eyebrow="Agent setup" title={setupStep === 'runtime' ? 'Connect the runtime' : 'Configure the agent'} onClose={onClose}>
-      {setupStep === 'runtime' ? (
-        <div className="agent-setup-flow">
-          <div className="agent-setup-progress"><span className="agent-setup-progress__active">01 Runtime <small>optional</small></span><span>02 Profile &amp; limits</span><span>03 Circle wallet</span></div>
-          <div className="form-note field--wide"><Bot /><span>A runtime callback is optional. You can create the agent and its Circle wallet now, then connect your worker later.</span></div>
-          <section className="runtime-setup-card runtime-setup-card--compact">
-            <header><div><div className="eyebrow">EXTERNAL API / SIGNED ONBOARDING</div><h3>Connect the runtime when ready</h3></div><KeyRound /></header>
-            <p>PACT can create the agent and its Circle wallet without an external server. Add a callback only when your own worker is online and ready to receive work.</p>
-            <a className="text-link" href="/docs/agent-api.html" rel="noreferrer" target="_blank"><SquareArrowOutUpRight /> Read the runtime API docs</a>
-            <label className="field"><span>External agent callback URL <small>optional · add later</small></span><input type="url" value={gatewayUrl} onChange={(event) => { setGatewayUrl(event.target.value); if (formError) setFormError(null); }} placeholder="https://agent.example.com/pact/callback" /></label>
-            <div className="runtime-local-runtime"><span><strong>No runtime online yet?</strong><small>Create the Circle wallet and agent profile now. You can connect its callback later.</small></span><button className="button button--ghost" type="button" onClick={continueWithoutCallback}><Check /> Continue without callback</button></div>
-            {formError ? <div className="form-error" role="alert"><AlertTriangle /> {formError}</div> : null}
-          </section>
-          <div className="agent-learning-note"><Radio /><span><strong>No automatic self-learning in PACT.</strong> The platform records signed task receipts, outcomes, Trust Score, and Platform Points. Your runtime may implement its own private memory or learning system, but PACT does not retrain or modify the model.</span></div>
-          <div className="modal__actions field--wide"><button className="button button--ghost" type="button" onClick={onClose}>Cancel</button><button className="button button--primary" type="button" onClick={continueToProfile}><ArrowRight /> Continue to profile</button></div>
-        </div>
-      ) : (
+    <Modal className="modal--agent-register" eyebrow="Agent setup" title="Configure the agent" onClose={onClose}>
       <form className="form-grid" onSubmit={submit}>
-        <div className="agent-setup-progress field--wide"><button type="button" onClick={() => setSetupStep('runtime')}><ArrowRight /> Runtime</button><span className="agent-setup-progress__active">02 Profile &amp; limits</span><span>03 Circle wallet</span></div>
+        <div className="agent-setup-progress agent-setup-progress--two field--wide"><span className="agent-setup-progress__active">01 Profile &amp; limits</span><span>02 Circle wallet</span></div>
         <div className="form-note field--wide"><Bot /><span>Your connected wallet remains the controller. PACT creates a separate Circle smart wallet for the agent after confirmation.</span></div>
         <div className="registration-section field--wide"><span>01 / AGENT IDENTITY</span><strong>Name the agent and set its operating envelope</strong><small>Define the public capability manifest that creators use to match work to this agent.</small></div>
         <div className="wallet-mode wallet-mode--active field--wide"><span><strong>Circle smart wallet <em>Required</em></strong><small>A dedicated Circle Arc smart-contract account is created for this agent. Your connected wallet remains its authenticated controller.</small></span><ShieldCheck /></div>
@@ -878,11 +885,7 @@ function RegisterAgentModal({
             <option>Operations &amp; coordination</option>
           </select>
         </label>
-        <div className="registration-section field--wide"><span>02 / WORK CONTROLS</span><strong>Choose how much the runtime may take on</strong><small>These limits become part of the signed agent profile. Settlement always stays bounded by the task escrow.</small></div>
-        <label className="field">
-          <span>Max parallel tasks</span>
-          <input min="1" max="32" step="1" type="number" required value={form.maxConcurrentTasks} onChange={(event) => update('maxConcurrentTasks', event.target.value)} />
-        </label>
+        <div className="registration-section field--wide"><span>02 / WORK CONTROLS</span><strong>Set the agent's operating limits</strong><small>These limits become part of the signed agent profile. Settlement always stays bounded by the task escrow.</small></div>
         <label className="field">
           <span>Per-task wallet cap / USDC</span>
           <input min="1" step="1" type="number" required value={form.perTaskLimitUsdc} onChange={(event) => update('perTaskLimitUsdc', event.target.value)} />
@@ -900,20 +903,19 @@ function RegisterAgentModal({
             <label className="field"><span>Tools / integrations</span><input required value={form.tools} placeholder="HTTPS, Python, repository sandbox" onChange={(event) => update('tools', event.target.value)} /></label>
             <label className="field"><span>Evidence returned</span><input required value={form.evidenceMethods} placeholder="Source manifest, test receipt" onChange={(event) => update('evidenceMethods', event.target.value)} /></label>
             <label className="registration-check field--wide"><input type="checkbox" checked={form.allowTransactionPreparation} onChange={(event) => update('allowTransactionPreparation', event.target.checked)} /><span><strong>Allow transaction preparation</strong><small>Only prepares unsigned Arc transactions; signing remains subject to the connected wallet policy.</small></span></label>
-            <div className="form-note form-note--muted field--wide"><ShieldCheck /><span>Runtime binding: <strong>External API</strong>. Secrets never belong in this manifest. Only the public commands, limits, and evidence policy are signed.</span></div>
+            <div className="form-note form-note--muted field--wide"><ShieldCheck /><span>Secrets never belong in this manifest. Only public commands, limits, and evidence policy are signed.</span></div>
           </div>
         </details>
         {formError ? <div className="form-error field--wide" role="alert"><AlertTriangle /> {formError}</div> : null}
         {address ? <div className="registration-wallet-note field--wide"><WalletCards /><span>Registration is bound to the connected wallet: <strong>{shortAddress(address)}</strong></span></div> : null}
         <div className="modal__actions field--wide">
-          <button className="button button--ghost" type="button" onClick={() => setSetupStep('runtime')}>Back</button>
+          <button className="button button--ghost" type="button" onClick={onClose}>Cancel</button>
           <button className="button button--primary" type="submit" disabled={busy}>
             {busy ? <RefreshCcw className="spin" /> : <BadgeCheck />}
             Create Circle wallet & register agent
           </button>
         </div>
       </form>
-      )}
     </Modal>
   );
 }
