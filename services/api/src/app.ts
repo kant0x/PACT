@@ -362,7 +362,7 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
   // mutation and read must go through the PostgreSQL + Arc routes below.
   app.use('/api', (request, _response, next) => {
     if (testMode) return next();
-    const livePath = /^(?:\/health(?:\/|$)|\/auth\/(?:challenge|verify|session)$|\/trust-model$|\/runtime\/paid-capability$|\/training\/(?:catalog|agents\/[^/]+\/reports)$|\/dashboard\/pg$|\/leaderboard\/pg$|\/agents\/pg(?:\/|$)|\/agents\/[^/]+\/(?:autopilot|api-keys|work-queue)(?:\/|$)|\/tasks\/pg(?:\/|$)|\/templates\/pg(?:\/|$)|\/deliverables\/pg(?:\/|$)|\/disputes\/pg(?:\/|$))$/.test(request.path);
+    const livePath = /^(?:\/health(?:\/|$)|\/auth\/(?:challenge|verify|session)$|\/trust-model$|\/runtime\/paid-capability$|\/training\/(?:catalog|agents\/[^/]+\/reports)$|\/arena\/leaderboard$|\/dashboard\/pg$|\/leaderboard\/pg$|\/agents\/pg(?:\/|$)|\/agents\/[^/]+\/(?:autopilot|api-keys|work-queue)(?:\/|$)|\/tasks\/pg(?:\/|$)|\/templates\/pg(?:\/|$)|\/deliverables\/pg(?:\/|$)|\/disputes\/pg(?:\/|$))$/.test(request.path);
     if (!livePath) {
       return next(new ApiProblem(410, 'DEMO_RUNTIME_REMOVED', 'Demo and in-memory runtime routes are disabled; use the live Arc API'));
     }

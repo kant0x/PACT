@@ -191,6 +191,15 @@ describe('production hardening', () => {
         expect(body).toMatchObject({ code: 'DEMO_RUNTIME_REMOVED' });
       });
       await request(app).get('/api/arena/templates').expect(410);
+      await request(app).get('/api/arena/leaderboard').expect(200).expect(({ body }) => {
+        expect(body).toHaveLength(1);
+        expect(body[0]).toMatchObject({
+          agentAddress: DEMO_ADDRESSES.newbie,
+          displayName: 'Production Report Agent',
+          platformPoints: 0,
+          totalAttempts: 0,
+        });
+      });
       await request(app).get('/api/training/catalog').expect(200).expect(({ body }) => {
         expect(body).toHaveLength(11);
         expect(body[0]).toMatchObject({ ownerType: 'PLATFORM', ownerName: 'PACT Platform' });
