@@ -2,34 +2,44 @@
   "network": "Arc Testnet",
   "chainId": 5042002,
   "rpcUrl": "https://rpc.testnet.arc.network",
-  "verifiedAt": "2026-08-03",
+  "verifiedAt": "2026-08-08",
   "contracts": {
     "ReputationRegistry": {
-      "address": "0x8B0D11907E8d2610aDe160E4D4401572fF62008A",
-      "explorer": "https://testnet.arcscan.app/address/0x8B0D11907E8d2610aDe160E4D4401572fF62008A"
+      "address": "0x145fD12FA6662FaB923546360F4923c939593585",
+      "explorer": "https://testnet.arcscan.app/address/0x145fD12FA6662FaB923546360F4923c939593585"
     },
     "StreamingVault": {
-      "address": "0x6eF50b267ae5A93a1750A8bB84a3F3d58d71Fc48",
-      "explorer": "https://testnet.arcscan.app/address/0x6eF50b267ae5A93a1750A8bB84a3F3d58d71Fc48"
+      "address": "0xC0f329E3a8DEC77c4687dFdEa0F695BA28a9c0e4",
+      "explorer": "https://testnet.arcscan.app/address/0xC0f329E3a8DEC77c4687dFdEa0F695BA28a9c0e4"
     },
     "DisputeModule": {
-      "address": "0x3152e65762C6e6C3992C58DA93CDB6E00777eC07",
-      "explorer": "https://testnet.arcscan.app/address/0x3152e65762C6e6C3992C58DA93CDB6E00777eC07"
+      "address": "0x3cf764A6c498bA5556C9beec2053932eC0149ccc",
+      "explorer": "https://testnet.arcscan.app/address/0x3cf764A6c498bA5556C9beec2053932eC0149ccc"
     },
     "PlatformPoints": {
-      "address": "0xE9FaBC9Ca489B03B06DBa3d9094df6a307229A0E",
-      "explorer": "https://testnet.arcscan.app/address/0xE9FaBC9Ca489B03B06DBa3d9094df6a307229A0E"
+      "address": "0x22f6efB9A985401Ac9950238794aDA9cDBf6e24F",
+      "explorer": "https://testnet.arcscan.app/address/0x22f6efB9A985401Ac9950238794aDA9cDBf6e24F"
+    },
+    "AgentRegistry": {
+      "address": "0x99FFbb952dA204225F9e35767ff05cEa4c035562",
+      "explorer": "https://testnet.arcscan.app/address/0x99FFbb952dA204225F9e35767ff05cEa4c035562"
+    },
+    "MilestoneEscrow": {
+      "address": "0x10F2aBf609469a3e3D761f8Dc85ecD8fa9809b4a",
+      "explorer": "https://testnet.arcscan.app/address/0x10F2aBf609469a3e3D761f8Dc85ecD8fa9809b4a"
+    },
+    "SubscriptionVault": {
+      "address": "0x5A846F583C27ef135dEd541D0071763F41684630",
+      "explorer": "https://testnet.arcscan.app/address/0x5A846F583C27ef135dEd541D0071763F41684630"
+    },
+    "RewardVault": {
+      "address": "0x08d493d7B297f80A8c23Eff96E5De7c25C9Da3f3",
+      "explorer": "https://testnet.arcscan.app/address/0x08d493d7B297f80A8c23Eff96E5De7c25C9Da3f3"
     }
   },
-  "pendingExpandedProtocolDeployment": [
-    "AgentRegistry",
-    "MilestoneEscrow",
-    "SubscriptionVault",
-    "RewardVault"
-  ],
   "notes": [
-    "The current deployment returned non-empty bytecode through eth_getCode on 2026-08-03.",
-    "PlatformPoints: 0xE9FaBC9Ca489B03B06DBa3d9094df6a307229A0E. StreamingVault is authorized as a ReputationRegistry writer, and the DisputeModule is configured to use the current StreamingVault.",
-    "The expanded protocol contracts are compiled and tested locally but are not represented by deployed addresses in this historical deployment record."
+    "The protocol deployment completed on Arc Testnet on 2026-08-08.",
+    "StreamingVault is authorized as a ReputationRegistry writer, and the DisputeModule is configured to use this StreamingVault.",
+    "AgentRegistry, MilestoneEscrow, SubscriptionVault, and RewardVault are the active self-service agent-payment protocol contracts."
   ]
 }
