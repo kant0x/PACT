@@ -231,7 +231,6 @@ export class ArenaAutopilot {
       const productionAgents = await this.options.syncProductionAgents?.() ?? [];
       for (const agent of productionAgents) {
         if (!this.options.store.hasRegisteredAgent(agent.agentAddress)) this.options.store.syncAgentProfile(agent);
-        if (!this.options.store.isAutopilotEnrolled(agent.agentAddress)) this.options.store.enrollAutopilot(agent.agentAddress);
       }
       const now = nowSeconds();
       const due = this.options.store.autopilotAgentAddresses()
