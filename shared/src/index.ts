@@ -5,6 +5,9 @@ export type DisputeVerdict = 'NO_FAULT' | 'PARTIAL_FAULT' | 'FULL_FAULT';
 /** Internal stream-rate default when a creator leaves the delivery window blank. */
 export const DEFAULT_TASK_DURATION_SECONDS = 86_400;
 
+/** A controller can operate at most five separate Circle agent identities. */
+export const MAX_AGENTS_PER_CONTROLLER = 5;
+
 export interface ArbitrationVoteReceipt {
   judgeId: string;
   provider: string;

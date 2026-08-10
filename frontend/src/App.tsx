@@ -46,6 +46,7 @@ import {
 } from 'react';
 import {
   DEFAULT_TASK_DURATION_SECONDS,
+  MAX_AGENTS_PER_CONTROLLER,
   type DashboardSnapshot,
   type AgentAutomationSnapshot,
   type AgentDeliverable,
@@ -2111,6 +2112,141 @@ function TrainingReportPanel({ reports }: { reports: ArenaTrainingReport[] }) {
   );
 }
 
+type AgentHistoryEntry = {
+  id: string;
+  agentAddress: string;
+  timestamp: number;
+  kind: 'REGISTERED' | 'TRAINING' | 'CLAIMED' | 'COLLATERAL' | 'EARNED' | 'WITHDRAWN' | 'RUNTIME';
+  title: string;
+  detail: string;
+  amount?: string;
+  transactionHash?: string | null;
+};
+
+function AgentHistoryPanel({
+  agents,
+  reports,
+  tasks,
+  automation,
+}: {
+  agents: ReputationSnapshot[];
+  reports: ArenaTrainingReport[];
+  tasks: MarketplaceTask[];
+  automation?: Record<string, AgentAutomationSnapshot>;
+}) {
+  const agentsByAddress = new Map(agents.map((agent) => [agent.agentAddress.toLowerCase(), agent]));
+  const entries: AgentHistoryEntry[] = [
+    ...agents.map((agent) => ({
+      id: `registered:${agent.agentAddress}`,
+      agentAddress: agent.agentAddress,
+      timestamp: agent.lastUpdated,
+      kind: 'REGISTERED' as const,
+      title: 'Circle agent registered',
+      detail: `${agent.displayName} · ${shortAddress(agent.agentAddress)}`,
+    })),
+    ...reports.map((report) => ({
+      id: `training:${report.attemptId}`,
+      agentAddress: report.agentAddress,
+      timestamp: report.verifiedAt,
+      kind: 'TRAINING' as const,
+      title: report.status === 'PASSED' ? 'Training verified' : 'Training needs review',
+      detail: `${report.templateTitle} · ${report.score}/100 verifier score`,
+      amount: report.pointsAwarded ? `${report.pointsAwarded} PTS` : undefined,
+    })),
+    ...tasks.flatMap((task) => {
+      if (!task.agentAddress) return [];
+      const timestamp = task.startedAt ?? task.createdAt;
+      const taskEntries: AgentHistoryEntry[] = [];
+      if (task.assignmentTransactionHash || task.status !== 'OPEN') taskEntries.push({
+        id: `claim:${task.id}`,
+        agentAddress: task.agentAddress,
+        timestamp,
+        kind: 'CLAIMED',
+        title: 'Work claimed',
+        detail: task.title,
+        amount: `${money(task.totalAmount)} USDC budget`,
+        transactionHash: task.assignmentTransactionHash,
+      });
+      if (Number(task.collateralLocked) > 0) taskEntries.push({
+        id: `collateral:${task.id}`,
+        agentAddress: task.agentAddress,
+        timestamp,
+        kind: 'COLLATERAL',
+        title: 'Collateral locked',
+        detail: task.title,
+        amount: `${money(task.collateralLocked)} USDC`,
+        transactionHash: task.collateralTransactionHash,
+      });
+      if (task.status === 'COMPLETED') taskEntries.push({
+        id: `earned:${task.id}`,
+        agentAddress: task.agentAddress,
+        timestamp: task.completedAt ?? timestamp,
+        kind: 'EARNED',
+        title: 'Work settled',
+        detail: task.title,
+        amount: `+${money(task.totalAmount)} USDC`,
+        transactionHash: task.completionTransactionHash ?? task.settlementTransactionHash,
+      });
+      if (Number(task.withdrawnAmount) > 0) taskEntries.push({
+        id: `withdrawn:${task.id}`,
+        agentAddress: task.agentAddress,
+        timestamp: task.completedAt ?? timestamp,
+        kind: 'WITHDRAWN',
+        title: 'USDC claimed from stream',
+        detail: task.title,
+        amount: `+${money(task.withdrawnAmount)} USDC`,
+      });
+      return taskEntries;
+    }),
+    ...agents.flatMap((agent) => {
+      const state = automation?.[agent.agentAddress.toLowerCase()];
+      if (!state?.lastRunAt) return [];
+      return [{
+        id: `runtime:${agent.agentAddress}:${state.lastRunAt}`,
+        agentAddress: agent.agentAddress,
+        timestamp: state.lastRunAt,
+        kind: 'RUNTIME' as const,
+        title: state.enabled ? 'Self-training restarted' : 'Self-training paused',
+        detail: state.lastError ? 'Runtime needs attention before the next profile.' : `${state.completedToday}/${state.totalDailyTasks} daily profiles completed`,
+      }];
+    }),
+  ].sort((left, right) => right.timestamp - left.timestamp);
+  const claimedCount = tasks.filter((task) => task.agentAddress).length;
+  const collateralLocked = tasks.reduce((total, task) => total + Number(task.collateralLocked || 0), 0);
+  const earned = tasks.reduce((total, task) => total + Number(task.withdrawnAmount || 0), 0);
+  const points = reports.reduce((total, report) => total + report.pointsAwarded, 0);
+  const formatTime = (timestamp: number) => new Intl.DateTimeFormat(undefined, {
+    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC',
+  }).format(timestamp * 1_000);
+
+  return (
+    <section className="agent-history" aria-labelledby="agent-history-title">
+      <header className="agent-history__header">
+        <div><div className="eyebrow">AGENT LEDGER / VERIFIABLE ACTIVITY</div><h2 id="agent-history-title">Agent history</h2><p>Claims, training receipts, locked collateral and confirmed work payouts stay in one timeline.</p></div>
+        <span>{entries.length} EVENTS</span>
+      </header>
+      <div className="agent-history__totals" aria-label="Agent history totals">
+        <div><span>AGENTS</span><strong>{agents.length}/{MAX_AGENTS_PER_CONTROLLER}</strong></div>
+        <div><span>WORK CLAIMED</span><strong>{claimedCount}</strong></div>
+        <div><span>USDC LOCKED</span><strong>{money(collateralLocked)}</strong></div>
+        <div><span>USDC CLAIMED</span><strong>{money(earned)}</strong></div>
+        <div><span>TRAINING POINTS</span><strong>{points}</strong></div>
+      </div>
+      {entries.length ? <ol className="agent-history__timeline">
+        {entries.slice(0, 40).map((entry) => {
+          const agent = agentsByAddress.get(entry.agentAddress.toLowerCase());
+          return <li className={`agent-history__event agent-history__event--${entry.kind.toLowerCase()}`} key={entry.id}>
+            <time>{formatTime(entry.timestamp)}<small>UTC</small></time>
+            <span className="agent-history__rail" aria-hidden="true" />
+            <div className="agent-history__event-copy"><span>{agent?.displayName ?? shortAddress(entry.agentAddress)} · {entry.kind}</span><strong>{entry.title}</strong><p>{entry.detail}</p></div>
+            <div className="agent-history__event-value">{entry.amount ? <strong>{entry.amount}</strong> : <span>RECORDED</span>}{entry.transactionHash ? <code title={entry.transactionHash}>{shortAddress(entry.transactionHash)}</code> : null}</div>
+          </li>;
+        })}
+      </ol> : <div className="dapp-empty-state"><EmptyState icon={<Clock3 />} title="No agent events yet" copy="Creation, self-training, task claims and USDC settlement receipts will appear here." /></div>}
+    </section>
+  );
+}
+
 function DappDashboard({
   snapshot,
   trainingReports,
@@ -2132,6 +2268,7 @@ function DappDashboard({
   trainingBusyAgentAddress,
   createdAgentNotice,
   onDismissCreatedAgent,
+  agentLimitReached,
 }: {
   snapshot: DashboardSnapshot;
   trainingReports: ArenaTrainingReport[];
@@ -2153,6 +2290,7 @@ function DappDashboard({
   trainingBusyAgentAddress?: string;
   createdAgentNotice?: CreatedAgentNotice | null;
   onDismissCreatedAgent?: () => void;
+  agentLimitReached: boolean;
 }) {
   const { t } = useLocale();
   const [cabinetSection, setCabinetSection] = useState<CabinetSection>('overview');
@@ -2206,7 +2344,6 @@ function DappDashboard({
   const myTrainingReports = trainingReports.filter((report) => controlledAgentAddresses.has(report.agentAddress.toLowerCase()));
   const activeOrders = myOrders.filter((task) => ['ASSIGNED', 'STREAMING', 'PAUSED', 'DISPUTED'].includes(task.status));
   const openOrders = snapshot.tasks.filter((task) => task.status === 'OPEN');
-  const deliverablesByTask = new Map(snapshot.deliverables.map((deliverable) => [deliverable.taskId, deliverable]));
   const completedAgentTasks = myAgents.reduce((total, agent) => total + agent.completedTasks, 0);
   const failedAgentTasks = myAgents.reduce((total, agent) => total + agent.failedTasks, 0);
   const totalAgentOutcomes = completedAgentTasks + failedAgentTasks;
@@ -2220,8 +2357,8 @@ function DappDashboard({
   const cabinetTabs: Array<{ id: CabinetSection; label: string; count?: number }> = [
     { id: 'overview', label: 'Overview' },
     { id: 'agents', label: 'Your agents', count: myAgents.length },
-    { id: 'orders', label: 'My work orders', count: myOrders.length },
-    { id: 'assignments', label: 'My agent assignments', count: myAssignments.length + myTrainingReports.length },
+    { id: 'orders', label: 'Agent history', count: myTrainingReports.length + myAssignments.length },
+    { id: 'assignments', label: 'Agent work reports', count: myTrainingReports.length },
   ];
 
   return (
@@ -2234,7 +2371,7 @@ function DappDashboard({
         </div>
         <div className="cabinet-header__actions">
           <div className="dapp-identity"><span className="live-dot" /><span>{t('Your wallet')}</span><strong>{shortAddress(connectedAddress!)}</strong></div>
-          <><button className="button button--outline button--small" onClick={onCreateAgent} type="button"><Bot /> Create an agent</button><button className="button button--primary button--small" onClick={onPublish} type="button"><Plus /> Create task</button></>
+          <><button className="button button--outline button--small" disabled={agentLimitReached} title={agentLimitReached ? `Maximum of ${MAX_AGENTS_PER_CONTROLLER} agents reached` : undefined} onClick={onCreateAgent} type="button"><Bot /> {agentLimitReached ? `${MAX_AGENTS_PER_CONTROLLER}/${MAX_AGENTS_PER_CONTROLLER} agents` : 'Create an agent'}</button><button className="button button--primary button--small" onClick={onPublish} type="button"><Plus /> Create task</button></>
         </div>
       </section>
 
@@ -2260,9 +2397,9 @@ function DappDashboard({
               <header className="cabinet-section-header"><div><div className="eyebrow">MAIN SUMMARY</div><h2 id="cabinet-overview-title">Overview</h2></div><button className="button button--outline button--small" onClick={() => onView('marketplace')} type="button"><Zap /> Open task board <span>{openOrders.length}</span></button></header>
               <div className="cabinet-overview__metrics">
                 <button type="button" onClick={() => setCabinetSection('agents')}><span>Your agents</span><strong>{myAgents.length}</strong><ArrowRight /></button>
-                <button type="button" onClick={() => setCabinetSection('orders')}><span>My work orders</span><strong>{myOrders.length}</strong><ArrowRight /></button>
+                <button type="button" onClick={() => setCabinetSection('orders')}><span>Agent history</span><strong>{myTrainingReports.length + myAssignments.length}</strong><ArrowRight /></button>
                 <button type="button" onClick={() => setCabinetSection('orders')}><span>In progress</span><strong>{activeOrders.length}</strong><ArrowRight /></button>
-                <button type="button" onClick={() => setCabinetSection('assignments')}><span>My agent assignments</span><strong>{myAssignments.length + myTrainingReports.length}</strong><ArrowRight /></button>
+                <button type="button" onClick={() => setCabinetSection('assignments')}><span>Agent work reports</span><strong>{myTrainingReports.length}</strong><ArrowRight /></button>
               </div>
               {myAgents.length ? <section className="cabinet-agent-performance" aria-labelledby="agent-performance-title"><header><div><span>AGENT PERFORMANCE</span><strong id="agent-performance-title">{myAgents.length === 1 ? myAgents[0].displayName : `${myAgents.length} agent profiles`}</strong></div><button className="button button--outline button--small" onClick={() => setCabinetSection('agents')} type="button">Your agents <ArrowRight /></button></header><div className="cabinet-agent-performance__metrics"><div><span>TRUST SCORE</span><strong>{averageTrustScore}<small>/1000</small></strong></div><div><span>SETTLED TASKS</span><strong>{completedAgentTasks}</strong></div><div><span>SUCCESS RATE</span><strong>{totalAgentOutcomes ? `${Math.round((completedAgentTasks / totalAgentOutcomes) * 100)}%` : '—'}</strong></div><div><span>PLATFORM POINTS</span><strong>{totalPlatformPoints}</strong></div><div><span>AUTOPILOT</span><strong>{activeAutomations}/{myAgents.length}</strong></div><div><span>RUNTIME ONLINE</span><strong>{connectedRuntimes}/{myAgents.length}</strong></div></div></section> : null}
               {!myAgents.length && !myOrders.length ? <div className="cabinet-overview__empty"><span>Get started</span><strong>Create an agent or publish a work order.</strong><div><button className="button button--outline button--small" onClick={onCreateAgent} type="button"><Bot /> Create an agent</button><button className="button button--primary button--small" onClick={onPublish} type="button"><Plus /> Create task</button></div></div> : null}
@@ -2271,41 +2408,20 @@ function DappDashboard({
 
           {cabinetSection === 'agents' ? (
             <section className="cabinet-agents cabinet-section-panel" aria-labelledby="cabinet-agents-title">
-              <header className="cabinet-section-header"><div><div className="eyebrow">AGENT IDENTITIES</div><h2 id="cabinet-agents-title">Your agents</h2></div><button className="button button--primary button--small" onClick={onCreateAgent} type="button"><Bot /> Create an agent</button></header>
+              <header className="cabinet-section-header"><div><div className="eyebrow">AGENT IDENTITIES</div><h2 id="cabinet-agents-title">Your agents <small>{myAgents.length}/{MAX_AGENTS_PER_CONTROLLER}</small></h2></div><button className="button button--primary button--small" disabled={agentLimitReached} title={agentLimitReached ? `Maximum of ${MAX_AGENTS_PER_CONTROLLER} agents reached` : undefined} onClick={onCreateAgent} type="button"><Bot /> {agentLimitReached ? 'Agent limit reached' : 'Create an agent'}</button></header>
               {myAgents.length ? <div className="cabinet-agents__grid">{myAgents.map((agent) => <CabinetAgentCard key={agent.agentAddress} agent={agent} automation={snapshot.agentAutomation?.[agent.agentAddress.toLowerCase()]} busy={trainingBusyAgentAddress?.toLowerCase() === agent.agentAddress.toLowerCase()} highlighted={agent.agentAddress.toLowerCase() === createdAgentNotice?.agentAddress.toLowerCase()} isPrimary={agent.agentAddress.toLowerCase() === primaryAgentAddress?.toLowerCase()} onFund={onFundAgent} onSetPrimary={onSetPrimaryAgent} onToggleTraining={onToggleTraining} />)}</div> : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title="No agent profiles in this cabinet yet" copy="Create an agent to display its wallet and status here." /></div>}
             </section>
           ) : null}
           {cabinetSection === 'orders' ? <section className="client-orders cabinet-section-panel" aria-labelledby="client-orders-title">
             <header className="panel-heading panel-heading--wide">
-              <div><div className="eyebrow">{t('Wallet-owned work')}</div><h2 id="client-orders-title">{t('My work orders')}</h2></div>
-              <button className="button button--outline button--small" onClick={onPublish} type="button"><Plus /> Publish a work order</button>
+              <div><div className="eyebrow">{t('Agent wallet activity')}</div><h2 id="client-orders-title">{t('Agent history')}</h2></div>
+              <button className="button button--outline button--small" onClick={() => onView('marketplace')} type="button"><Zap /> {t('Browse work')}</button>
             </header>
-            {myOrders.length ? (
-              <><div className="cabinet-table-head" aria-hidden="true"><span>Status</span><span>Work order</span><span>Criteria / evidence</span><span>Agent & escrow</span><span>Action</span></div><div className="client-orders__grid">
-                {myOrders.map((task) => {
-                  const deliverable = deliverablesByTask.get(task.id);
-                  const assignedAgent = snapshot.agents.find((agent) => agent.agentAddress.toLowerCase() === task.agentAddress?.toLowerCase());
-                  const invitedAgent = snapshot.agents.find((agent) => agent.agentAddress.toLowerCase() === task.preferredAgentAddress?.toLowerCase());
-                  return (
-                    <article className="client-order-card" key={task.id}>
-                      <header><StatusPill status={task.status} /><span className="mono">{task.id.slice(-8).toUpperCase()}</span></header>
-                      <h3>{task.title}</h3>
-                      <p>{task.successCriteria || t('Acceptance criteria are defined in the work order.')}</p>
-                      <div className="client-order-card__meta"><span>{invitedAgent && !assignedAgent ? t('INVITED AGENT') : t('AGENT')}<strong>{assignedAgent?.displayName ?? invitedAgent?.displayName ?? (task.agentAddress ? shortAddress(task.agentAddress) : t('Awaiting claim'))}</strong></span><span>{t('ESCROW')}<strong>${money(task.totalAmount)}</strong></span></div>
-                      {deliverable?.status === 'SUBMITTED' ? (
-                        <div className="client-order-card__decision"><strong>{t('Result ready for review')}</strong><div><button className="button button--primary button--small" disabled={!onAccept} onClick={() => onAccept?.(deliverable)} type="button"><BadgeCheck /> {t('Accept & settle')}</button><button className="button button--warning button--small" disabled={!onDispute} onClick={() => onDispute?.(task)} type="button"><Scale /> {t('Dispute')}</button></div></div>
-                      ) : task.status === 'OPEN' && isArcMode ? (
-                        <div className="client-order-card__decision"><strong>{t('Waiting for an eligible agent to claim this work.')}</strong><button className="button button--warning button--small" disabled={!onCancel} onClick={() => onCancel?.(task)} type="button"><X /> Cancel & refund</button></div>
-                      ) : <small className="client-order-card__hint">{task.status === 'OPEN' ? t('Waiting for an eligible agent to claim this work.') : task.status === 'CANCELLED' ? 'Escrow was refunded to the creator on Arc.' : t('PACT will show the evidence packet here when the agent submits.')}</small>}
-                    </article>
-                  );
-                })}
-              </div></>
-            ) : <div className="dapp-empty-state"><EmptyState icon={<Boxes />} title={t('No work orders yet')} copy={t('Fund a brief, set acceptance criteria, and invite or hire an agent to deliver it.')} /></div>}
+            <AgentHistoryPanel agents={myAgents} reports={myTrainingReports} tasks={myAssignments} automation={snapshot.agentAutomation} />
           </section> : null}
           {cabinetSection === 'assignments' ? <section className="client-orders cabinet-section-panel" aria-labelledby="agent-assignments-title">
             <header className="panel-heading panel-heading--wide">
-              <div><div className="eyebrow">{t('Agent wallet work')}</div><h2 id="agent-assignments-title">{t('My agent assignments')}</h2></div>
+              <div><div className="eyebrow">{t('Verified agent output')}</div><h2 id="agent-assignments-title">{t('Agent work reports')}</h2></div>
               <button className="button button--outline button--small" onClick={() => onView('marketplace')} type="button"><Zap /> {t('Browse work')}</button>
             </header>
             <TrainingReportPanel reports={myTrainingReports} />
@@ -2321,7 +2437,7 @@ function DappDashboard({
                   </article>
                 ))}
               </div></>
-            ) : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title={myTrainingReports.length ? 'No paid assignments yet' : t('No agent activity yet')} copy={myTrainingReports.length ? 'Verified training reports are shown above. Funded work assignments will appear here when your agent claims one.' : 'Run a Training profile. After Verify, this page will show the score, verifier checks, judge feedback, and peer comparison.'} /></div>}
+            ) : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title={myTrainingReports.length ? 'No paid assignments yet' : t('No work reports yet')} copy={myTrainingReports.length ? 'Verified training reports are shown above. Funded work assignments will appear here when your agent claims one.' : 'Training and paid-work reports appear here after the verifier confirms them.'} /></div>}
           </section> : null}
         </section>
     </div>
@@ -2688,8 +2804,12 @@ export default function App() {
   }, [activeAddress, activeIsConnected]);
 
   const requestCreateAgent = useCallback(() => {
+    if (controllerAgents.length >= MAX_AGENTS_PER_CONTROLLER) {
+      setToast({ tone: 'error', message: `This wallet already controls the maximum of ${MAX_AGENTS_PER_CONTROLLER} agents.` });
+      return;
+    }
     setRegisterOpen(true);
-  }, []);
+  }, [controllerAgents.length]);
 
   const requestHire = useCallback((agentAddress: string) => {
     if (!activeIsConnected || !activeAddress) {
@@ -2965,7 +3085,7 @@ export default function App() {
             <>
               {view === 'overview' ? <Overview snapshot={snapshot} onView={changeView} /> : null}
               {view === 'protocol' ? <AgentProtocol onView={changeView} /> : null}
-              {view === 'dapp' ? <DappDashboard snapshot={snapshot} trainingReports={trainingReports} connectedAddress={activeAddress} onConnect={connectAgent} onPublish={() => requestPublish()} onCreateAgent={requestCreateAgent} onView={changeView} onFundAgent={setFundingAgent} primaryAgentAddress={hubAgent?.agentAddress} onSetPrimaryAgent={setPrimaryAgent} onToggleTraining={toggleAgentTraining} trainingBusyAgentAddress={busyKey?.startsWith('training:') ? busyKey.slice('training:'.length) : undefined} onRunAgent={runAgentTask} createdAgentNotice={createdAgentNotice} onDismissCreatedAgent={() => setCreatedAgentNotice(null)} onAccept={(deliverable) => void perform(`accept:${deliverable.taskId}`, 'Result accepted. Settlement and reputation are finalized.', async () => {
+              {view === 'dapp' ? <DappDashboard snapshot={snapshot} trainingReports={trainingReports} connectedAddress={activeAddress} onConnect={connectAgent} onPublish={() => requestPublish()} onCreateAgent={requestCreateAgent} onView={changeView} onFundAgent={setFundingAgent} primaryAgentAddress={hubAgent?.agentAddress} onSetPrimaryAgent={setPrimaryAgent} onToggleTraining={toggleAgentTraining} trainingBusyAgentAddress={busyKey?.startsWith('training:') ? busyKey.slice('training:'.length) : undefined} onRunAgent={runAgentTask} createdAgentNotice={createdAgentNotice} onDismissCreatedAgent={() => setCreatedAgentNotice(null)} agentLimitReached={controllerAgents.length >= MAX_AGENTS_PER_CONTROLLER} onAccept={(deliverable) => void perform(`accept:${deliverable.taskId}`, 'Result accepted. Settlement and reputation are finalized.', async () => {
                 if (!isArcMode) return api.acceptDeliverable(deliverable.id);
                 const task = tasksById.get(deliverable.taskId);
                 if (!task?.chainTaskId) throw new Error('The work order has no Arc task ID.');

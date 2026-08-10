@@ -3,7 +3,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { createHash } from 'node:crypto';
-import { DEFAULT_TASK_DURATION_SECONDS, DEMO_ADDRESSES, inferTaskCategory, manifestSupportsTaskCategory, manifestSupportsWorkOrder, normalizeWorkOrderSpec, type ApiError, type WorkOrderSpec } from '@pact/shared';
+import { DEFAULT_TASK_DURATION_SECONDS, DEMO_ADDRESSES, inferTaskCategory, manifestSupportsTaskCategory, manifestSupportsWorkOrder, MAX_AGENTS_PER_CONTROLLER, normalizeWorkOrderSpec, type ApiError, type WorkOrderSpec } from '@pact/shared';
 import { ApiProblem } from './errors.js';
 import { DemoStore, demoStore } from './store.js';
 import { SCORE } from './config.js';
@@ -915,6 +915,10 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
       const identity = requestIdentity(request);
       if (identity?.kind !== 'wallet') {
         throw new ApiProblem(401, 'CONTROLLER_WALLET_REQUIRED', 'Connect and authenticate the human controller wallet before creating a Circle agent wallet');
+      }
+      const existingAgents = await agentRepository.countByController(identity.subject);
+      if (existingAgents >= MAX_AGENTS_PER_CONTROLLER) {
+        throw new ApiProblem(409, 'AGENT_LIMIT_REACHED', `A controller wallet can own at most ${MAX_AGENTS_PER_CONTROLLER} agents`);
       }
       const provisioned = await createArcSponsoredWallet();
       const finalAddress = provisioned.wallet.address;

@@ -86,6 +86,16 @@ export class AgentRepository {
     }));
   }
 
+  async countByController(controllerAddress: string): Promise<number> {
+    const res = await query(
+      `SELECT COUNT(*)::int AS count
+       FROM agents
+       WHERE wallet_provider = 'CIRCLE' AND lower(controller_address) = lower($1)`,
+      [controllerAddress],
+    );
+    return Number(res.rows[0]?.count ?? 0);
+  }
+
   async awardPlatformPoints(address: string, points: number): Promise<void> {
     await query(`
       UPDATE agents
