@@ -27,7 +27,7 @@ services:
       PACT_DATABASE_URL: postgres://pact:${POSTGRES_PASSWORD}@postgres:5432/pact
       PACT_CORS_ORIGINS: ${PACT_CORS_ORIGINS:?Set PACT_CORS_ORIGINS in deploy/.env.production}
       PACT_REQUIRE_ARENA_SIGNATURES: "true"
-      PACT_AGENT_AUTOPILOT_ENABLED: "false"
+      PACT_AGENT_AUTOPILOT_ENABLED: "true"
       ARENA_JUDGE_PROVIDER: openai
       ARBITRATOR_PROVIDER: council
       ARBITRATOR_FALLBACK: disabled
