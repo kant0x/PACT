@@ -1,0 +1,20 @@
+{
+  "network": "arc-testnet",
+  "chainId": 5042002,
+  "deployedAt": "2026-08-10T11:23:29.779Z",
+  "contracts": {
+    "StreamingVault": "0xc32BD99404FECAbD6648f9fcCD0B63A7DD1fA9e6",
+    "WorkOrderCommitments": "0x00266B350bf3661d1988788AE08c534a8d5a5727",
+    "VerificationRegistry": "0xe17731648c8D9963156f6fa0C32aF5479C3571dd",
+    "HubRegistry": "0x228883bD44818b9d8F772514c744e4d313361dF9",
+    "AgentRegistry": "0x20772a366B36b36D60ea6e685567718480C9f285",
+    "DisputeModule": "0x54c6412D23C3574771483bD1448d67527fDd5f15",
+    "ReputationRegistry": "0x145fD12FA6662FaB923546360F4923c939593585",
+    "PlatformPoints": "0x22f6efB9A985401Ac9950238794aDA9cDBf6e24F"
+  },
+  "notes": [
+    "Work orders commit immutable terms, acceptance checklist, and report hashes.",
+    "Settlement requires an accepted independent verifier verdict when VerificationRegistry is configured.",
+    "AI judge processing stays off-chain; verdict and evidence hashes are the on-chain commitment."
+  ]
+}
