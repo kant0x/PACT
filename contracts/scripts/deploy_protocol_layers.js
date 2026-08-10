@@ -12,11 +12,14 @@ if (fs.existsSync(envFile) && typeof process.loadEnvFile === 'function') process
 
 const rpcUrl = process.env.PACT_ARC_RPC_URL || process.env.ARC_RPC_URL || 'https://rpc.testnet.arc.network';
 const expectedChainId = BigInt(process.env.EXPECTED_CHAIN_ID || '5042002');
-const privateKey = process.env.DEPLOYER_PRIVATE_KEY || process.env.PRIVATE_KEY;
+const privateKey = process.env.DEPLOYER_PRIVATE_KEY
+  || process.env.PRIVATE_KEY
+  || process.env.PACT_DISPUTE_ADMIN_PRIVATE_KEY;
 const usdcAddress = process.env.ARC_USDC_ADDRESS || '0x3600000000000000000000000000000000000000';
 const reputationAddress = process.env.PACT_REPUTATION_REGISTRY_ADDRESS || process.env.REPUTATION_REGISTRY_ADDRESS;
 const initialVerifierAddress = process.env.PACT_INITIAL_VERIFIER_ADDRESS?.trim() || null;
 const collateralTimeout = Number(process.env.COLLATERAL_TIMEOUT_SECONDS || 86_400);
+const deployFreshBaseRegistries = process.env.PACT_DEPLOY_FRESH_BASE_REGISTRIES === 'true';
 
 const isAddress = (value) => typeof value === 'string' && /^0x[a-fA-F0-9]{40}$/.test(value);
 const requireAddress = (name, value) => {
@@ -40,7 +43,7 @@ async function main() {
     throw new Error('DEPLOYER_PRIVATE_KEY (or PRIVATE_KEY) is required and must be a 32-byte hex key');
   }
   requireAddress('ARC_USDC_ADDRESS', usdcAddress);
-  requireAddress('PACT_REPUTATION_REGISTRY_ADDRESS', reputationAddress);
+  if (!deployFreshBaseRegistries) requireAddress('PACT_REPUTATION_REGISTRY_ADDRESS', reputationAddress);
   if (initialVerifierAddress) requireAddress('PACT_INITIAL_VERIFIER_ADDRESS', initialVerifierAddress);
   if (!Number.isInteger(collateralTimeout) || collateralTimeout <= 0) throw new Error('COLLATERAL_TIMEOUT_SECONDS must be a positive integer');
 
@@ -49,7 +52,9 @@ async function main() {
   const network = await provider.getNetwork();
   if (network.chainId !== expectedChainId) throw new Error(`Expected chain ${expectedChainId}, received ${network.chainId}`);
   if (await provider.getCode(usdcAddress) === '0x') throw new Error('ARC_USDC_ADDRESS has no bytecode');
-  if (await provider.getCode(reputationAddress) === '0x') throw new Error('PACT_REPUTATION_REGISTRY_ADDRESS has no bytecode');
+  if (!deployFreshBaseRegistries && await provider.getCode(reputationAddress) === '0x') {
+    throw new Error('PACT_REPUTATION_REGISTRY_ADDRESS has no bytecode');
+  }
 
   const workOrderArtifact = loadArtifact('WorkOrderCommitments');
   const verificationArtifact = loadArtifact('VerificationRegistry');
@@ -58,14 +63,22 @@ async function main() {
   const agentArtifact = loadArtifact('AgentRegistry');
   const hubArtifact = loadArtifact('HubRegistry');
   const reputationArtifact = loadArtifact('ReputationRegistry');
+  const pointsArtifact = loadArtifact('PlatformPoints');
 
   console.log(`Deploying protocol layers from ${wallet.address} on Arc Testnet…`);
+  const reputation = deployFreshBaseRegistries
+    ? await deploy(reputationArtifact, wallet)
+    : null;
+  const activeReputationAddress = reputation ? await reputation.getAddress() : reputationAddress;
+  const points = deployFreshBaseRegistries
+    ? await deploy(pointsArtifact, wallet, [wallet.address])
+    : null;
   const workOrders = await deploy(workOrderArtifact, wallet, [wallet.address]);
   const verification = await deploy(verificationArtifact, wallet, [wallet.address, await workOrders.getAddress()]);
   const dispute = await deploy(disputeArtifact, wallet, [wallet.address]);
   const vault = await deploy(vaultArtifact, wallet, [
     usdcAddress,
-    reputationAddress,
+    activeReputationAddress,
     await workOrders.getAddress(),
     await dispute.getAddress(),
     collateralTimeout,
@@ -74,12 +87,13 @@ async function main() {
   const hubRegistry = await deploy(hubArtifact, wallet, [wallet.address]);
 
   const workOrdersWithSigner = new ethers.Contract(await workOrders.getAddress(), workOrderArtifact.abi, wallet);
-  const reputationWithSigner = new ethers.Contract(reputationAddress, reputationArtifact.abi, wallet);
+  const reputationWithSigner = new ethers.Contract(activeReputationAddress, reputationArtifact.abi, wallet);
   const verificationWithSigner = new ethers.Contract(await verification.getAddress(), verificationArtifact.abi, wallet);
   const disputeWithSigner = new ethers.Contract(await dispute.getAddress(), disputeArtifact.abi, wallet);
   const vaultAddress = await vault.getAddress();
   await (await workOrdersWithSigner.setAuthorizedWriter(vaultAddress, true)).wait();
   await (await reputationWithSigner.setAuthorizedWriter(vaultAddress, true)).wait();
+  if (points) await (await points.setAuthorizedAwarder(wallet.address, true)).wait();
   await (await disputeWithSigner.setVault(vaultAddress)).wait();
   await (await disputeWithSigner.setVerificationRegistry(await verification.getAddress())).wait();
   if (initialVerifierAddress) await (await verificationWithSigner.setAuthorizedVerifier(initialVerifierAddress, true)).wait();
@@ -96,9 +110,11 @@ async function main() {
       StreamingVault: vaultAddress,
       AgentRegistry: await agentRegistry.getAddress(),
       HubRegistry: await hubRegistry.getAddress(),
-      ReputationRegistry: reputationAddress,
+      ReputationRegistry: activeReputationAddress,
+      PlatformPoints: points ? await points.getAddress() : null,
     },
     initialVerifier: initialVerifierAddress,
+    deployedFreshBaseRegistries: deployFreshBaseRegistries,
     collateralTimeoutSeconds: collateralTimeout,
     deployedAt: new Date().toISOString(),
   };

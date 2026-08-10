@@ -111,7 +111,15 @@ class ArcPlatformPointsService implements PlatformPointsService {
 
 export function createPlatformPointsFromEnv(env: NodeJS.ProcessEnv = process.env): PlatformPointsService | null {
   const contractAddress = env.PLATFORM_POINTS_ADDRESS?.trim();
-  const privateKey = (env.PLATFORM_POINTS_AWARDER_PRIVATE_KEY || env.DEPLOYER_PRIVATE_KEY || '').trim();
+  // Production can use the dispute administrator as the dedicated on-chain
+  // scorer. Keep the explicit PlatformPoints key first so operators can split
+  // the roles later without changing application code.
+  const privateKey = (
+    env.PLATFORM_POINTS_AWARDER_PRIVATE_KEY
+    || env.DEPLOYER_PRIVATE_KEY
+    || env.PACT_DISPUTE_ADMIN_PRIVATE_KEY
+    || ''
+  ).trim();
   if (!contractAddress && !privateKey) return null;
   if (!contractAddress || !privateKey) {
     throw new Error('PLATFORM_POINTS_ADDRESS and PLATFORM_POINTS_AWARDER_PRIVATE_KEY (or DEPLOYER_PRIVATE_KEY) are both required for Arc points');
