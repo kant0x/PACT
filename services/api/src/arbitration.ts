@@ -163,7 +163,12 @@ export class OpenAIArbitrator implements Arbitrator {
   private readonly roleInstructions: string;
 
   constructor(options: OpenAIArbitratorOptions) {
-    this.client = new OpenAI({ apiKey: options.apiKey, timeout: options.timeoutMs ?? 15_000, maxRetries: 1 });
+    this.client = new OpenAI({
+      apiKey: options.apiKey,
+      baseURL: process.env.OPENAI_BASE_URL?.trim() || undefined,
+      timeout: options.timeoutMs ?? 15_000,
+      maxRetries: 1,
+    });
     this.model = options.model ?? 'gpt-4o-mini';
     this.fallback = options.fallback ?? null;
     this.judgeId = options.judgeId ?? 'openai-merits';

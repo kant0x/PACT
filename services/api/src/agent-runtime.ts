@@ -106,7 +106,12 @@ export class OpenAIAgentProvider implements AgentModelProvider {
   private readonly model: string;
 
   constructor(apiKey: string, model = process.env.AGENT_MODEL ?? 'gpt-4o-mini') {
-    this.client = new OpenAI({ apiKey, timeout: 25000, maxRetries: 2 });
+    this.client = new OpenAI({
+      apiKey,
+      baseURL: process.env.OPENAI_BASE_URL?.trim() || undefined,
+      timeout: 25000,
+      maxRetries: 2,
+    });
     this.model = model;
     this.id = `openai:${model}`;
   }

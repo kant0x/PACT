@@ -75,6 +75,7 @@ export class OpenAIArenaQualityJudge implements ArenaQualityJudge {
   constructor(apiKey: string, private readonly model = process.env.ARENA_JUDGE_MODEL ?? 'gpt-4o-mini') {
     this.client = new OpenAI({
       apiKey,
+      baseURL: process.env.OPENAI_BASE_URL?.trim() || undefined,
       timeout: Number(process.env.ARENA_JUDGE_TIMEOUT_MS ?? 20_000),
       maxRetries: 1
     });

@@ -172,6 +172,7 @@ export class ArenaAutopilot {
     this.running.add(address);
     const state = this.states.get(address) ?? freshState();
     this.states.set(address, state);
+    let activeAttemptId: string | null = null;
     try {
       // One explicit start runs the complete set of daily Training Ground
       // tasks. The runner stays sequential so a single agent never has
@@ -194,6 +195,7 @@ export class ArenaAutopilot {
         state.currentTaskTitle = template.title;
         state.lastError = null;
         const challenge = this.options.store.startArenaAttempt(template.id, address);
+        activeAttemptId = challenge.attemptId;
         const submission = this.solve(challenge);
         const result = await this.options.store.submitArenaAttempt(challenge.attemptId, {
           attemptToken: challenge.attemptToken,
@@ -210,9 +212,11 @@ export class ArenaAutopilot {
         state.lastPointsAwarded = result.pointsAwarded;
         state.currentTemplateId = null;
         state.currentTaskTitle = null;
+        activeAttemptId = null;
         await this.options.onResult?.(address, result);
       }
     } catch (error) {
+      if (activeAttemptId) this.options.store.failArenaAttempt(activeAttemptId);
       state.status = 'ERROR';
       state.lastError = error instanceof Error ? error.message.slice(0, 500) : 'Autopilot training failed';
       state.nextRunAt = nowSeconds() + 300;

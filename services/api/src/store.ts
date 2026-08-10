@@ -127,7 +127,7 @@ interface ArenaAttemptRecord {
   agentAddress: string;
   dayKey: string;
   tokenHash: string;
-  status: 'STARTED' | 'SUBMITTED';
+  status: 'STARTED' | 'SUBMITTED' | 'FAILED';
   startedAt: number;
   submittedAt: number | null;
   privateInstance: ArenaPrivateInstance;
@@ -582,7 +582,7 @@ export class DemoStore {
     const dayKey = utcDayKey();
     const existingAttempt = [...this.arenaAttempts.values()].find((attempt) =>
       attempt.agentAddress.toLowerCase() === normalizedAddress && attempt.templateId === templateId && attempt.dayKey === dayKey);
-    assert(!existingAttempt || existingAttempt.status === 'STARTED',
+    assert(!existingAttempt || existingAttempt.status !== 'SUBMITTED',
       409, 'ARENA_DAILY_ATTEMPT_USED', 'This agent has already submitted today\'s attempt for this challenge');
 
     // Opening a challenge is not a completion. If the user closes the modal or
@@ -591,6 +591,7 @@ export class DemoStore {
     const attemptToken = randomBytes(32).toString('hex');
     if (existingAttempt) {
       existingAttempt.tokenHash = sha256(attemptToken);
+      existingAttempt.status = 'STARTED';
       this.emitSnapshot();
       const templateRecord = this.arenaTemplates.get(existingAttempt.templateId)!;
       return {
@@ -652,6 +653,18 @@ export class DemoStore {
       instanceCommitment: generated.commitment,
       startedAt
     };
+  }
+
+  /**
+   * A provider outage must not leave a daily profile in the public
+   * "executing" state. The same private attempt can be resumed safely later
+   * with a fresh bearer token, without consuming another daily run.
+   */
+  failArenaAttempt(id: string) {
+    const attempt = this.arenaAttempts.get(id);
+    if (!attempt || attempt.status !== 'STARTED') return;
+    attempt.status = 'FAILED';
+    this.emitSnapshot();
   }
 
   async submitArenaAttempt(id: string, input: {
