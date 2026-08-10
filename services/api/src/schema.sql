@@ -45,6 +45,9 @@ CREATE TABLE IF NOT EXISTS tasks (
   stream_start_tx_hash VARCHAR(66),
   completion_tx_hash VARCHAR(66),
   settlement_tx_hash VARCHAR(66),
+  work_order_hash VARCHAR(66),
+  acceptance_hash VARCHAR(66),
+  result_proof_hash VARCHAR(66),
   title VARCHAR(255) NOT NULL,
   description TEXT NOT NULL,
   success_criteria TEXT NOT NULL,
@@ -154,6 +157,9 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS collateral_tx_hash VARCHAR(66);
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS stream_start_tx_hash VARCHAR(66);
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS completion_tx_hash VARCHAR(66);
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS settlement_tx_hash VARCHAR(66);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS work_order_hash VARCHAR(66);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS acceptance_hash VARCHAR(66);
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS result_proof_hash VARCHAR(66);
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS preferred_agent_address VARCHAR(42);
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS work_order JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE agents ADD COLUMN IF NOT EXISTS wallet_provider VARCHAR(20) NOT NULL DEFAULT 'EXTERNAL';

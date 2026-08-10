@@ -15,6 +15,9 @@ function ensureWorkOrderColumn() {
     ALTER TABLE tasks ADD COLUMN IF NOT EXISTS stream_start_tx_hash VARCHAR(66);
     ALTER TABLE tasks ADD COLUMN IF NOT EXISTS completion_tx_hash VARCHAR(66);
     ALTER TABLE tasks ADD COLUMN IF NOT EXISTS settlement_tx_hash VARCHAR(66);
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS work_order_hash VARCHAR(66);
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS acceptance_hash VARCHAR(66);
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS result_proof_hash VARCHAR(66);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_chain_task_id ON tasks(chain_task_id) WHERE chain_task_id IS NOT NULL;
     CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_funding_tx_hash ON tasks(funding_tx_hash) WHERE funding_tx_hash IS NOT NULL;
   `)
@@ -43,7 +46,8 @@ export class TaskRepository {
         id, chain_task_id, funding_tx_hash, title, description, success_criteria, creator_address, agent_address,
         total_amount, estimated_duration_seconds, stream_rate_per_second, status,
         collateral_locked, accrued_amount, withdrawn_amount, created_at, started_at, completed_at, template_id, terms, work_order, preferred_agent_address
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+        , work_order_hash, acceptance_hash, result_proof_hash
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
     `, [
       id, chain?.chainTaskId ?? null, chain?.fundingTransactionHash ?? null,
       task.title, task.description, task.successCriteria, task.creatorAddress, task.agentAddress,
@@ -52,13 +56,19 @@ export class TaskRepository {
       task.templateId || null,
       task.terms ? JSON.stringify(task.terms) : null,
       task.workOrder ? JSON.stringify(task.workOrder) : '{}',
-      task.preferredAgentAddress ?? null
+      task.preferredAgentAddress ?? null,
+      task.workOrderHash ?? null,
+      task.acceptanceHash ?? null,
+      task.resultProofHash ?? null,
     ]);
 
     return {
       id,
       chainTaskId: chain?.chainTaskId ?? null,
       fundingTransactionHash: chain?.fundingTransactionHash ?? null,
+      workOrderHash: task.workOrderHash ?? null,
+      acceptanceHash: task.acceptanceHash ?? null,
+      resultProofHash: task.resultProofHash ?? null,
       assignmentTransactionHash: null,
       collateralTransactionHash: null,
       streamStartTransactionHash: null,
@@ -112,8 +122,9 @@ export class TaskRepository {
         accrued_amount = $11, withdrawn_amount = $12, started_at = $13,
         completed_at = $14, template_id = $15, terms = $16, work_order = $17, preferred_agent_address = $18,
         funding_tx_hash = $19, assignment_tx_hash = $20, collateral_tx_hash = $21,
-        stream_start_tx_hash = $22, completion_tx_hash = $23, settlement_tx_hash = $24
-      WHERE id = $25
+        stream_start_tx_hash = $22, completion_tx_hash = $23, settlement_tx_hash = $24,
+        work_order_hash = $25, acceptance_hash = $26, result_proof_hash = $27
+      WHERE id = $28
     `, [
       updated.chainTaskId, updated.title, updated.description, updated.successCriteria,
       updated.agentAddress, updated.totalAmount, updated.estimatedDurationSeconds,
@@ -128,6 +139,9 @@ export class TaskRepository {
       updated.streamStartTransactionHash ?? null,
       updated.completionTransactionHash ?? null,
       updated.settlementTransactionHash ?? null,
+      updated.workOrderHash ?? null,
+      updated.acceptanceHash ?? null,
+      updated.resultProofHash ?? null,
       id
     ]);
 
@@ -143,6 +157,9 @@ export class TaskRepository {
       id: row.id,
       chainTaskId: row.chain_task_id,
       fundingTransactionHash: row.funding_tx_hash ?? null,
+      workOrderHash: row.work_order_hash ?? null,
+      acceptanceHash: row.acceptance_hash ?? null,
+      resultProofHash: row.result_proof_hash ?? null,
       assignmentTransactionHash: row.assignment_tx_hash ?? null,
       collateralTransactionHash: row.collateral_tx_hash ?? null,
       streamStartTransactionHash: row.stream_start_tx_hash ?? null,

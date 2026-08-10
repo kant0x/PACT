@@ -11,6 +11,9 @@ import { ERC20_ABI } from './arc';
 import {
   ARC_USDC_ADDRESS,
   requireAgentRegistryAddress,
+  requireReputationRegistryAddress,
+  requireVerificationRegistryAddress,
+  requireHubRegistryAddress,
   requireMilestoneEscrowAddress,
   requireRewardVaultAddress,
   requireSubscriptionVaultAddress,
@@ -22,6 +25,45 @@ export const AGENT_REGISTRY_ABI = [
   { type: 'function', name: 'setAgentActive', stateMutability: 'nonpayable', inputs: [{ name: 'active', type: 'bool' }], outputs: [] },
   { type: 'function', name: 'isRegistered', stateMutability: 'view', inputs: [{ name: 'agent', type: 'address' }], outputs: [{ name: '', type: 'bool' }] },
   { type: 'function', name: 'getAgentProfile', stateMutability: 'view', inputs: [{ name: 'agent', type: 'address' }], outputs: [{ name: 'profileHash', type: 'bytes32' }, { name: 'capabilitiesHash', type: 'bytes32' }, { name: 'registeredAt', type: 'uint64' }, { name: 'updatedAt', type: 'uint64' }, { name: 'active', type: 'bool' }] },
+  { type: 'function', name: 'registerAgentWithCommitment', stateMutability: 'nonpayable', inputs: [{ name: 'profileHash', type: 'bytes32' }, { name: 'capabilitiesHash', type: 'bytes32' }, { name: 'documentHash', type: 'bytes32' }, { name: 'walletPolicyHash', type: 'bytes32' }, { name: 'runtimeHash', type: 'bytes32' }, { name: 'controller', type: 'address' }], outputs: [] },
+  { type: 'function', name: 'commitAgentDocument', stateMutability: 'nonpayable', inputs: [{ name: 'documentHash', type: 'bytes32' }, { name: 'walletPolicyHash', type: 'bytes32' }, { name: 'runtimeHash', type: 'bytes32' }, { name: 'controller', type: 'address' }], outputs: [] },
+  { type: 'function', name: 'recordActivity', stateMutability: 'nonpayable', inputs: [{ name: 'activityType', type: 'uint8' }, { name: 'detailsHash', type: 'bytes32' }], outputs: [] },
+] as const;
+
+export const REPUTATION_REGISTRY_ABI = [
+  { type: 'function', name: 'importExternalAttestation', stateMutability: 'nonpayable', inputs: [
+    { name: 'agent', type: 'address' },
+    { name: 'proof', type: 'tuple', components: [
+      { name: 'sourceDomain', type: 'uint32' },
+      { name: 'externalScore', type: 'uint256' },
+      { name: 'completedTasks', type: 'uint256' },
+      { name: 'failedTasks', type: 'uint256' },
+      { name: 'totalVolume', type: 'uint256' },
+      { name: 'nonce', type: 'uint256' },
+      { name: 'deadline', type: 'uint256' },
+      { name: 'signature', type: 'bytes' },
+    ] },
+  ], outputs: [] },
+  { type: 'function', name: 'getPortableReputation', stateMutability: 'view', inputs: [{ name: 'agent', type: 'address' }], outputs: [
+    { name: 'recognizedScore', type: 'uint256' }, { name: 'claimedScore', type: 'uint256' },
+    { name: 'completedTasks', type: 'uint256' }, { name: 'failedTasks', type: 'uint256' },
+    { name: 'totalVolume', type: 'uint256' }, { name: 'sourceDomain', type: 'uint32' },
+    { name: 'nonce', type: 'uint256' }, { name: 'attestor', type: 'address' }, { name: 'importedAt', type: 'uint256' },
+  ] },
+] as const;
+
+export const VERIFICATION_REGISTRY_ABI = [
+  { type: 'function', name: 'verifyResult', stateMutability: 'nonpayable', inputs: [
+    { name: 'vault', type: 'address' }, { name: 'taskId', type: 'uint256' },
+    { name: 'reportHash', type: 'bytes32' }, { name: 'verdictHash', type: 'bytes32' },
+    { name: 'evidenceHash', type: 'bytes32' }, { name: 'accepted', type: 'bool' },
+  ], outputs: [] },
+  { type: 'function', name: 'isAcceptedVerdict', stateMutability: 'view', inputs: [{ name: 'vault', type: 'address' }, { name: 'taskId', type: 'uint256' }, { name: 'verdictHash', type: 'bytes32' }], outputs: [{ name: '', type: 'bool' }] },
+] as const;
+
+export const HUB_REGISTRY_ABI = [
+  { type: 'function', name: 'publishHubVersion', stateMutability: 'nonpayable', inputs: [{ name: 'hubId', type: 'bytes32' }, { name: 'rulesHash', type: 'bytes32' }, { name: 'limitsHash', type: 'bytes32' }, { name: 'taskSpecHash', type: 'bytes32' }, { name: 'active', type: 'bool' }], outputs: [{ name: 'version', type: 'uint256' }] },
+  { type: 'function', name: 'setHubVersionActive', stateMutability: 'nonpayable', inputs: [{ name: 'hubId', type: 'bytes32' }, { name: 'version', type: 'uint256' }, { name: 'active', type: 'bool' }], outputs: [] },
 ] as const;
 
 export const MILESTONE_ESCROW_ABI = [
@@ -95,6 +137,76 @@ export async function updateAgentProfileOnChain(input: ArcClients & { profile: s
     abi: AGENT_REGISTRY_ABI,
     functionName: 'updateAgentProfile',
     args: [hashProtocolDocument(input.profile), hashProtocolDocument(input.capabilities)],
+  });
+}
+
+/** Anyone may relay a signed external attestation; the contract independently
+ * checks that the signer is an owner-authorized verifier and that the nonce is fresh. */
+export async function importExternalReputationAttestation(input: ArcClients & {
+  agent: Address;
+  proof: {
+    sourceDomain: number;
+    externalScore: bigint;
+    completedTasks: bigint;
+    failedTasks: bigint;
+    totalVolume: bigint;
+    nonce: bigint;
+    deadline: bigint;
+    signature: Hex;
+  };
+}): Promise<Hash> {
+  return writeAndWait({
+    ...input,
+    address: requireReputationRegistryAddress(),
+    abi: REPUTATION_REGISTRY_ABI,
+    functionName: 'importExternalAttestation',
+    args: [input.agent, input.proof],
+  });
+}
+
+export async function verifyWorkOrderResult(input: ArcClients & {
+  vault: Address;
+  taskId: bigint;
+  report: string | unknown;
+  verdict: string | unknown;
+  evidence: string | unknown;
+  accepted: boolean;
+}): Promise<Hash> {
+  return writeAndWait({
+    ...input,
+    address: requireVerificationRegistryAddress(),
+    abi: VERIFICATION_REGISTRY_ABI,
+    functionName: 'verifyResult',
+    args: [
+      input.vault,
+      input.taskId,
+      hashProtocolDocument(input.report),
+      hashProtocolDocument(input.verdict),
+      hashProtocolDocument(input.evidence),
+      input.accepted,
+    ],
+  });
+}
+
+export async function publishHubVersionOnChain(input: ArcClients & {
+  hub: string | unknown;
+  rules: string | unknown;
+  limits: string | unknown;
+  taskSpec: string | unknown;
+  active: boolean;
+}): Promise<Hash> {
+  return writeAndWait({
+    ...input,
+    address: requireHubRegistryAddress(),
+    abi: HUB_REGISTRY_ABI,
+    functionName: 'publishHubVersion',
+    args: [
+      hashProtocolDocument(input.hub),
+      hashProtocolDocument(input.rules),
+      hashProtocolDocument(input.limits),
+      hashProtocolDocument(input.taskSpec),
+      input.active,
+    ],
   });
 }
 

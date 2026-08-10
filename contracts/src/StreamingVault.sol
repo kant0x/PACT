@@ -26,6 +26,18 @@ interface IReputationRegistry {
     ) external;
 }
 
+interface IWorkOrderCommitments {
+    function createWorkOrderCommitment(
+        uint256 taskId,
+        address creator,
+        bytes32 termsHash,
+        bytes32 acceptanceChecklistHash
+    ) external;
+
+    function recordReport(uint256 taskId, address agent, bytes32 reportHash) external;
+    function hasWorkOrderCommitment(address vault, uint256 taskId) external view returns (bool);
+}
+
 // Custom continuous-payment vault, independent of Superfluid.
 // Settles via an x402-compatible nanopayment flow at the integration layer.
 contract StreamingVault {
@@ -63,6 +75,7 @@ contract StreamingVault {
 
     IERC20 public immutable usdc;
     IReputationRegistry public immutable reputationRegistry;
+    IWorkOrderCommitments public immutable workOrderCommitments;
     uint64 public immutable collateralTimeout;
 
     address public owner;
@@ -135,6 +148,13 @@ contract StreamingVault {
         uint256 refundedToCreator
     );
     event TaskCancelled(uint256 indexed taskId, uint256 refundedToCreator);
+    event WorkOrderCommitted(
+        uint256 indexed taskId,
+        bytes32 indexed workOrderHash,
+        bytes32 indexed acceptanceHash,
+        address creator,
+        uint256 timestamp
+    );
 
     error Unauthorized();
     error ZeroAddress();
@@ -153,22 +173,26 @@ contract StreamingVault {
     error NotPreferredAgent();
     error EmptyProof();
     error ProofRequired();
+    error EmptyCommitment();
 
     constructor(
         address usdcAddress,
         address registryAddress,
+        address workOrderCommitmentsAddress,
         address disputeModuleAddress,
         uint64 collateralTimeoutSeconds
     ) {
         if (
             usdcAddress == address(0) ||
             registryAddress == address(0) ||
+            workOrderCommitmentsAddress == address(0) ||
             disputeModuleAddress == address(0)
         ) revert ZeroAddress();
         if (collateralTimeoutSeconds == 0) revert InvalidAmount();
 
         usdc = IERC20(usdcAddress);
         reputationRegistry = IReputationRegistry(registryAddress);
+        workOrderCommitments = IWorkOrderCommitments(workOrderCommitmentsAddress);
         disputeModule = disputeModuleAddress;
         collateralTimeout = collateralTimeoutSeconds;
         owner = msg.sender;
@@ -332,6 +356,28 @@ contract StreamingVault {
     function createOpenTask(uint256 totalAmount, uint256 ratePerSecond, address preferredAgent)
         external
         nonReentrant
+        returns (uint256 taskId)
+    {
+        return _createOpenTask(totalAmount, ratePerSecond, preferredAgent);
+    }
+
+    /// @notice Funds a public work order and anchors its full envelope and
+    /// acceptance checklist before any agent can claim it.
+    function createCommittedOpenTask(
+        uint256 totalAmount,
+        uint256 ratePerSecond,
+        address preferredAgent,
+        bytes32 workOrderHash,
+        bytes32 acceptanceHash
+    ) external nonReentrant returns (uint256 taskId) {
+        if (workOrderHash == bytes32(0) || acceptanceHash == bytes32(0)) revert EmptyCommitment();
+        taskId = _createOpenTask(totalAmount, ratePerSecond, preferredAgent);
+        workOrderCommitments.createWorkOrderCommitment(taskId, msg.sender, workOrderHash, acceptanceHash);
+        emit WorkOrderCommitted(taskId, workOrderHash, acceptanceHash, msg.sender, block.timestamp);
+    }
+
+    function _createOpenTask(uint256 totalAmount, uint256 ratePerSecond, address preferredAgent)
+        private
         returns (uint256 taskId)
     {
         if (totalAmount == 0 || ratePerSecond == 0) revert InvalidAmount();
@@ -542,6 +588,12 @@ contract StreamingVault {
         }
         if (proofHash == bytes32(0)) revert EmptyProof();
         resultProofHashes[taskId] = proofHash;
+        // Legacy orders created before the commitment layer remain settleable.
+        // New orders always have a commitment and therefore also emit the
+        // report receipt through WorkOrderCommitments.
+        if (workOrderCommitments.hasWorkOrderCommitment(address(this), taskId)) {
+            workOrderCommitments.recordReport(taskId, msg.sender, proofHash);
+        }
         emit ResultProofSubmitted(taskId, msg.sender, proofHash);
     }
 

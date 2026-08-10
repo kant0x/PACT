@@ -69,6 +69,8 @@ import {
   type WorkOrderSpec,
   type WorkOrderTemplateId,
   WORK_ORDER_TEMPLATES,
+  canonicalAcceptanceChecklist,
+  canonicalWorkOrderCommitment,
   normalizeWorkOrderSpec,
 } from '@pact/shared';
 import { API_BASE, PactApiError, api, authenticateWallet, clearWalletSession, creatorTaskMessage, type PublishTaskInput, type TrustModel } from './api';
@@ -3377,6 +3379,8 @@ export default function App() {
               amountUsdc: input.totalAmount,
               estimatedDurationSeconds: input.estimatedDurationSeconds ?? DEFAULT_TASK_DURATION_SECONDS,
               preferredAgentAddress: input.preferredAgentAddress as `0x${string}` | null | undefined,
+              workOrderCommitment: canonicalWorkOrderCommitment(input),
+              acceptanceChecklistCommitment: canonicalAcceptanceChecklist(input.workOrder),
               publicClient: arcPublicClient,
               walletClient: arcWalletClient,
               onProgress: (message) => setToast({ tone: 'success', message }),

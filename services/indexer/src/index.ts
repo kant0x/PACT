@@ -37,12 +37,14 @@ const arcChain = {
 const publicClient = createPublicClient({ chain: arcChain, transport: http(rpcUrl) });
 const events = parseAbi([
   'event TaskCreated(uint256 indexed taskId, address indexed creator, address indexed agent, uint256 totalAmount, uint256 requiredCollateral, uint256 collateralDeadline)',
+  'event WorkOrderCommitted(uint256 indexed taskId, bytes32 indexed workOrderHash, bytes32 indexed acceptanceHash, address creator, uint256 timestamp)',
   'event TaskAssigned(uint256 indexed taskId, address indexed agent, uint256 requiredCollateral, uint256 collateralDeadline)',
   'event CollateralPosted(uint256 indexed taskId, address indexed agent, uint256 amount)',
   'event StreamStarted(uint256 indexed taskId, uint256 ratePerSecond, uint256 timestamp)',
   'event StreamPaused(uint256 indexed taskId, uint256 accruedAmount, uint256 timestamp)',
   'event StreamResumed(uint256 indexed taskId, uint256 timestamp)',
   'event StreamWithdrawn(uint256 indexed taskId, address indexed agent, uint256 amount)',
+  'event ResultProofSubmitted(uint256 indexed taskId, address indexed agent, bytes32 proofHash)',
   'event TaskCompleted(uint256 indexed taskId, uint256 paidToAgent, uint256 collateralReturned)',
   'event CollateralSlashed(uint256 indexed taskId, uint256 slashPct, uint256 collateralSlashed, uint256 earnedByAgent, uint256 refundedToCreator)',
   'event TaskCancelled(uint256 indexed taskId, uint256 refundedToCreator)',
@@ -158,6 +160,12 @@ async function applyEvent(db: PoolClient, log: IndexedLog) {
        WHERE funding_tx_hash = $2`,
       [chainTaskId, txHash],
     );
+  } else if (log.eventName === 'WorkOrderCommitted') {
+    await db.query(
+      `UPDATE tasks SET work_order_hash = $1, acceptance_hash = $2
+       WHERE chain_task_id = $3`,
+      [String(args.workOrderHash).toLowerCase(), String(args.acceptanceHash).toLowerCase(), chainTaskId],
+    );
   } else if (log.eventName === 'TaskAssigned') {
     await db.query(
       `UPDATE tasks SET status = 'ASSIGNED', agent_address = $1, collateral_locked = $2,
@@ -189,6 +197,11 @@ async function applyEvent(db: PoolClient, log: IndexedLog) {
     await db.query(
       `UPDATE tasks SET withdrawn_amount = withdrawn_amount + $1::numeric WHERE chain_task_id = $2`,
       [formatUnits(args.amount as bigint, 6), chainTaskId],
+    );
+  } else if (log.eventName === 'ResultProofSubmitted') {
+    await db.query(
+      `UPDATE tasks SET result_proof_hash = $1 WHERE chain_task_id = $2`,
+      [String(args.proofHash).toLowerCase(), chainTaskId],
     );
   } else if (log.eventName === 'TaskCompleted') {
     await db.query(

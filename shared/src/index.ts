@@ -284,6 +284,55 @@ export function normalizeWorkOrderSpec(input?: Partial<WorkOrderSpec> | null): W
   };
 }
 
+/**
+ * Deterministic representations used to commit a paid brief to an EVM
+ * contract.  The JSON itself stays off-chain; its keccak hash is what is
+ * stored on-chain.  Keeping this in `shared` prevents the browser and API
+ * from accidentally hashing different copies of the same order.
+ */
+export interface WorkOrderCommitmentInput {
+  creatorAddress: string;
+  title: string;
+  description?: string;
+  successCriteria?: string;
+  totalAmount: string | number;
+  estimatedDurationSeconds?: number;
+  preferredAgentAddress?: string | null;
+  workOrder?: Partial<WorkOrderSpec> | null;
+}
+
+export function canonicalUsdcAmount(value: string | number): string {
+  const raw = String(value).trim();
+  const match = /^(\d+)(?:\.(\d{1,6}))?$/.exec(raw);
+  if (!match) return raw;
+  const whole = match[1].replace(/^0+(?=\d)/, '') || '0';
+  const fraction = (match[2] ?? '').replace(/0+$/, '');
+  return fraction ? `${whole}.${fraction}` : whole;
+}
+
+export function canonicalAcceptanceChecklist(input?: Partial<WorkOrderSpec> | null): string {
+  const workOrder = normalizeWorkOrderSpec(input);
+  return JSON.stringify({
+    protocol: 'PACT_ACCEPTANCE_CHECKLIST_V1',
+    checklist: workOrder.acceptanceChecklist,
+  });
+}
+
+export function canonicalWorkOrderCommitment(input: WorkOrderCommitmentInput): string {
+  const workOrder = normalizeWorkOrderSpec(input.workOrder);
+  return JSON.stringify({
+    protocol: 'PACT_WORK_ORDER_V1',
+    creator: input.creatorAddress.trim().toLowerCase(),
+    title: input.title.trim(),
+    description: (input.description ?? '').trim(),
+    successCriteria: (input.successCriteria ?? '').trim(),
+    totalAmount: canonicalUsdcAmount(input.totalAmount),
+    estimatedDurationSeconds: input.estimatedDurationSeconds ?? DEFAULT_TASK_DURATION_SECONDS,
+    preferredAgent: input.preferredAgentAddress?.trim().toLowerCase() ?? '',
+    workOrder,
+  });
+}
+
 const TASK_CATEGORY_PATTERNS: Record<AgentTaskCategory, RegExp> = {
   CREATIVE: /(video|presentation|creative|visual|caption|voice|storyboard|design|media|animation)/i,
   SECURITY: /(security|audit|policy|risk|threat|abuse|privilege|compliance)/i,
@@ -460,6 +509,12 @@ export interface MarketplaceTask {
   chainTaskId: string | null;
   /** Arc transaction that funded this work order in StreamingVault. */
   fundingTransactionHash?: string | null;
+  /** Keccak-256 hash of the full immutable paid work-order envelope. */
+  workOrderHash?: string | null;
+  /** Keccak-256 hash of the immutable acceptance checklist. */
+  acceptanceHash?: string | null;
+  /** Keccak-256 hash of the final deliverable/report packet when submitted. */
+  resultProofHash?: string | null;
   /** Operator transaction that assigned the claiming agent on-chain. */
   assignmentTransactionHash?: string | null;
   /** Agent transaction that locked the required collateral. */

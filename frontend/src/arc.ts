@@ -1,5 +1,5 @@
 import type { PublicClient, WalletClient } from 'viem';
-import { parseUnits } from 'viem';
+import { keccak256, parseUnits, stringToHex, type Hex } from 'viem';
 import { ARC_USDC_ADDRESS, requireStreamingVaultAddress } from './runtime';
 
 export const ERC20_ABI = [
@@ -43,6 +43,19 @@ export const ERC20_ABI = [
 ] as const;
 
 export const STREAMING_VAULT_ABI = [
+  {
+    type: 'function',
+    name: 'createCommittedOpenTask',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'totalAmount', type: 'uint256' },
+      { name: 'ratePerSecond', type: 'uint256' },
+      { name: 'preferredAgent', type: 'address' },
+      { name: 'workOrderHash', type: 'bytes32' },
+      { name: 'acceptanceHash', type: 'bytes32' },
+    ],
+    outputs: [{ name: 'taskId', type: 'uint256' }],
+  },
   {
     type: 'function',
     name: 'createOpenTask',
@@ -113,6 +126,9 @@ interface FundOpenOrderInput {
   amountUsdc: string;
   estimatedDurationSeconds: number;
   preferredAgentAddress?: `0x${string}` | null;
+  /** Canonical full brief and checklist, committed before USDC moves. */
+  workOrderCommitment: string;
+  acceptanceChecklistCommitment: string;
   publicClient: PublicClient;
   walletClient: WalletClient;
   onProgress?: (message: string) => void;
@@ -127,6 +143,8 @@ export async function fundOpenOrder(input: FundOpenOrderInput): Promise<`0x${str
   }
   const duration = BigInt(input.estimatedDurationSeconds);
   const ratePerSecond = (amount + duration - 1n) / duration;
+  const workOrderHash = keccak256(stringToHex(input.workOrderCommitment));
+  const acceptanceHash = keccak256(stringToHex(input.acceptanceChecklistCommitment));
 
   input.onProgress?.('Checking USDC approval…');
   const allowance = await input.publicClient.readContract({
@@ -156,8 +174,14 @@ export async function fundOpenOrder(input: FundOpenOrderInput): Promise<`0x${str
     chain: input.publicClient.chain,
     address: vaultAddress,
     abi: STREAMING_VAULT_ABI,
-    functionName: 'createOpenTask',
-    args: [amount, ratePerSecond, input.preferredAgentAddress ?? '0x0000000000000000000000000000000000000000'],
+    functionName: 'createCommittedOpenTask',
+    args: [
+      amount,
+      ratePerSecond,
+      input.preferredAgentAddress ?? '0x0000000000000000000000000000000000000000',
+      workOrderHash as Hex,
+      acceptanceHash as Hex,
+    ],
   });
   const fundingReceipt = await input.publicClient.waitForTransactionReceipt({ hash: fundingHash });
   if (fundingReceipt.status !== 'success') throw new Error('Work-order funding reverted on Arc Testnet.');

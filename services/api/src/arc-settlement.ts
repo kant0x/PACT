@@ -18,6 +18,7 @@ const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const;
 
 export const STREAMING_VAULT_ABI = parseAbi([
   'event TaskCreated(uint256 indexed taskId, address indexed creator, address indexed agent, uint256 totalAmount, uint256 requiredCollateral, uint256 collateralDeadline)',
+  'event WorkOrderCommitted(uint256 indexed taskId, bytes32 indexed workOrderHash, bytes32 indexed acceptanceHash, address creator, uint256 timestamp)',
   'event TaskAssigned(uint256 indexed taskId, address indexed agent, uint256 requiredCollateral, uint256 collateralDeadline)',
   'event CollateralPosted(uint256 indexed taskId, address indexed agent, uint256 amount)',
   'event StreamPaused(uint256 indexed taskId, uint256 accruedAmount, uint256 timestamp)',
@@ -25,6 +26,7 @@ export const STREAMING_VAULT_ABI = parseAbi([
   'event TaskCancelled(uint256 indexed taskId, uint256 refundedToCreator)',
   'function tasks(uint256 taskId) view returns (address creator, address agent, uint256 totalAmount, uint256 requiredCollateral, uint256 collateralLocked, uint256 ratePerSecond, uint256 accruedAmount, uint256 withdrawnAmount, uint64 collateralDeadline, uint64 lastAccrualTimestamp, uint8 status, uint256 agentCollateral, uint256 totalUnderwritten, uint256 agentPayoutPaid)',
   'function preferredAgents(uint256 taskId) view returns (address)',
+  'function workOrderCommitments(uint256 taskId) view returns (bytes32 workOrderHash, bytes32 acceptanceHash, uint64 committedAt)',
   'function resultProofHashes(uint256 taskId) view returns (bytes32)',
   'function claimOpenTask(uint256 taskId)',
   'function pauseForDispute(uint256 taskId)',
@@ -35,6 +37,10 @@ const DISPUTE_MODULE_ABI = parseAbi([
   'function vault() view returns (address)',
   'function paused() view returns (bool)',
   'function settle(uint256 taskId, uint256 slashPct, bytes32 decisionHash)',
+]);
+
+const WORK_ORDER_COMMITMENTS_ABI = parseAbi([
+  'function getWorkOrderCommitment(address vault, uint256 taskId) view returns (address creator, address agent, bytes32 termsHash, bytes32 acceptanceChecklistHash, bytes32 reportHash, uint64 committedAt, uint64 reportedAt)',
 ]);
 
 const arcTestnet = {
@@ -58,6 +64,8 @@ export interface ArcSettlementGateway {
     totalAmount: string;
     ratePerSecond: string;
     preferredAgentAddress?: string | null;
+    workOrderHash: string;
+    acceptanceHash: string;
     transactionHash: string;
   }): Promise<VerifiedFunding>;
   verifyAgentClaimed(input: {
@@ -90,6 +98,7 @@ export interface ArcSettlementGateway {
   readiness(): Promise<{
     chainId: number;
     vaultAddress: Address;
+    workOrderCommitmentsAddress: Address;
     settlementSignerAddress: Address;
     disputeModuleAddress: Address;
     disputeModuleOwned: boolean;
@@ -115,6 +124,7 @@ export class ViemArcSettlementGateway implements ArcSettlementGateway {
 
   constructor(
     private readonly vaultAddress: Address,
+    private readonly workOrderCommitmentsAddress: Address,
     private readonly disputeModuleAddress: Address,
     rpcUrl: string,
     operatorPrivateKey: Hex,
@@ -137,6 +147,8 @@ export class ViemArcSettlementGateway implements ArcSettlementGateway {
     totalAmount: string;
     ratePerSecond: string;
     preferredAgentAddress?: string | null;
+    workOrderHash: string;
+    acceptanceHash: string;
     transactionHash: string;
   }): Promise<VerifiedFunding> {
     if (!isAddress(input.creatorAddress)) {
@@ -154,6 +166,9 @@ export class ViemArcSettlementGateway implements ArcSettlementGateway {
       ? getAddress(input.preferredAgentAddress)
       : ZERO_ADDRESS;
     const transactionHash = input.transactionHash as Hash;
+    if (!/^0x[a-fA-F0-9]{64}$/.test(input.workOrderHash) || !/^0x[a-fA-F0-9]{64}$/.test(input.acceptanceHash)) {
+      throw new ArcSettlementError('INVALID_WORK_ORDER_COMMITMENT', 'Work-order and acceptance commitments must be bytes32 values');
+    }
     const [receipt, transaction] = await Promise.all([
       this.publicClient.getTransactionReceipt({ hash: transactionHash }),
       this.publicClient.getTransaction({ hash: transactionHash }),
@@ -189,7 +204,23 @@ export class ViemArcSettlementGateway implements ArcSettlementGateway {
       );
     }
 
-    const [task, preferredAgent] = await Promise.all([
+    const commitments = parseEventLogs({
+      abi: STREAMING_VAULT_ABI,
+      eventName: 'WorkOrderCommitted',
+      logs: receipt.logs.filter((log) => getAddress(log.address) === this.vaultAddress),
+      strict: true,
+    });
+    const committed = commitments.find((event) => (
+      event.args.taskId === funded.args.taskId
+      && event.args.creator && getAddress(event.args.creator) === creator
+      && event.args.workOrderHash.toLowerCase() === input.workOrderHash.toLowerCase()
+      && event.args.acceptanceHash.toLowerCase() === input.acceptanceHash.toLowerCase()
+    ));
+    if (!committed) {
+      throw new ArcSettlementError('WORK_ORDER_COMMITMENT_MISMATCH', 'Funding transaction does not anchor this exact work order and acceptance checklist');
+    }
+
+    const [task, preferredAgent, onchainCommitment] = await Promise.all([
       this.publicClient.readContract({
         address: this.vaultAddress,
         abi: STREAMING_VAULT_ABI,
@@ -202,6 +233,12 @@ export class ViemArcSettlementGateway implements ArcSettlementGateway {
         functionName: 'preferredAgents',
         args: [funded.args.taskId],
       }),
+      this.publicClient.readContract({
+        address: this.workOrderCommitmentsAddress,
+        abi: WORK_ORDER_COMMITMENTS_ABI,
+        functionName: 'getWorkOrderCommitment',
+        args: [this.vaultAddress, funded.args.taskId],
+      }),
     ]);
     if (
       getAddress(task[0]) !== creator
@@ -210,6 +247,10 @@ export class ViemArcSettlementGateway implements ArcSettlementGateway {
       || task[5] !== expectedRate
       || task[10] !== 1
       || getAddress(preferredAgent) !== expectedPreferredAgent
+      || getAddress(onchainCommitment[0]) !== creator
+      || onchainCommitment[2].toLowerCase() !== input.workOrderHash.toLowerCase()
+      || onchainCommitment[3].toLowerCase() !== input.acceptanceHash.toLowerCase()
+      || onchainCommitment[5] === 0n
     ) {
       throw new ArcSettlementError('FUNDING_STATE_MISMATCH', 'StreamingVault state does not match the funding receipt');
     }
@@ -504,6 +545,7 @@ export class ViemArcSettlementGateway implements ArcSettlementGateway {
     return {
       chainId,
       vaultAddress: this.vaultAddress,
+      workOrderCommitmentsAddress: this.workOrderCommitmentsAddress,
       settlementSignerAddress: this.account.address,
       disputeModuleAddress: this.disputeModuleAddress,
       disputeModuleOwned: getAddress(disputeOwner) === this.account.address,
@@ -537,10 +579,14 @@ export function createArcSettlementGatewayFromEnv(
   if (env.PACT_MODE !== 'arc') return null;
   const rpcUrl = env.PACT_ARC_RPC_URL ?? env.ARC_RPC_URL ?? 'https://rpc.testnet.arc.network';
   const vault = env.PACT_STREAMING_VAULT_ADDRESS ?? env.STREAMING_VAULT_ADDRESS ?? env.VAULT_ADDRESS;
+  const workOrderCommitments = env.PACT_WORK_ORDER_COMMITMENTS_ADDRESS ?? env.WORK_ORDER_COMMITMENTS_ADDRESS;
   const disputeModule = env.PACT_DISPUTE_MODULE_ADDRESS ?? env.DISPUTE_MODULE_ADDRESS;
   const privateKey = env.PACT_DISPUTE_ADMIN_PRIVATE_KEY ?? env.PACT_OPERATOR_PRIVATE_KEY;
   if (!vault || !isAddress(vault)) {
     throw new Error('PACT_STREAMING_VAULT_ADDRESS must be a valid Arc Testnet contract address');
+  }
+  if (!workOrderCommitments || !isAddress(workOrderCommitments)) {
+    throw new Error('PACT_WORK_ORDER_COMMITMENTS_ADDRESS must be a valid Arc Testnet contract address');
   }
   if (!privateKey || !/^0x[a-fA-F0-9]{64}$/.test(privateKey)) {
     throw new Error('PACT_DISPUTE_ADMIN_PRIVATE_KEY is required in Arc mode and must be a 32-byte hex key');
@@ -548,5 +594,11 @@ export function createArcSettlementGatewayFromEnv(
   if (!disputeModule || !isAddress(disputeModule)) {
     throw new Error('PACT_DISPUTE_MODULE_ADDRESS must be a valid Arc Testnet contract address');
   }
-  return new ViemArcSettlementGateway(getAddress(vault), getAddress(disputeModule), rpcUrl, privateKey as Hex);
+  return new ViemArcSettlementGateway(
+    getAddress(vault),
+    getAddress(workOrderCommitments),
+    getAddress(disputeModule),
+    rpcUrl,
+    privateKey as Hex,
+  );
 }

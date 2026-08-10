@@ -3,7 +3,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { createHash } from 'node:crypto';
-import { DEFAULT_TASK_DURATION_SECONDS, DEMO_ADDRESSES, inferTaskCategory, manifestSupportsTaskCategory, manifestSupportsWorkOrder, MAX_AGENTS_PER_CONTROLLER, normalizeWorkOrderSpec, type ApiError, type WorkOrderSpec } from '@pact/shared';
+import { DEFAULT_TASK_DURATION_SECONDS, DEMO_ADDRESSES, canonicalAcceptanceChecklist, canonicalWorkOrderCommitment, inferTaskCategory, manifestSupportsTaskCategory, manifestSupportsWorkOrder, MAX_AGENTS_PER_CONTROLLER, normalizeWorkOrderSpec, type ApiError, type WorkOrderSpec } from '@pact/shared';
 import { ApiProblem } from './errors.js';
 import { DemoStore, demoStore } from './store.js';
 import { SCORE } from './config.js';
@@ -48,7 +48,10 @@ const CIRCLE_AGENT_VAULT_ABI = parseAbi([
 ]);
 const CIRCLE_AGENT_REGISTRY_ABI = parseAbi([
   'function registerAgent(bytes32 profileHash, bytes32 capabilitiesHash)',
+  'function registerAgentWithCommitment(bytes32 profileHash, bytes32 capabilitiesHash, bytes32 documentHash, bytes32 walletPolicyHash, bytes32 runtimeHash, address controller)',
   'function updateAgentProfile(bytes32 profileHash, bytes32 capabilitiesHash)',
+  'function commitAgentDocument(bytes32 documentHash, bytes32 walletPolicyHash, bytes32 runtimeHash, address controller)',
+  'function recordActivity(uint8 activityType, bytes32 detailsHash)',
 ]);
 const CIRCLE_AGENT_MILESTONE_ABI = parseAbi([
   'function submitProof(uint256 planId, uint256 milestoneId, bytes32 proofHash)',
@@ -94,6 +97,46 @@ const agentRegistrationMessage = (input: { displayName: string; capabilityManife
     ? Object.fromEntries(Object.entries(input.capabilityManifest).filter(([key]) => key !== 'updatedAt'))
     : null)}`,
 ].join('\n');
+
+const commitmentHash = (value: unknown) => keccak256(stringToHex(JSON.stringify(value)));
+
+function agentCommitmentHashes(input: {
+  agentAddress: string;
+  controllerAddress: string;
+  displayName: string;
+  capabilityManifest: unknown;
+}) {
+  const profile = {
+    protocol: 'PACT_AGENT_PROFILE_V2',
+    agent: input.agentAddress.toLowerCase(),
+    displayName: input.displayName.trim(),
+  };
+  const walletPolicy = {
+    protocol: 'PACT_CIRCLE_SCA_POLICY_V1',
+    chainId: 5042002,
+    accountType: 'SCA',
+    controller: input.controllerAddress.toLowerCase(),
+    agent: input.agentAddress.toLowerCase(),
+  };
+  const runtime = {
+    protocol: 'PACT_EXTERNAL_RUNTIME_V1',
+    agent: input.agentAddress.toLowerCase(),
+    execution: 'EXTERNAL_RUNTIME_REQUIRED',
+  };
+  return {
+    profileHash: commitmentHash(profile),
+    capabilitiesHash: commitmentHash(input.capabilityManifest),
+    walletPolicyHash: commitmentHash(walletPolicy),
+    runtimeHash: commitmentHash(runtime),
+    documentHash: commitmentHash({
+      protocol: 'PACT_AGENT_REGISTRATION_V2',
+      profile,
+      capabilities: input.capabilityManifest,
+      walletPolicy,
+      runtime,
+    }),
+  };
+}
 
 const arenaAttemptMessage = (input: { templateId: string; agentAddress: string; dayKey: string }) => [
   'PACT: start Training Ground attempt',
@@ -944,29 +987,39 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
         circleWalletId: provisioned.wallet.id,
         circleWalletSetId: provisioned.walletSetId,
       };
-      let onchainRegistration: { id: string; state: string } | null = null;
+      let onchainRegistration: {
+        id: string;
+        state: string;
+        profileHash: string;
+        capabilitiesHash: string;
+        documentHash: string;
+        walletPolicyHash: string;
+        runtimeHash: string;
+      } | null = null;
       const agentRegistryAddress = process.env.PACT_AGENT_REGISTRY_ADDRESS ?? process.env.AGENT_REGISTRY_ADDRESS;
       if (agentRegistryAddress) {
         if (!ETHEREUM_ADDRESS.test(agentRegistryAddress)) {
           throw new ApiProblem(503, 'AGENT_REGISTRY_UNAVAILABLE', 'Configured AgentRegistry address is invalid');
         }
-        const profileHash = keccak256(stringToHex(JSON.stringify({
-          agent: agent.agentAddress,
-          displayName: agent.displayName,
-          version: 1,
-        })));
-        const capabilitiesHash = keccak256(stringToHex(JSON.stringify(agent.capabilityManifest)));
+        const hashes = agentCommitmentHashes(agent);
         const registration = await submitArcContractCall({
           walletId: agent.circleWalletId,
           contractAddress: getAddress(agentRegistryAddress),
           callData: encodeFunctionData({
             abi: CIRCLE_AGENT_REGISTRY_ABI,
-            functionName: 'registerAgent',
-            args: [profileHash, capabilitiesHash],
+            functionName: 'registerAgentWithCommitment',
+            args: [
+              hashes.profileHash,
+              hashes.capabilitiesHash,
+              hashes.documentHash,
+              hashes.walletPolicyHash,
+              hashes.runtimeHash,
+              getAddress(agent.controllerAddress),
+            ],
           }),
           refId: `PACT:REGISTER_AGENT:${agent.agentAddress}`,
         });
-        onchainRegistration = { id: registration.id, state: registration.state };
+        onchainRegistration = { id: registration.id, state: registration.state, ...hashes };
       }
       await agentRepository.create(agent);
       // Live agents are never auto-solved by the server. A registered agent
@@ -1009,6 +1062,8 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
       const protocolActions = new Set([
         'REGISTER_AGENT',
         'UPDATE_AGENT_PROFILE',
+        'COMMIT_AGENT_DOCUMENT',
+        'RECORD_AGENT_ACTIVITY',
         'SUBMIT_MILESTONE_PROOF',
         'CLAIM_MILESTONE',
         'CLAIM_SUBSCRIPTION',
@@ -1083,18 +1138,67 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
         } else {
           callData = encodeFunctionData({ abi: CIRCLE_AGENT_VAULT_ABI, functionName: 'pauseForDispute', args: [chainTaskId] });
         }
-      } else if (action === 'REGISTER_AGENT' || action === 'UPDATE_AGENT_PROFILE') {
+      } else if (action === 'REGISTER_AGENT' || action === 'UPDATE_AGENT_PROFILE' || action === 'COMMIT_AGENT_DOCUMENT' || action === 'RECORD_AGENT_ACTIVITY') {
+        contractAddress = configuredProtocolAddress('AGENT_REGISTRY');
+        if (action === 'RECORD_AGENT_ACTIVITY') {
+          const activityType = Number(request.body?.activityType);
+          const detailsHash = text(request.body?.detailsHash).trim();
+          if (!Number.isInteger(activityType) || activityType < 0 || activityType > 2 || !BYTES32.test(detailsHash)) {
+            throw new ApiProblem(400, 'AGENT_ACTIVITY_REQUIRED', 'activityType must be 0..2 and detailsHash must be a bytes32 value');
+          }
+          callData = encodeFunctionData({
+            abi: CIRCLE_AGENT_REGISTRY_ABI,
+            functionName: 'recordActivity',
+            args: [activityType, detailsHash as `0x${string}`],
+          });
+        } else if (action === 'COMMIT_AGENT_DOCUMENT') {
+          const documentHash = text(request.body?.documentHash).trim();
+          const walletPolicyHash = text(request.body?.walletPolicyHash).trim();
+          const runtimeHash = text(request.body?.runtimeHash).trim();
+          const controller = text(request.body?.controllerAddress).trim();
+          if (![documentHash, walletPolicyHash, runtimeHash].every((value) => BYTES32.test(value)) || !ETHEREUM_ADDRESS.test(controller)) {
+            throw new ApiProblem(400, 'AGENT_COMMITMENT_REQUIRED', 'document, policy, runtime hashes and controllerAddress are required');
+          }
+          callData = encodeFunctionData({
+            abi: CIRCLE_AGENT_REGISTRY_ABI,
+            functionName: 'commitAgentDocument',
+            args: [
+              documentHash as `0x${string}`,
+              walletPolicyHash as `0x${string}`,
+              runtimeHash as `0x${string}`,
+              getAddress(controller),
+            ],
+          });
+        } else {
         const profileHash = text(request.body?.profileHash).trim();
         const capabilitiesHash = text(request.body?.capabilitiesHash).trim();
         if (!BYTES32.test(profileHash) || !BYTES32.test(capabilitiesHash)) {
           throw new ApiProblem(400, 'AGENT_PROFILE_HASH_REQUIRED', 'profileHash and capabilitiesHash must be bytes32 values');
         }
-        contractAddress = configuredProtocolAddress('AGENT_REGISTRY');
+        const documentHash = text(request.body?.documentHash).trim();
+        const walletPolicyHash = text(request.body?.walletPolicyHash).trim();
+        const runtimeHash = text(request.body?.runtimeHash).trim();
+        const controller = text(request.body?.controllerAddress).trim();
+        const hasFullCommitment = action === 'REGISTER_AGENT'
+          && [documentHash, walletPolicyHash, runtimeHash].every((value) => BYTES32.test(value))
+          && ETHEREUM_ADDRESS.test(controller);
         callData = encodeFunctionData({
           abi: CIRCLE_AGENT_REGISTRY_ABI,
-          functionName: action === 'REGISTER_AGENT' ? 'registerAgent' : 'updateAgentProfile',
-          args: [profileHash as `0x${string}`, capabilitiesHash as `0x${string}`],
+          functionName: hasFullCommitment
+            ? 'registerAgentWithCommitment'
+            : action === 'REGISTER_AGENT' ? 'registerAgent' : 'updateAgentProfile',
+          args: hasFullCommitment
+            ? [
+              profileHash as `0x${string}`,
+              capabilitiesHash as `0x${string}`,
+              documentHash as `0x${string}`,
+              walletPolicyHash as `0x${string}`,
+              runtimeHash as `0x${string}`,
+              getAddress(controller),
+            ]
+            : [profileHash as `0x${string}`, capabilitiesHash as `0x${string}`],
         });
+        }
       } else if (action === 'SUBMIT_MILESTONE_PROOF' || action === 'CLAIM_MILESTONE') {
         if (!/^[1-9][0-9]*$/.test(protocolResourceId) || !/^[0-9]+$/.test(text(request.body?.milestoneId))) {
           throw new ApiProblem(400, 'MILESTONE_ID_REQUIRED', 'resourceId and milestoneId must be valid integers');
@@ -1217,7 +1321,23 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
       await assertCreatorSignature(input);
 
       const money = (value: number) => Math.max(0, value).toFixed(6).replace(/\.?0+$/, '') || '0';
-      let verifiedFunding: { chainTaskId: string; fundingTransactionHash: string } | undefined;
+      const workOrderHash = keccak256(stringToHex(canonicalWorkOrderCommitment({
+        creatorAddress: input.creatorAddress,
+        title: input.title,
+        description: input.description,
+        successCriteria: input.successCriteria,
+        totalAmount: input.totalAmount,
+        estimatedDurationSeconds,
+        preferredAgentAddress,
+        workOrder,
+      })));
+      const acceptanceHash = keccak256(stringToHex(canonicalAcceptanceChecklist(workOrder)));
+      let verifiedFunding: {
+        chainTaskId: string;
+        fundingTransactionHash: string;
+        workOrderHash: string;
+        acceptanceHash: string;
+      } | undefined;
       if (process.env.PACT_MODE === 'arc') {
         if (!arcSettlement) throw new ApiProblem(503, 'ARC_SETTLEMENT_UNAVAILABLE', 'Arc settlement gateway is unavailable');
         const fundingTransactionHash = text(input.fundingTransactionHash).trim().toLowerCase();
@@ -1241,6 +1361,8 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
             totalAmount: money(total),
             ratePerSecond: money(Math.ceil(total * 1_000_000 / estimatedDurationSeconds) / 1_000_000),
             preferredAgentAddress,
+            workOrderHash,
+            acceptanceHash,
             transactionHash: fundingTransactionHash,
           });
           const existingTask = await taskRepository.findByChainTaskId(funding.chainTaskId);
@@ -1250,6 +1372,8 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
           verifiedFunding = {
             chainTaskId: funding.chainTaskId,
             fundingTransactionHash: funding.transactionHash,
+            workOrderHash,
+            acceptanceHash,
           };
         } catch (error) {
           if (error instanceof ApiProblem) throw error;
@@ -1279,6 +1403,9 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
         templateId: input.templateId ?? null,
         terms: null,
         workOrder,
+        workOrderHash: verifiedFunding?.workOrderHash ?? null,
+        acceptanceHash: verifiedFunding?.acceptanceHash ?? null,
+        resultProofHash: null,
       };
 
       const task = await taskRepository.create(taskData, verifiedFunding);
@@ -1321,8 +1448,8 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
       const existing = await taskRepository.findById(request.params.id);
       if (!existing) throw new ApiProblem(404, 'NOT_FOUND', 'Task not found');
       authorizeAddress(request, existing.creatorAddress, 'Only the task creator can edit this work order');
-      if (process.env.PACT_MODE === 'arc' && existing.status !== 'OPEN') {
-        throw new ApiProblem(409, 'FUNDED_TASK_IMMUTABLE', 'A funded work order cannot be edited after an agent has claimed it');
+      if (process.env.PACT_MODE === 'arc' && existing.chainTaskId) {
+        throw new ApiProblem(409, 'FUNDED_TASK_IMMUTABLE', 'A funded work order is immutable after its terms and acceptance checklist are committed on Arc');
       }
       const task = await taskRepository.update(request.params.id, request.body);
       if (!task) throw new ApiProblem(404, 'NOT_FOUND', 'Task not found');

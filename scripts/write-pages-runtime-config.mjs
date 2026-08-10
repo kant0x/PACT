@@ -6,6 +6,10 @@ const config = {
   arcRpcUrl: process.env.PACT_PUBLIC_ARC_RPC_URL ?? 'https://rpc.testnet.arc.network',
   streamingVaultAddress: process.env.PACT_PUBLIC_STREAMING_VAULT_ADDRESS ?? '0x6eF50b267ae5A93a1750A8bB84a3F3d58d71Fc48',
   agentRegistryAddress: process.env.PACT_PUBLIC_AGENT_REGISTRY_ADDRESS ?? '',
+  reputationRegistryAddress: process.env.PACT_PUBLIC_REPUTATION_REGISTRY_ADDRESS ?? '',
+  workOrderCommitmentsAddress: process.env.PACT_PUBLIC_WORK_ORDER_COMMITMENTS_ADDRESS ?? '',
+  verificationRegistryAddress: process.env.PACT_PUBLIC_VERIFICATION_REGISTRY_ADDRESS ?? '',
+  hubRegistryAddress: process.env.PACT_PUBLIC_HUB_REGISTRY_ADDRESS ?? '',
   milestoneEscrowAddress: process.env.PACT_PUBLIC_MILESTONE_ESCROW_ADDRESS ?? '',
   subscriptionVaultAddress: process.env.PACT_PUBLIC_SUBSCRIPTION_VAULT_ADDRESS ?? '',
   rewardVaultAddress: process.env.PACT_PUBLIC_REWARD_VAULT_ADDRESS ?? '',
@@ -25,6 +29,10 @@ for (const [name, address] of Object.entries({
 
 for (const [name, address] of Object.entries({
   PACT_PUBLIC_AGENT_REGISTRY_ADDRESS: config.agentRegistryAddress,
+  PACT_PUBLIC_REPUTATION_REGISTRY_ADDRESS: config.reputationRegistryAddress,
+  PACT_PUBLIC_WORK_ORDER_COMMITMENTS_ADDRESS: config.workOrderCommitmentsAddress,
+  PACT_PUBLIC_VERIFICATION_REGISTRY_ADDRESS: config.verificationRegistryAddress,
+  PACT_PUBLIC_HUB_REGISTRY_ADDRESS: config.hubRegistryAddress,
   PACT_PUBLIC_MILESTONE_ESCROW_ADDRESS: config.milestoneEscrowAddress,
   PACT_PUBLIC_SUBSCRIPTION_VAULT_ADDRESS: config.subscriptionVaultAddress,
   PACT_PUBLIC_REWARD_VAULT_ADDRESS: config.rewardVaultAddress,

@@ -73,6 +73,50 @@ describe("PACT protocol extensions", () => {
     ).rejects.toThrow();
   });
 
+  it("anchors the full Circle-agent registration envelope and lifecycle receipts", async () => {
+    const profileHash = keccak256(toUtf8Bytes("profile-v2"));
+    const capabilitiesHash = keccak256(toUtf8Bytes("capabilities-v2"));
+    const documentHash = keccak256(toUtf8Bytes("complete signed agent envelope"));
+    const policyHash = keccak256(toUtf8Bytes("circle-sca policy"));
+    const runtimeHash = keccak256(toUtf8Bytes("external runtime requirement"));
+    await (
+      await agentRegistry.connect(agent).registerAgentWithCommitment(
+        profileHash,
+        capabilitiesHash,
+        documentHash,
+        policyHash,
+        runtimeHash,
+        await creator.getAddress(),
+      )
+    ).wait();
+    const commitment = await agentRegistry.getAgentCommitment(await agent.getAddress());
+    expect(commitment.controller).toBe(await creator.getAddress());
+    expect(commitment.documentHash).toBe(documentHash);
+    expect(commitment.walletPolicyHash).toBe(policyHash);
+    expect(commitment.runtimeHash).toBe(runtimeHash);
+    await (await agentRegistry.connect(agent).recordActivity(2, keccak256(toUtf8Bytes("restart receipt")))).wait();
+    await expect(
+      agentRegistry.connect(intruder).recordActivity(2, keccak256(toUtf8Bytes("forged restart"))),
+    ).rejects.toThrow();
+  });
+
+  it("publishes immutable Hub specification versions", async () => {
+    const hubRegistry = await deploy("HubRegistry", owner, [await owner.getAddress()]);
+    const hubId = keccak256(toUtf8Bytes("training-hub"));
+    const rulesHash = keccak256(toUtf8Bytes("hub rules v1"));
+    const limitsHash = keccak256(toUtf8Bytes("hub limits v1"));
+    const taskSpecHash = keccak256(toUtf8Bytes("hub task spec v1"));
+    await (await hubRegistry.publishHubVersion(hubId, rulesHash, limitsHash, taskSpecHash, true)).wait();
+    expect(await hubRegistry.hubVersionCount(hubId)).toBe(1n);
+    const version = await hubRegistry.getHubVersion(hubId, 1);
+    expect(version.rulesHash).toBe(rulesHash);
+    expect(version.limitsHash).toBe(limitsHash);
+    expect(version.taskSpecHash).toBe(taskSpecHash);
+    await expect(
+      hubRegistry.connect(intruder).publishHubVersion(hubId, rulesHash, limitsHash, taskSpecHash, true),
+    ).rejects.toThrow();
+  });
+
   it("stores proof hashes and lets the agent claim approved milestones", async () => {
     const amounts = [parseUnits("10", 6), parseUnits("20", 6), parseUnits("30", 6)];
     await (await usdc.connect(creator).approve(await milestoneEscrow.getAddress(), parseUnits("60", 6))).wait();

@@ -7,6 +7,7 @@
     "build": "node scripts/compile.js",
     "test": "npm run build && vitest run",
     "deploy:testnet": "npm run build && node scripts/deploy_testnet.js",
+    "deploy:layers:testnet": "npm run build && node scripts/deploy_protocol_layers.js",
     "deploy:points:testnet": "npm run build && node scripts/deploy_platform_points.js"
   },
   "devDependencies": {

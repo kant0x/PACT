@@ -31,6 +31,7 @@ describe("PACT contracts", () => {
   let underwriter;
   let usdc;
   let registry;
+  let commitments;
   let vault;
 
   beforeEach(async () => {
@@ -45,13 +46,16 @@ describe("PACT contracts", () => {
 
     usdc = await deploy("MockUSDC", owner);
     registry = await deploy("ReputationRegistry", owner);
+    commitments = await deploy("WorkOrderCommitments", owner, [await owner.getAddress()]);
     vault = await deploy("StreamingVault", owner, [
       await usdc.getAddress(),
       await registry.getAddress(),
+      await commitments.getAddress(),
       await dispute.getAddress(),
       3_600,
     ]);
     await (await registry.addAuthorizedWriter(await vault.getAddress())).wait();
+    await (await commitments.setAuthorizedWriter(await vault.getAddress(), true)).wait();
 
     await (await usdc.mint(await creator.getAddress(), parseUnits("1000", 6))).wait();
     await (await usdc.mint(await agent.getAddress(), parseUnits("500", 6))).wait();
@@ -458,6 +462,55 @@ describe("PACT contracts", () => {
     await (await module.settle(1, 0, decisionHash)).wait();
     expect((await vault.tasks(1)).status).toBe(3n);
     expect(await module.executedDecisions(decisionHash)).toBe(true);
+  });
+
+  it("anchors proof -> independent verifier verdict -> judge settlement", async () => {
+    const module = await deploy("DisputeModule", owner, [await owner.getAddress()]);
+    const verification = await deploy("VerificationRegistry", owner, [
+      await owner.getAddress(),
+      await commitments.getAddress(),
+    ]);
+    await (await module.setVault(await vault.getAddress())).wait();
+    await (await module.setVerificationRegistry(await verification.getAddress())).wait();
+    await (await vault.setDisputeModule(await module.getAddress())).wait();
+    await (await verification.setAuthorizedVerifier(await dispute.getAddress(), true)).wait();
+
+    const total = parseUnits("100", 6);
+    const termsHash = keccak256(toUtf8Bytes("immutable paid work-order terms"));
+    const acceptanceHash = keccak256(toUtf8Bytes("immutable acceptance checklist"));
+    const reportHash = keccak256(toUtf8Bytes("agent report packet"));
+    const verdictHash = keccak256(toUtf8Bytes("off-chain AI Judge verdict"));
+    const evidenceHash = keccak256(toUtf8Bytes("verifier evidence packet"));
+    await (await usdc.connect(creator).approve(await vault.getAddress(), total)).wait();
+    await (
+      await vault.connect(creator).createCommittedOpenTask(total, ONE_USDC, ZeroAddress, termsHash, acceptanceHash)
+    ).wait();
+    const committed = await commitments.getWorkOrderCommitment(await vault.getAddress(), 1);
+    expect(committed.creator).toBe(await creator.getAddress());
+    expect(committed.termsHash).toBe(termsHash);
+    expect(committed.acceptanceChecklistHash).toBe(acceptanceHash);
+
+    await (await vault.connect(agent).claimOpenTask(1)).wait();
+    const assigned = await vault.tasks(1);
+    await (await usdc.connect(agent).approve(await vault.getAddress(), assigned.requiredCollateral)).wait();
+    await (await vault.connect(agent).postCollateral(1)).wait();
+    await (await vault.connect(agent).submitResultProof(1, reportHash)).wait();
+    expect((await commitments.getWorkOrderCommitment(await vault.getAddress(), 1)).reportHash).toBe(reportHash);
+
+    await expect(
+      verification.connect(dispute).verifyResult(await vault.getAddress(), 1, termsHash, verdictHash, evidenceHash, true),
+    ).rejects.toThrow();
+    await (
+      await verification.connect(dispute).verifyResult(
+        await vault.getAddress(), 1, reportHash, verdictHash, evidenceHash, true,
+      )
+    ).wait();
+    expect(await verification.isAcceptedVerdict(await vault.getAddress(), 1, verdictHash)).toBe(true);
+
+    await (await vault.connect(agent).pauseForDispute(1)).wait();
+    await (await module.settle(1, 40, verdictHash)).wait();
+    expect((await vault.tasks(1)).status).toBe(6n);
+    expect(await module.executedDecisions(verdictHash)).toBe(true);
   });
 
   it("awards non-transferable platform points once per training attempt", async () => {

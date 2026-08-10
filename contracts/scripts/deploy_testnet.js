@@ -96,6 +96,9 @@ async function main() {
   const disputeModuleArtifact = loadContract('DisputeModule');
   const platformPointsArtifact = loadContract('PlatformPoints');
   const agentRegistryArtifact = loadContract('AgentRegistry');
+  const workOrderCommitmentsArtifact = loadContract('WorkOrderCommitments');
+  const verificationRegistryArtifact = loadContract('VerificationRegistry');
+  const hubRegistryArtifact = loadContract('HubRegistry');
   const milestoneEscrowArtifact = loadContract('MilestoneEscrow');
   const subscriptionVaultArtifact = loadContract('SubscriptionVault');
   const rewardVaultArtifact = loadContract('RewardVault');
@@ -136,6 +139,28 @@ async function main() {
   const reputationAddress = await reputationContract.getAddress();
   console.log(`ReputationRegistry deployed at: ${reputationAddress}`);
 
+  console.log('\nDeploying WorkOrderCommitments...');
+  const WorkOrderCommitmentsFactory = new ethers.ContractFactory(
+    workOrderCommitmentsArtifact.abi,
+    workOrderCommitmentsArtifact.bytecode,
+    wallet
+  );
+  const workOrderCommitmentsContract = await WorkOrderCommitmentsFactory.deploy(wallet.address);
+  await workOrderCommitmentsContract.waitForDeployment();
+  const workOrderCommitmentsAddress = await workOrderCommitmentsContract.getAddress();
+  console.log(`WorkOrderCommitments deployed at: ${workOrderCommitmentsAddress}`);
+
+  console.log('\nDeploying VerificationRegistry...');
+  const VerificationRegistryFactory = new ethers.ContractFactory(
+    verificationRegistryArtifact.abi,
+    verificationRegistryArtifact.bytecode,
+    wallet
+  );
+  const verificationRegistryContract = await VerificationRegistryFactory.deploy(wallet.address, workOrderCommitmentsAddress);
+  await verificationRegistryContract.waitForDeployment();
+  const verificationRegistryAddress = await verificationRegistryContract.getAddress();
+  console.log(`VerificationRegistry deployed at: ${verificationRegistryAddress}`);
+
   // 2. Deploy StreamingVault
   console.log('\nDeploying StreamingVault...');
   const VaultFactory = new ethers.ContractFactory(
@@ -146,6 +171,7 @@ async function main() {
   const vaultContract = await VaultFactory.deploy(
     USDC_ADDRESS,
     reputationAddress,
+    workOrderCommitmentsAddress,
     disputeModuleAddress,
     COLLATERAL_TIMEOUT_SECONDS
   );
@@ -160,6 +186,8 @@ async function main() {
     if ((await disputeModuleContract.vault()).toLowerCase() !== vaultAddress.toLowerCase()) {
       throw new Error('DisputeModule vault configuration did not persist');
     }
+    const moduleVerificationTx = await disputeModuleContract.setVerificationRegistry(verificationRegistryAddress);
+    await moduleVerificationTx.wait();
     if (DISPUTE_ADMIN_ADDRESS && DISPUTE_ADMIN_ADDRESS.toLowerCase() !== wallet.address.toLowerCase()) {
       const ownershipTx = await disputeModuleContract.transferOwnership(DISPUTE_ADMIN_ADDRESS);
       await ownershipTx.wait();
@@ -175,6 +203,11 @@ async function main() {
     throw new Error('StreamingVault writer authorization did not persist on ReputationRegistry');
   }
   console.log(`Registry writer authorization confirmed in ${writerTx.hash}`);
+  const commitmentWriterTx = await workOrderCommitmentsContract.setAuthorizedWriter(vaultAddress, true);
+  await commitmentWriterTx.wait();
+  if (!(await workOrderCommitmentsContract.authorizedWriters(vaultAddress))) {
+    throw new Error('StreamingVault writer authorization did not persist on WorkOrderCommitments');
+  }
 
   const [configuredUsdc, configuredRegistry, configuredDisputeModule, configuredTimeout] = await Promise.all([
     vaultContract.usdc(),
@@ -241,6 +274,17 @@ async function main() {
   const agentRegistryAddress = await agentRegistryContract.getAddress();
   console.log(`AgentRegistry deployed at: ${agentRegistryAddress}`);
 
+  console.log('\nDeploying HubRegistry...');
+  const HubRegistryFactory = new ethers.ContractFactory(
+    hubRegistryArtifact.abi,
+    hubRegistryArtifact.bytecode,
+    wallet
+  );
+  const hubRegistryContract = await HubRegistryFactory.deploy(wallet.address);
+  await hubRegistryContract.waitForDeployment();
+  const hubRegistryAddress = await hubRegistryContract.getAddress();
+  console.log(`HubRegistry deployed at: ${hubRegistryAddress}`);
+
   console.log('\nDeploying MilestoneEscrow...');
   const MilestoneEscrowFactory = new ethers.ContractFactory(
     milestoneEscrowArtifact.abi,
@@ -293,8 +337,11 @@ async function main() {
     contracts: {
       ReputationRegistry: reputationAddress,
       StreamingVault: vaultAddress,
+      WorkOrderCommitments: workOrderCommitmentsAddress,
+      VerificationRegistry: verificationRegistryAddress,
       PlatformPoints: platformPointsAddress,
       AgentRegistry: agentRegistryAddress,
+      HubRegistry: hubRegistryAddress,
       MilestoneEscrow: milestoneEscrowAddress,
       SubscriptionVault: subscriptionVaultAddress,
       RewardVault: rewardVaultAddress

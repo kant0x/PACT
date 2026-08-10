@@ -3,6 +3,10 @@ export interface PactRuntimeConfig {
   arcRpcUrl?: string;
   streamingVaultAddress?: `0x${string}`;
   agentRegistryAddress?: `0x${string}`;
+  reputationRegistryAddress?: `0x${string}`;
+  workOrderCommitmentsAddress?: `0x${string}`;
+  verificationRegistryAddress?: `0x${string}`;
+  hubRegistryAddress?: `0x${string}`;
   milestoneEscrowAddress?: `0x${string}`;
   subscriptionVaultAddress?: `0x${string}`;
   rewardVaultAddress?: `0x${string}`;
@@ -18,6 +22,10 @@ export const runtimeConfig: PactRuntimeConfig = {
   arcRpcUrl: browserConfig?.arcRpcUrl ?? import.meta.env.VITE_ARC_RPC_URL,
   streamingVaultAddress: browserConfig?.streamingVaultAddress ?? import.meta.env.VITE_STREAMING_VAULT_ADDRESS,
   agentRegistryAddress: browserConfig?.agentRegistryAddress ?? import.meta.env.VITE_AGENT_REGISTRY_ADDRESS,
+  reputationRegistryAddress: browserConfig?.reputationRegistryAddress ?? import.meta.env.VITE_REPUTATION_REGISTRY_ADDRESS,
+  workOrderCommitmentsAddress: browserConfig?.workOrderCommitmentsAddress ?? import.meta.env.VITE_WORK_ORDER_COMMITMENTS_ADDRESS,
+  verificationRegistryAddress: browserConfig?.verificationRegistryAddress ?? import.meta.env.VITE_VERIFICATION_REGISTRY_ADDRESS,
+  hubRegistryAddress: browserConfig?.hubRegistryAddress ?? import.meta.env.VITE_HUB_REGISTRY_ADDRESS,
   milestoneEscrowAddress: browserConfig?.milestoneEscrowAddress ?? import.meta.env.VITE_MILESTONE_ESCROW_ADDRESS,
   subscriptionVaultAddress: browserConfig?.subscriptionVaultAddress ?? import.meta.env.VITE_SUBSCRIPTION_VAULT_ADDRESS,
   rewardVaultAddress: browserConfig?.rewardVaultAddress ?? import.meta.env.VITE_REWARD_VAULT_ADDRESS,
@@ -44,6 +52,10 @@ function requireProtocolAddress(address: `0x${string}` | undefined, label: strin
 }
 
 export const requireAgentRegistryAddress = () => requireProtocolAddress(runtimeConfig.agentRegistryAddress, 'AgentRegistry');
+export const requireReputationRegistryAddress = () => requireProtocolAddress(runtimeConfig.reputationRegistryAddress, 'ReputationRegistry');
+export const requireWorkOrderCommitmentsAddress = () => requireProtocolAddress(runtimeConfig.workOrderCommitmentsAddress, 'WorkOrderCommitments');
+export const requireVerificationRegistryAddress = () => requireProtocolAddress(runtimeConfig.verificationRegistryAddress, 'VerificationRegistry');
+export const requireHubRegistryAddress = () => requireProtocolAddress(runtimeConfig.hubRegistryAddress, 'HubRegistry');
 export const requireMilestoneEscrowAddress = () => requireProtocolAddress(runtimeConfig.milestoneEscrowAddress, 'MilestoneEscrow');
 export const requireSubscriptionVaultAddress = () => requireProtocolAddress(runtimeConfig.subscriptionVaultAddress, 'SubscriptionVault');
 export const requireRewardVaultAddress = () => requireProtocolAddress(runtimeConfig.rewardVaultAddress, 'RewardVault');

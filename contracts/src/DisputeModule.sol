@@ -6,6 +6,10 @@ interface IStreamingVaultSettlement {
     function resumeAfterDispute(uint256 taskId) external;
 }
 
+interface IVerificationRegistry {
+    function isAcceptedVerdict(address vault, uint256 taskId, bytes32 verdictHash) external view returns (bool);
+}
+
 /// @notice Controlled settlement relay for finalized PACT dispute decisions.
 /// @dev The off-chain Judge decides the fault classification. This contract
 /// only applies an already-finalized slash policy to the configured vault.
@@ -18,15 +22,18 @@ contract DisputeModule {
     error VaultNotConfigured();
     error ModulePaused();
     error ReentrantCall();
+    error VerdictNotVerified();
 
     address public owner;
     address public vault;
+    address public verificationRegistry;
     bool public paused;
     bool private executing;
     mapping(bytes32 => bool) public executedDecisions;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event VaultConfigured(address indexed previousVault, address indexed newVault);
+    event VerificationRegistryConfigured(address indexed previousRegistry, address indexed newRegistry);
     event Paused(address indexed account);
     event Unpaused(address indexed account);
     event DecisionSettled(
@@ -66,6 +73,14 @@ contract DisputeModule {
         vault = newVault;
     }
 
+    /// @notice Enables verifier-gated settlement. An independent authorized
+    /// verifier must first confirm the report and off-chain Judge verdict.
+    function setVerificationRegistry(address newRegistry) external onlyOwner {
+        if (newRegistry == address(0)) revert ZeroAddress();
+        emit VerificationRegistryConfigured(verificationRegistry, newRegistry);
+        verificationRegistry = newRegistry;
+    }
+
     function pause() external onlyOwner {
         paused = true;
         emit Paused(msg.sender);
@@ -88,6 +103,10 @@ contract DisputeModule {
         if (slashPct > 100) revert InvalidPercentage();
         if (decisionHash == bytes32(0)) revert InvalidDecisionHash();
         if (executedDecisions[decisionHash]) revert DecisionAlreadyExecuted();
+        if (
+            verificationRegistry != address(0)
+            && !IVerificationRegistry(verificationRegistry).isAcceptedVerdict(vault, taskId, decisionHash)
+        ) revert VerdictNotVerified();
 
         executedDecisions[decisionHash] = true;
         if (slashPct == 0) {
