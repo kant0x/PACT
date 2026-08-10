@@ -1672,6 +1672,21 @@ html[lang="es"] .overview-section-heading h2 {
 .registration-check strong { color: var(--pact-ink); font-size: 12px; }
 .registration-check small { color: var(--pact-muted); font: 400 10px/1.5 var(--font-mono); }
 .registration-check input { margin-top: 3px; accent-color: var(--pact-rust); }
+.registration-consent { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 12px; padding: 14px 15px; border: 1px solid var(--pact-line-strong); background: linear-gradient(110deg, rgba(203,103,63,.12), rgba(255,255,255,.018) 56%); cursor: pointer; }
+.registration-consent:has(input:checked) { border-color: var(--pact-rust); box-shadow: inset 3px 0 0 var(--pact-rust-hot); }
+.registration-consent input { width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--pact-rust-hot); }
+.registration-consent span { display: grid; gap: 4px; }
+.registration-consent strong { color: var(--pact-ink-strong); font: 600 14px/1.1 "Archivo Narrow", sans-serif; }
+.registration-consent small { color: var(--pact-muted); font: 400 9px/1.45 var(--font-mono); }
+.agent-register-success { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 15px; padding: 18px; border: 1px solid var(--pact-line-strong); background: linear-gradient(135deg, rgba(203,103,63,.18), rgba(12,11,10,.98) 65%); }
+.agent-register-success__icon { display: grid; place-items: center; width: 42px; height: 42px; color: var(--pact-rust-hot); border: 1px solid var(--pact-rust); background: rgba(203,103,63,.13); }
+.agent-register-success__icon svg { width: 22px; }
+.agent-register-success > div:nth-child(2) { display: grid; gap: 5px; min-width: 0; }
+.agent-register-success > div:nth-child(2) > span, .agent-register-success__address > span { color: var(--pact-rust-hot); font: 500 9px/1 var(--font-mono); letter-spacing: .13em; text-transform: uppercase; }
+.agent-register-success h3 { margin: 0; color: var(--pact-ink-strong); font: 600 29px/.95 "Archivo Narrow", sans-serif; }
+.agent-register-success p { margin: 0; color: var(--pact-muted); font: 400 11px/1.45 var(--font-body); }
+.agent-register-success__address { grid-column: 1 / -1; display: grid; gap: 7px; padding-top: 13px; border-top: 1px solid var(--pact-line); }
+.agent-register-success__address code { overflow-wrap: anywhere; color: var(--pact-ink-strong); font: 500 12px/1.45 var(--font-mono); }
 .modal--agent-funding { width: min(700px, 100%); }
 .agent-funding-form { display: grid; gap: 16px; }
 .agent-funding-form__wallet { display: flex; align-items: flex-start; gap: 13px; padding: 15px; border-left: 2px solid var(--pact-rust); background: rgba(203,103,63,.07); }

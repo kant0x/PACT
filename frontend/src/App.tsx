@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Clapperboard,
   Clock3,
+  Copy,
   Database,
   FileCode2,
   FileSearch,
@@ -783,10 +784,12 @@ function PublishModal({
 function RegisterAgentModal({
   onClose,
   onRegister,
+  onOpenCreatedAgent,
   busy,
 }: {
   onClose: () => void;
-  onRegister: (input: { displayName: string; capabilityManifest: AgentCapabilityManifest; provisionWallet: true }, sessionToken: string) => Promise<void>;
+  onRegister: (input: { displayName: string; capabilityManifest: AgentCapabilityManifest; provisionWallet: true }, sessionToken: string) => Promise<{ agentAddress: string; displayName: string } | false>;
+  onOpenCreatedAgent: (agentAddress: string) => void;
   busy: boolean;
 }) {
   const { address } = useAccount();
@@ -806,6 +809,9 @@ function RegisterAgentModal({
   });
   const [formError, setFormError] = useState<string | null>(null);
   const [activeStep, setActiveStep] = useState<1 | 2>(1);
+  const [walletTermsAccepted, setWalletTermsAccepted] = useState(false);
+  const [createdAgent, setCreatedAgent] = useState<{ agentAddress: string; displayName: string } | null>(null);
+  const [addressCopied, setAddressCopied] = useState(false);
 
   const update = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm((current) => ({ ...current, [key]: value }));
   const splitList = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
@@ -887,16 +893,56 @@ function RegisterAgentModal({
       setActiveStep(1);
       return;
     }
+    if (!walletTermsAccepted) {
+      setFormError('Confirm the Circle wallet terms before creating the agent wallet.');
+      return;
+    }
     try {
       if (!address) throw new Error('Connect the agent owner wallet before registering an agent.');
       const session = await authenticateWallet(address, (message) => signMessageAsync({ message }));
       // Use the just-issued session directly. This avoids relying on a later
       // sessionStorage read between wallet approval and Circle provisioning.
-      await onRegister({ displayName: registration.name, capabilityManifest: registration.capabilityManifest, provisionWallet: true }, session.token);
+      const result = await onRegister({ displayName: registration.name, capabilityManifest: registration.capabilityManifest, provisionWallet: true }, session.token);
+      if (result) setCreatedAgent(result);
+      else setFormError('Circle wallet creation was not completed. Check the error message and try again.');
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Registration was cancelled.');
     }
   };
+
+  const copyCreatedAddress = async () => {
+    if (!createdAgent) return;
+    try {
+      await navigator.clipboard?.writeText(createdAgent.agentAddress);
+      setAddressCopied(true);
+    } catch {
+      setFormError('Could not copy the address. Select and copy it manually.');
+    }
+  };
+
+  if (createdAgent) {
+    return (
+      <Modal className="modal--agent-register" eyebrow="Circle wallet ready" title="Agent created" onClose={onClose}>
+        <section className="agent-register-success" aria-live="polite">
+          <div className="agent-register-success__icon"><BadgeCheck /></div>
+          <div>
+            <span>AGENT IDENTITY CREATED</span>
+            <h3>{createdAgent.displayName}</h3>
+            <p>A dedicated Circle smart wallet has been created for this agent on Arc Testnet.</p>
+          </div>
+          <div className="agent-register-success__address">
+            <span>AGENT WALLET ADDRESS</span>
+            <code>{createdAgent.agentAddress}</code>
+          </div>
+        </section>
+        {formError ? <div className="form-error" role="alert"><AlertTriangle /> {formError}</div> : null}
+        <div className="modal__actions">
+          <button className="button button--ghost" type="button" onClick={() => void copyCreatedAddress()}><Copy /> {addressCopied ? 'Address copied' : 'Copy address'}</button>
+          <button className="button button--primary" type="button" onClick={() => onOpenCreatedAgent(createdAgent.agentAddress)}>Open agent in Cabinet <ArrowRight /></button>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal className="modal--agent-register" eyebrow="Agent setup" title="Configure the agent" onClose={onClose}>
@@ -954,13 +1000,17 @@ function RegisterAgentModal({
             <div><span>CONTROLLER</span><strong>{address ? shortAddress(address) : 'Not connected'}</strong><small>Can manage the agent; cannot replace its wallet.</small></div>
           </div>
           {address ? <div className="registration-wallet-note field--wide"><WalletCards /><span>Circle wallet creation is bound to the connected controller: <strong>{shortAddress(address)}</strong></span></div> : null}
+          <label className="registration-consent field--wide">
+            <input type="checkbox" checked={walletTermsAccepted} onChange={(event) => { setWalletTermsAccepted(event.target.checked); setFormError(null); }} />
+            <span><strong>I agree to create this Circle agent wallet</strong><small>I understand that PACT will create a separate Circle smart-contract wallet for this agent. The connected wallet remains its controller and authorizes its actions.</small></span>
+          </label>
         </>}
         {formError ? <div className="form-error field--wide" role="alert"><AlertTriangle /> {formError}</div> : null}
         <div className="modal__actions field--wide">
           <button className="button button--ghost" type="button" onClick={activeStep === 1 ? onClose : () => { setFormError(null); setActiveStep(1); }}>{activeStep === 1 ? 'Cancel' : 'Back'}</button>
-          {activeStep === 1 ? <button className="button button--primary" type="button" onClick={advance}>Continue to Circle wallet <ArrowRight /></button> : <button className="button button--primary" type="submit" disabled={busy}>
+          {activeStep === 1 ? <button className="button button--primary" type="button" onClick={advance} disabled={form.displayName.trim().length < 2} title={form.displayName.trim().length < 2 ? 'Enter an agent name first' : undefined}>Continue to Circle wallet <ArrowRight /></button> : <button className="button button--primary" type="submit" disabled={busy || !walletTermsAccepted} title={!walletTermsAccepted ? 'Confirm the Circle wallet terms first' : undefined}>
             {busy ? <RefreshCcw className="spin" /> : <BadgeCheck />}
-            Create Circle wallet & register agent
+            {busy ? 'Creating Circle wallet…' : 'Create Circle wallet & register agent'}
           </button>}
         </div>
       </form>
@@ -3239,7 +3289,25 @@ export default function App() {
           setHireAgentAddress(null);
         }
       }} /> : null}
-      {registerOpen ? <RegisterAgentModal busy={busyKey === 'register'} onClose={() => setRegisterOpen(false)} onRegister={async (input, sessionToken) => { const result = await perform('register', 'Circle agent wallet created. Connect its runtime to begin work.', () => api.registerAgent(input, sessionToken)); if (result && typeof result === 'object' && 'agent' in result && result.agent && typeof result.agent === 'object' && 'agentAddress' in result.agent && typeof result.agent.agentAddress === 'string') { const createdAgent = result.agent as { agentAddress: string; displayName?: string }; setCreatedAgentNotice({ agentAddress: createdAgent.agentAddress, displayName: createdAgent.displayName || input.displayName }); setRegisterOpen(false); setSelectedAgent(createdAgent.agentAddress); changeView('dapp'); } }} /> : null}
+      {registerOpen ? <RegisterAgentModal
+        busy={busyKey === 'register'}
+        onClose={() => setRegisterOpen(false)}
+        onOpenCreatedAgent={(agentAddress) => {
+          setRegisterOpen(false);
+          setSelectedAgent(agentAddress);
+          changeView('dapp');
+        }}
+        onRegister={async (input, sessionToken) => {
+          const result = await perform('register', 'Circle agent wallet created. Connect its runtime to begin work.', () => api.registerAgent(input, sessionToken));
+          if (result && typeof result === 'object' && 'agent' in result && result.agent && typeof result.agent === 'object' && 'agentAddress' in result.agent && typeof result.agent.agentAddress === 'string') {
+            const createdAgent = result.agent as { agentAddress: string; displayName?: string };
+            const displayName = createdAgent.displayName || input.displayName;
+            setCreatedAgentNotice({ agentAddress: createdAgent.agentAddress, displayName });
+            return { agentAddress: createdAgent.agentAddress, displayName };
+          }
+          return false;
+        }}
+      /> : null}
       {arenaChallenge && arenaResult ? <AutomatedArenaResultModal
         challenge={arenaChallenge}
         result={arenaResult}
