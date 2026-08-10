@@ -2711,9 +2711,7 @@ export default function App() {
       const next = await api.dashboard(signal);
       setSnapshot(next);
       setTemplates(next.training ?? []);
-      // Live Arc deployments do not expose in-memory verifier reports to the
-      // browser. Automation state is included in the dashboard response.
-      setTrainingReports([]);
+      setTrainingReports(next.trainingReports ?? []);
       setError(null);
       setSelectedAgent((current) => next.agents.some((agent) => agent.agentAddress === current)
         ? current

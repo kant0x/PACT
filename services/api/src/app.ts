@@ -854,6 +854,12 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
         // dashboard avoids exposing the legacy in-memory training endpoints
         // to browser polling in production.
         training: store.listArenaTemplates(),
+        // Reports are redacted owner-facing summaries. Include them with the
+        // dashboard so the Cabinet can show completed runs without a second
+        // legacy polling route for every agent.
+        trainingReports: agents.flatMap((agent) => store.hasRegisteredAgent(agent.agentAddress)
+          ? store.arenaReports(agent.agentAddress)
+          : []),
         agentAutomation: arenaAutopilot.snapshots(agents.map((agent) => agent.agentAddress))
       };
 

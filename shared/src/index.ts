@@ -772,6 +772,8 @@ export interface DashboardSnapshot {
   deliverables: AgentDeliverable[];
   /** Public Training Ground catalogue. Per-agent state remains in agentAutomation. */
   training?: ArenaTemplate[];
+  /** Redacted verifier reports for completed Training Ground attempts. */
+  trainingReports?: ArenaTrainingReport[];
   metrics: {
     totalVolume: string;
     activeStreams: number;
