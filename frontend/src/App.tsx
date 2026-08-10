@@ -2672,7 +2672,6 @@ export default function App() {
   }, [activeAddress]);
 
   const hubAgent = controllerAgents.find((agent) => agent.agentAddress.toLowerCase() === primaryAgentAddress?.toLowerCase()) ?? controllerAgents[0];
-  const trainingAgentAddress = hubAgent?.agentAddress;
 
   const handleDisconnect = useCallback(() => {
     if (isConnected) disconnect();
@@ -2730,7 +2729,14 @@ export default function App() {
   useEffect(() => {
     const controller = new AbortController();
     void loadDashboard(false, controller.signal);
-    return () => controller.abort();
+    // Live Arc state changes off-screen while an agent is working. Refresh the
+    // one dashboard endpoint instead of repeatedly hitting legacy training
+    // routes, so Execute / Verify states cannot remain frozen in the browser.
+    const timer = window.setInterval(() => void loadDashboard(true, controller.signal), 15_000);
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+    };
   }, [loadDashboard]);
 
   useEffect(() => {
