@@ -2357,8 +2357,8 @@ function DappDashboard({
   const cabinetTabs: Array<{ id: CabinetSection; label: string; count?: number }> = [
     { id: 'overview', label: 'Overview' },
     { id: 'agents', label: 'Your agents', count: myAgents.length },
-    { id: 'orders', label: 'Agent history', count: myTrainingReports.length + myAssignments.length },
-    { id: 'assignments', label: 'Agent work reports', count: myTrainingReports.length },
+    { id: 'orders', label: t('Agent history'), count: myTrainingReports.length + myAssignments.length },
+    { id: 'assignments', label: t('Agent work reports'), count: myTrainingReports.length },
   ];
 
   return (
@@ -2397,9 +2397,9 @@ function DappDashboard({
               <header className="cabinet-section-header"><div><div className="eyebrow">MAIN SUMMARY</div><h2 id="cabinet-overview-title">Overview</h2></div><button className="button button--outline button--small" onClick={() => onView('marketplace')} type="button"><Zap /> Open task board <span>{openOrders.length}</span></button></header>
               <div className="cabinet-overview__metrics">
                 <button type="button" onClick={() => setCabinetSection('agents')}><span>Your agents</span><strong>{myAgents.length}</strong><ArrowRight /></button>
-                <button type="button" onClick={() => setCabinetSection('orders')}><span>Agent history</span><strong>{myTrainingReports.length + myAssignments.length}</strong><ArrowRight /></button>
+                <button type="button" onClick={() => setCabinetSection('orders')}><span>{t('Agent history')}</span><strong>{myTrainingReports.length + myAssignments.length}</strong><ArrowRight /></button>
                 <button type="button" onClick={() => setCabinetSection('orders')}><span>In progress</span><strong>{activeOrders.length}</strong><ArrowRight /></button>
-                <button type="button" onClick={() => setCabinetSection('assignments')}><span>Agent work reports</span><strong>{myTrainingReports.length}</strong><ArrowRight /></button>
+                <button type="button" onClick={() => setCabinetSection('assignments')}><span>{t('Agent work reports')}</span><strong>{myTrainingReports.length}</strong><ArrowRight /></button>
               </div>
               {myAgents.length ? <section className="cabinet-agent-performance" aria-labelledby="agent-performance-title"><header><div><span>AGENT PERFORMANCE</span><strong id="agent-performance-title">{myAgents.length === 1 ? myAgents[0].displayName : `${myAgents.length} agent profiles`}</strong></div><button className="button button--outline button--small" onClick={() => setCabinetSection('agents')} type="button">Your agents <ArrowRight /></button></header><div className="cabinet-agent-performance__metrics"><div><span>TRUST SCORE</span><strong>{averageTrustScore}<small>/1000</small></strong></div><div><span>SETTLED TASKS</span><strong>{completedAgentTasks}</strong></div><div><span>SUCCESS RATE</span><strong>{totalAgentOutcomes ? `${Math.round((completedAgentTasks / totalAgentOutcomes) * 100)}%` : '—'}</strong></div><div><span>PLATFORM POINTS</span><strong>{totalPlatformPoints}</strong></div><div><span>AUTOPILOT</span><strong>{activeAutomations}/{myAgents.length}</strong></div><div><span>RUNTIME ONLINE</span><strong>{connectedRuntimes}/{myAgents.length}</strong></div></div></section> : null}
               {!myAgents.length && !myOrders.length ? <div className="cabinet-overview__empty"><span>Get started</span><strong>Create an agent or publish a work order.</strong><div><button className="button button--outline button--small" onClick={onCreateAgent} type="button"><Bot /> Create an agent</button><button className="button button--primary button--small" onClick={onPublish} type="button"><Plus /> Create task</button></div></div> : null}

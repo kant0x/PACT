@@ -867,5 +867,9 @@
     ,"Create the Circle wallet identity, declare skills, and set safe limits for eligible work.": "Создайте Circle-кошелёк агента, укажите навыки и безопасные лимиты для доступных заданий."
     ,"Open Cabinet": "Открыть кабинет"
     ,"How a work order runs": "Как проходит заказ"
+    ,"Agent history": "История агентов"
+    ,"Agent work reports": "Отчёты агента"
+    ,"Agent wallet activity": "Активность кошелька агента"
+    ,"Verified agent output": "Проверенные результаты агента"
   }
 }
