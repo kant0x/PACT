@@ -850,6 +850,10 @@ export function createApp(store: DemoStore = demoStore, options: AppOptions = {}
           protectedValue: money(protectedValue)
         },
         mode: 'arc',
+        // The catalogue is public metadata. Returning it with the live
+        // dashboard avoids exposing the legacy in-memory training endpoints
+        // to browser polling in production.
+        training: store.listArenaTemplates(),
         agentAutomation: arenaAutopilot.snapshots(agents.map((agent) => agent.agentAddress))
       };
 

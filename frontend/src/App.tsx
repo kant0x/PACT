@@ -2158,6 +2158,12 @@ function DappDashboard({
   const [cabinetSection, setCabinetSection] = useState<CabinetSection>('overview');
   const connected = Boolean(connectedAddress);
 
+  // Registration completes in a modal. When it closes, land the owner on the
+  // newly created identity rather than leaving them on the Cabinet overview.
+  useEffect(() => {
+    if (createdAgentNotice) setCabinetSection('agents');
+  }, [createdAgentNotice?.agentAddress]);
+
   if (!connected) {
     return (
       <div className="view-stack dapp-page">
@@ -2270,7 +2276,7 @@ function DappDashboard({
           ) : null}
 
           {cabinetSection === 'agents' ? (
-            <section className="cabinet-agents cabinet-section-panel" aria-labelledby="cabinet-agents-title">
+            <section className="cabinet-agents cabinet-section-panel" id="cabinet-agents" aria-labelledby="cabinet-agents-title">
               <header className="cabinet-section-header"><div><div className="eyebrow">AGENT IDENTITIES</div><h2 id="cabinet-agents-title">Your agents</h2></div><button className="button button--primary button--small" onClick={onCreateAgent} type="button"><Bot /> Create an agent</button></header>
               {myAgents.length ? <div className="cabinet-agents__grid">{myAgents.map((agent) => <CabinetAgentCard key={agent.agentAddress} agent={agent} automation={snapshot.agentAutomation?.[agent.agentAddress.toLowerCase()]} busy={trainingBusyAgentAddress?.toLowerCase() === agent.agentAddress.toLowerCase()} highlighted={agent.agentAddress.toLowerCase() === createdAgentNotice?.agentAddress.toLowerCase()} isPrimary={agent.agentAddress.toLowerCase() === primaryAgentAddress?.toLowerCase()} onFund={onFundAgent} onSetPrimary={onSetPrimaryAgent} onToggleTraining={onToggleTraining} />)}</div> : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title="No agent profiles in this cabinet yet" copy="Create an agent to display its wallet and status here." /></div>}
             </section>
@@ -2711,6 +2717,10 @@ export default function App() {
     try {
       const next = await api.dashboard(signal);
       setSnapshot(next);
+      setTemplates(next.training ?? []);
+      // Live Arc deployments do not expose in-memory verifier reports to the
+      // browser. Automation state is included in the dashboard response.
+      setTrainingReports([]);
       setError(null);
       setSelectedAgent((current) => next.agents.some((agent) => agent.agentAddress === current)
         ? current
@@ -2734,32 +2744,6 @@ export default function App() {
     void api.trustModel(controller.signal).then(setTrustModel).catch(() => undefined);
     return () => controller.abort();
   }, []);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    let active = true;
-    const loadTemplates = () => void api.trainingCatalog(trainingAgentAddress, controller.signal)
-      .then((next) => { if (active) setTemplates(next); })
-      .catch(() => { if (active) setTemplates([]); });
-    loadTemplates();
-    const timer = window.setInterval(loadTemplates, 5_000);
-    return () => { active = false; controller.abort(); window.clearInterval(timer); };
-  }, [trainingAgentAddress]);
-
-  useEffect(() => {
-    if (!trainingAgentAddress) {
-      setTrainingReports([]);
-      return undefined;
-    }
-    const controller = new AbortController();
-    let active = true;
-    const loadReports = () => void api.arenaReports(trainingAgentAddress, controller.signal)
-      .then((next) => { if (active) setTrainingReports(next); })
-      .catch(() => { if (active) setTrainingReports([]); });
-    loadReports();
-    const timer = window.setInterval(loadReports, 5_000);
-    return () => { active = false; controller.abort(); window.clearInterval(timer); };
-  }, [trainingAgentAddress]);
 
   useEffect(() => {
     clearWalletSession(connectedAddress);

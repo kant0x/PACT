@@ -4,8 +4,6 @@ import {
   AgentAutomationSnapshot,
   AgentRun,
   ArenaLeaderboardEntry,
-  ArenaTemplate,
-  ArenaTrainingReport,
   DashboardSnapshot,
   Dispute,
   DisputeVerdict,
@@ -295,10 +293,6 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ cancellationTransactionHash }),
     }),
-  trainingCatalog: (agentAddress?: string, signal?: AbortSignal) =>
-    request<ArenaTemplate[]>(`/api/training/catalog${agentAddress ? `?agentAddress=${encodeURIComponent(agentAddress)}` : ''}`, { signal }),
-  arenaReports: (agentAddress: string, signal?: AbortSignal) =>
-    request<ArenaTrainingReport[]>(`/api/training/agents/${encodeURIComponent(agentAddress)}/reports`, { signal }),
   arenaLeaderboard: (signal?: AbortSignal) =>
     request<ArenaLeaderboardEntry[]>('/api/arena/leaderboard', { signal }),
   createDispute: (input: CreateDisputeInput) =>

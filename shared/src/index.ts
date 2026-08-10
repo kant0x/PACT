@@ -770,6 +770,8 @@ export interface DashboardSnapshot {
   disputes: Dispute[];
   agentRuns: AgentRun[];
   deliverables: AgentDeliverable[];
+  /** Public Training Ground catalogue. Per-agent state remains in agentAutomation. */
+  training?: ArenaTemplate[];
   metrics: {
     totalVolume: string;
     activeStreams: number;
