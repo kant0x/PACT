@@ -219,6 +219,34 @@ p { color: var(--muted); }
   font: 500 10px/1 var(--font-mono) !important;
   letter-spacing: .055em;
 }
+.topbar--workspace .operator__primary {
+  display: grid;
+  min-width: 112px;
+  gap: 3px;
+  padding: 0 5px 0 9px;
+  border-left: 1px solid rgba(203, 103, 63, .24);
+}
+.topbar--workspace .operator__primary > span {
+  color: #b9b1ac;
+  font: 500 7px/1 var(--font-mono);
+  letter-spacing: .08em;
+}
+.topbar--workspace .operator__primary strong,
+.topbar--workspace .operator__primary select {
+  overflow: hidden;
+  width: 100%;
+  padding: 0;
+  color: var(--pact-ink-strong);
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: 600 10px/1 var(--font-mono);
+  letter-spacing: .025em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.topbar--workspace .operator__primary select { appearance: auto; cursor: pointer; }
+.topbar--workspace .operator__primary select option { color: #171311; background: #f4eee9; }
 .topbar--workspace .operator__balance {
   display: grid;
   min-width: 68px;
@@ -1476,6 +1504,9 @@ html[lang="es"] .overview-section-heading h2 {
   .topbar__tools .operator .button { width: 44px; padding: 0; }
   .topbar--workspace .operator__deposit { width: 36px !important; padding: 0 !important; }
   .operator__deposit-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .topbar--workspace .operator__primary { min-width: 72px; padding-left: 6px; }
+  .topbar--workspace .operator__primary > span { font-size: 6px; }
+  .topbar--workspace .operator__primary strong, .topbar--workspace .operator__primary select { font-size: 9px; }
   .topbar--workspace .operator__balance { min-width: 57px; padding-left: 6px; }
   .topbar--workspace .operator__balance span { font-size: 6px; }
   .topbar--workspace .operator__balance strong { font-size: 9px; }
@@ -1626,6 +1657,11 @@ html[lang="es"] .overview-section-heading h2 {
 .modal--agent-register .wallet-mode { min-height: 0; padding: 10px 12px; gap: 10px; }
 .modal--agent-register .wallet-mode strong { font-size: 17px; }
 .modal--agent-register .wallet-mode small { font-size: 9px; line-height: 1.35; }
+.agent-wallet-review { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; overflow: hidden; border: 1px solid var(--pact-line-strong); background: var(--pact-line); }
+.agent-wallet-review > div { display: grid; align-content: start; gap: 5px; min-height: 104px; padding: 14px; background: var(--pact-surface); }
+.agent-wallet-review span { color: var(--pact-rust-hot); font: 500 8px/1 var(--font-mono); letter-spacing: .13em; text-transform: uppercase; }
+.agent-wallet-review strong { color: var(--pact-ink-strong); font: 600 21px/1 "Archivo Narrow", sans-serif; overflow-wrap: anywhere; }
+.agent-wallet-review small { color: var(--pact-muted); font: 400 9px/1.4 var(--font-mono); }
 .modal--agent-register .modal__actions { margin-top: 0; }
 
 @media (max-width: 720px), (max-height: 760px) {
@@ -1666,8 +1702,13 @@ html[lang="es"] .overview-section-heading h2 {
 .cabinet-agent-card__identity > div { display: grid; gap: 4px; min-width: 0; }
 .cabinet-agent-card__identity > div > span { color: var(--pact-rust-hot); font: 500 8px/1 var(--font-mono); letter-spacing: .12em; }
 .cabinet-agent-card__identity h3 { overflow: hidden; margin: 0; color: var(--pact-ink-strong); font: 600 24px/.98 "Archivo Narrow", sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+.cabinet-agent-card__badges { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex: 0 0 auto; }
 .cabinet-agent-card__status { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; color: var(--pact-rust-hot); font: 500 8px/1 var(--font-mono); letter-spacing: .11em; }
 .cabinet-agent-card__status i { width: 6px; height: 6px; border-radius: 50%; background: var(--pact-rust-hot); box-shadow: 0 0 0 3px rgba(229,138,97,.12); }
+.cabinet-agent-card__status--primary { color: #7be0a7; }
+.cabinet-agent-card__status--primary i { background: #55c88d; box-shadow: 0 0 0 3px rgba(85,200,141,.12), 0 0 11px rgba(85,200,141,.42); }
+.cabinet-agent-card__set-primary { min-height: 24px; padding: 0 7px; color: var(--pact-muted); border: 1px solid var(--pact-line-strong); background: transparent; font: 500 8px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.cabinet-agent-card__set-primary:hover { color: var(--pact-ink); border-color: var(--pact-rust-hot); background: rgba(229,138,97,.09); }
 .cabinet-agent-card__wallet { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 13px; border-left: 2px solid var(--pact-rust); background: rgba(203,103,63,.07); }
 .cabinet-agent-card__wallet > div { display: grid; gap: 6px; min-width: 0; }
 .cabinet-agent-card__wallet span, .cabinet-agent-card__capabilities > span { color: var(--pact-rust-hot); font: 500 8px/1.2 var(--font-mono); letter-spacing: .1em; }
@@ -1740,7 +1781,7 @@ html[lang="es"] .overview-section-heading h2 {
 .cabinet-section-panel .client-order-card { padding: 18px; }
 
 @media (max-width: 720px) {
-  .runtime-choice-grid, .wallet-mode-grid, .form-grid, .agent-setup-progress, .agent-manifest-advanced__fields { grid-template-columns: 1fr; }
+  .runtime-choice-grid, .wallet-mode-grid, .form-grid, .agent-setup-progress, .agent-wallet-review, .agent-manifest-advanced__fields { grid-template-columns: 1fr; }
   .field--wide { grid-column: auto; }
   .agent-created-banner { grid-template-columns: auto minmax(0, 1fr); }
   .agent-created-banner > .icon-button { grid-column: 2; justify-self: end; grid-row: 1; }
@@ -1753,6 +1794,7 @@ html[lang="es"] .overview-section-heading h2 {
   .cabinet-section-header { align-items: flex-start; flex-direction: column; }
   .cabinet-overview__metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cabinet-agent-card__header { flex-direction: column; }
+  .cabinet-agent-card__badges { justify-content: flex-start; }
   .cabinet-agent-card__facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .wallet-connect-banner { grid-template-columns: auto 1fr; padding: 15px; }
   .wallet-connect-banner .button { grid-column: 1 / -1; width: 100%; justify-content: center; }

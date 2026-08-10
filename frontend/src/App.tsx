@@ -82,6 +82,7 @@ import { ARC_USDC_ADDRESS, isArcMode } from './runtime';
 import { config } from './wagmi';
 
 const wait = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+const primaryAgentStorageKey = (controllerAddress: string) => `pact.primary-agent:${controllerAddress.toLowerCase()}`;
 
 const trainingHubMeta = (kind: ArenaTemplate['kind']) => {
   if (kind === 'DOCUMENT_RETRIEVAL') return { level: '03', label: 'DOCUMENT INTELLIGENCE', difficulty: 5, icon: FileSearch };
@@ -137,21 +138,26 @@ async function waitForCircleTransaction(
 function WalletHeader({
   activeAddress,
   activeIsConnected,
-  agentAddress,
+  primaryAgent,
+  controllerAgents,
   canDeposit,
   onOpenConnectModal,
   onDeposit,
+  onSelectPrimaryAgent,
   onDisconnect,
 }: {
   activeAddress?: string;
   activeIsConnected: boolean;
-  agentAddress?: string;
+  primaryAgent?: ReputationSnapshot;
+  controllerAgents: ReputationSnapshot[];
   canDeposit: boolean;
   onOpenConnectModal: () => void;
   onDeposit: () => void;
+  onSelectPrimaryAgent: (agentAddress: string) => void;
   onDisconnect: () => void;
 }) {
   const { t } = useLocale();
+  const agentAddress = primaryAgent?.agentAddress;
   const { data: rawAgentBalance, isLoading: agentBalanceLoading } = useReadContract({
     address: ARC_USDC_ADDRESS as `0x${string}`,
     abi: ERC20_ABI,
@@ -174,11 +180,17 @@ function WalletHeader({
           <span className="operator__state"><i /> {t('Connected')}</span>
           <strong className="mono" title={activeAddress}>{shortAddress(activeAddress)}</strong>
         </span>
+        <label className="operator__primary">
+          <span>PRIMARY AGENT</span>
+          {controllerAgents.length > 1 ? <select value={agentAddress ?? ''} onChange={(event) => onSelectPrimaryAgent(event.target.value)} aria-label="Primary agent">
+            {controllerAgents.map((agent) => <option value={agent.agentAddress} key={agent.agentAddress}>{agent.displayName}</option>)}
+          </select> : <strong title={agentAddress}>{primaryAgent?.displayName ?? 'No agent'}</strong>}
+        </label>
         <span className="operator__balance" title={agentAddress ? `Agent wallet ${agentAddress}` : 'No agent wallet connected'}>
           <span>AGENT USDC</span>
           <strong>{agentBalanceLabel}</strong>
         </span>
-        <button className="button button--small button--primary operator__deposit" disabled={!canDeposit} onClick={onDeposit} type="button">
+        <button className="button button--small button--primary operator__deposit" aria-label={primaryAgent ? `Deposit USDC to ${primaryAgent.displayName}` : 'Deposit USDC'} title={primaryAgent ? `Deposit USDC to ${primaryAgent.displayName}` : undefined} disabled={!canDeposit} onClick={onDeposit} type="button">
           <WalletCards size={13} /> <span className="operator__deposit-label">Deposit</span>
         </button>
         <button className="button button--small button--outline operator__disconnect" onClick={onDisconnect} type="button" aria-label="Disconnect wallet">
@@ -1938,16 +1950,20 @@ function AgentFundingModal({
 function CabinetAgentCard({
   agent,
   highlighted,
+  isPrimary,
   automation,
   busy = false,
   onFund,
+  onSetPrimary,
   onToggleTraining,
 }: {
   agent: ReputationSnapshot;
   highlighted: boolean;
+  isPrimary: boolean;
   automation?: AgentAutomationSnapshot;
   busy?: boolean;
   onFund: (agent: ReputationSnapshot) => void;
+  onSetPrimary: (agent: ReputationSnapshot) => void;
   onToggleTraining: (agent: ReputationSnapshot, enabled: boolean) => void;
 }) {
   const capabilityLabels = agent.capabilityManifest.capabilities.map((capability) => capability.label);
@@ -1974,7 +1990,10 @@ function CabinetAgentCard({
           <AgentMark agent={agent} />
           <div><span>AGENT PROFILE</span><h3>{agent.displayName}</h3></div>
         </div>
-        <span className="cabinet-agent-card__status"><i /> CREATED</span>
+        <div className="cabinet-agent-card__badges">
+          <span className={isPrimary ? 'cabinet-agent-card__status cabinet-agent-card__status--primary' : 'cabinet-agent-card__status'}><i /> {isPrimary ? 'PRIMARY' : 'CREATED'}</span>
+          {!isPrimary ? <button className="cabinet-agent-card__set-primary" type="button" onClick={() => onSetPrimary(agent)}>Set primary</button> : null}
+        </div>
       </header>
       <div className="cabinet-agent-card__wallet">
         <div><span>AGENT WALLET / CIRCLE SMART WALLET</span><strong title={agent.agentAddress}>{agent.agentAddress}</strong><small>{walletLabel} · controller: {agent.wallet ? shortAddress(agent.wallet.controllerAddress) : 'not returned'}</small></div>
@@ -2057,6 +2076,8 @@ function DappDashboard({
   onWithdraw,
   onRunAgent,
   onFundAgent,
+  primaryAgentAddress,
+  onSetPrimaryAgent,
   onToggleTraining,
   trainingBusyAgentAddress,
   createdAgentNotice,
@@ -2076,6 +2097,8 @@ function DappDashboard({
   onWithdraw?: (task: MarketplaceTask) => void;
   onRunAgent?: (task: MarketplaceTask) => void;
   onFundAgent: (agent: ReputationSnapshot) => void;
+  primaryAgentAddress?: string;
+  onSetPrimaryAgent: (agent: ReputationSnapshot) => void;
   onToggleTraining: (agent: ReputationSnapshot, enabled: boolean) => void;
   trainingBusyAgentAddress?: string;
   createdAgentNotice?: CreatedAgentNotice | null;
@@ -2199,7 +2222,7 @@ function DappDashboard({
           {cabinetSection === 'agents' ? (
             <section className="cabinet-agents cabinet-section-panel" aria-labelledby="cabinet-agents-title">
               <header className="cabinet-section-header"><div><div className="eyebrow">AGENT IDENTITIES</div><h2 id="cabinet-agents-title">Your agents</h2></div><button className="button button--primary button--small" onClick={onCreateAgent} type="button"><Bot /> Create an agent</button></header>
-              {myAgents.length ? <div className="cabinet-agents__grid">{myAgents.map((agent) => <CabinetAgentCard key={agent.agentAddress} agent={agent} automation={snapshot.agentAutomation?.[agent.agentAddress.toLowerCase()]} busy={trainingBusyAgentAddress?.toLowerCase() === agent.agentAddress.toLowerCase()} highlighted={agent.agentAddress.toLowerCase() === createdAgentNotice?.agentAddress.toLowerCase()} onFund={onFundAgent} onToggleTraining={onToggleTraining} />)}</div> : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title="No agent profiles in this cabinet yet" copy="Create an agent to display its wallet and status here." /></div>}
+              {myAgents.length ? <div className="cabinet-agents__grid">{myAgents.map((agent) => <CabinetAgentCard key={agent.agentAddress} agent={agent} automation={snapshot.agentAutomation?.[agent.agentAddress.toLowerCase()]} busy={trainingBusyAgentAddress?.toLowerCase() === agent.agentAddress.toLowerCase()} highlighted={agent.agentAddress.toLowerCase() === createdAgentNotice?.agentAddress.toLowerCase()} isPrimary={agent.agentAddress.toLowerCase() === primaryAgentAddress?.toLowerCase()} onFund={onFundAgent} onSetPrimary={onSetPrimaryAgent} onToggleTraining={onToggleTraining} />)}</div> : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title="No agent profiles in this cabinet yet" copy="Create an agent to display its wallet and status here." /></div>}
             </section>
           ) : null}
           {cabinetSection === 'orders' ? <section className="client-orders cabinet-section-panel" aria-labelledby="client-orders-title">
@@ -2534,6 +2557,7 @@ export default function App() {
   const [workspaceMode, setWorkspaceMode] = useState(() => ['dapp', 'leaderboard', 'disputes'].includes(viewFromLocation()));
   const [trustModel, setTrustModel] = useState<TrustModel | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<string>('');
+  const [primaryAgentAddress, setPrimaryAgentAddress] = useState<string | null>(null);
   const [registryProfile, setRegistryProfile] = useState<string | null>(null);
   const [hireAgentAddress, setHireAgentAddress] = useState<string | null>(null);
   const [marketCategory, setMarketCategory] = useState<MarketCategory>('ALL');
@@ -2564,9 +2588,40 @@ export default function App() {
     }
   });
 
-  const hubAgent = activeAddress
-    ? snapshot?.agents.find((agent) => agent.agentAddress.toLowerCase() === activeAddress.toLowerCase() || agent.wallet?.controllerAddress.toLowerCase() === activeAddress.toLowerCase())
-    : undefined;
+  const controllerAgents = useMemo(() => {
+    if (!activeAddress || !snapshot) return [];
+    const controllerAddress = activeAddress.toLowerCase();
+    return snapshot.agents.filter((agent) => agent.agentAddress.toLowerCase() === controllerAddress || agent.wallet?.controllerAddress.toLowerCase() === controllerAddress);
+  }, [activeAddress, snapshot]);
+
+  useEffect(() => {
+    if (!activeAddress) {
+      setPrimaryAgentAddress(null);
+      return;
+    }
+    const addresses = new Set(controllerAgents.map((agent) => agent.agentAddress.toLowerCase()));
+    let storedPrimary: string | null = null;
+    try {
+      storedPrimary = window.localStorage.getItem(primaryAgentStorageKey(activeAddress));
+    } catch {
+      // The Cabinet still works when storage is unavailable.
+    }
+    const fallback = controllerAgents.find((agent) => agent.agentAddress.toLowerCase() === storedPrimary?.toLowerCase()) ?? controllerAgents[0];
+    setPrimaryAgentAddress((current) => current && addresses.has(current.toLowerCase()) ? current : fallback?.agentAddress ?? null);
+  }, [activeAddress, controllerAgents]);
+
+  const setPrimaryAgent = useCallback((agent: ReputationSnapshot) => {
+    if (!activeAddress || agent.wallet?.controllerAddress.toLowerCase() !== activeAddress.toLowerCase()) return;
+    setPrimaryAgentAddress(agent.agentAddress);
+    try {
+      window.localStorage.setItem(primaryAgentStorageKey(activeAddress), agent.agentAddress);
+    } catch {
+      // Keeping the current selection in memory is sufficient for this session.
+    }
+    setToast({ tone: 'success', message: `${agent.displayName} is now the primary agent. Deposit and Hub actions target this wallet.` });
+  }, [activeAddress]);
+
+  const hubAgent = controllerAgents.find((agent) => agent.agentAddress.toLowerCase() === primaryAgentAddress?.toLowerCase()) ?? controllerAgents[0];
   const trainingAgentAddress = hubAgent?.agentAddress;
 
   const handleDisconnect = useCallback(() => {
@@ -2859,7 +2914,7 @@ export default function App() {
             {isDappView ? <button className="icon-button icon-button--top" disabled={busyKey !== null} onClick={() => void loadDashboard()} type="button" aria-label="Refresh dashboard"><RefreshCcw className={loading ? 'spin' : ''} /></button> : null}
             <LanguageSwitcher />
             {!isDappView ? <button className="button button--small button--workspace-entry" onClick={() => changeView('dapp')} type="button"><LayoutDashboard /> <span>{t('Cabinet')}</span></button> : null}
-            {isDappView && activeIsConnected ? <WalletHeader activeAddress={activeAddress} activeIsConnected={activeIsConnected} agentAddress={hubAgent?.agentAddress} canDeposit={Boolean(hubAgent)} onOpenConnectModal={() => setWalletModalOpen(true)} onDeposit={() => { if (hubAgent) setFundingAgent(hubAgent); }} onDisconnect={handleDisconnect} /> : null}
+            {isDappView && activeIsConnected ? <WalletHeader activeAddress={activeAddress} activeIsConnected={activeIsConnected} primaryAgent={hubAgent} controllerAgents={controllerAgents} canDeposit={Boolean(hubAgent)} onOpenConnectModal={() => setWalletModalOpen(true)} onDeposit={() => { if (hubAgent) setFundingAgent(hubAgent); }} onSelectPrimaryAgent={(agentAddress) => { const agent = controllerAgents.find((candidate) => candidate.agentAddress === agentAddress); if (agent) setPrimaryAgent(agent); }} onDisconnect={handleDisconnect} /> : null}
           </div>
         </header>
 
@@ -2878,7 +2933,7 @@ export default function App() {
             <>
               {view === 'overview' ? <Overview snapshot={snapshot} onView={changeView} /> : null}
               {view === 'protocol' ? <AgentProtocol onView={changeView} /> : null}
-              {view === 'dapp' ? <DappDashboard snapshot={snapshot} trainingReports={trainingReports} connectedAddress={activeAddress} onConnect={connectAgent} onPublish={() => requestPublish()} onCreateAgent={requestCreateAgent} onView={changeView} onFundAgent={setFundingAgent} onToggleTraining={toggleAgentTraining} trainingBusyAgentAddress={busyKey?.startsWith('training:') ? busyKey.slice('training:'.length) : undefined} onRunAgent={runAgentTask} createdAgentNotice={createdAgentNotice} onDismissCreatedAgent={() => setCreatedAgentNotice(null)} onAccept={(deliverable) => void perform(`accept:${deliverable.taskId}`, 'Result accepted. Settlement and reputation are finalized.', async () => {
+              {view === 'dapp' ? <DappDashboard snapshot={snapshot} trainingReports={trainingReports} connectedAddress={activeAddress} onConnect={connectAgent} onPublish={() => requestPublish()} onCreateAgent={requestCreateAgent} onView={changeView} onFundAgent={setFundingAgent} primaryAgentAddress={hubAgent?.agentAddress} onSetPrimaryAgent={setPrimaryAgent} onToggleTraining={toggleAgentTraining} trainingBusyAgentAddress={busyKey?.startsWith('training:') ? busyKey.slice('training:'.length) : undefined} onRunAgent={runAgentTask} createdAgentNotice={createdAgentNotice} onDismissCreatedAgent={() => setCreatedAgentNotice(null)} onAccept={(deliverable) => void perform(`accept:${deliverable.taskId}`, 'Result accepted. Settlement and reputation are finalized.', async () => {
                 if (!isArcMode) return api.acceptDeliverable(deliverable.id);
                 const task = tasksById.get(deliverable.taskId);
                 if (!task?.chainTaskId) throw new Error('The work order has no Arc task ID.');
