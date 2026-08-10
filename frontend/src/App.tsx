@@ -793,12 +793,12 @@ function RegisterAgentModal({
     allowTransactionPreparation: false,
   });
   const [formError, setFormError] = useState<string | null>(null);
+  const [activeStep, setActiveStep] = useState<1 | 2>(1);
 
   const update = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm((current) => ({ ...current, [key]: value }));
   const splitList = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
 
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
+  const prepareRegistration = () => {
     const name = form.displayName.trim();
     const description = form.description.trim();
     const inputTypes = splitList(form.inputTypes);
@@ -808,6 +808,10 @@ function RegisterAgentModal({
     const perTaskLimitUsdc = form.perTaskLimitUsdc.trim();
     const humanApprovalAboveUsdc = form.humanApprovalAboveUsdc.trim();
     setFormError(null);
+    if (name.length < 2) {
+      setFormError('Give the agent a name with at least 2 characters.');
+      return null;
+    }
     if (description.length < 20) {
       setFormError('Describe the agent in at least 20 characters so creators can judge fit before assigning work.');
       return;
@@ -852,12 +856,31 @@ function RegisterAgentModal({
       },
       updatedAt: Math.floor(Date.now() / 1000),
     };
+    return { name, capabilityManifest };
+  };
+
+  const advance = () => {
+    if (!prepareRegistration()) return;
+    setActiveStep(2);
+  };
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (activeStep === 1) {
+      advance();
+      return;
+    }
+    const registration = prepareRegistration();
+    if (!registration) {
+      setActiveStep(1);
+      return;
+    }
     try {
       if (!address) throw new Error('Connect the agent owner wallet before registering an agent.');
       const session = await authenticateWallet(address, (message) => signMessageAsync({ message }));
       // Use the just-issued session directly. This avoids relying on a later
       // sessionStorage read between wallet approval and Circle provisioning.
-      await onRegister({ displayName: name, capabilityManifest, provisionWallet: true }, session.token);
+      await onRegister({ displayName: registration.name, capabilityManifest: registration.capabilityManifest, provisionWallet: true }, session.token);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Registration was cancelled.');
     }
@@ -866,54 +889,67 @@ function RegisterAgentModal({
   return (
     <Modal className="modal--agent-register" eyebrow="Agent setup" title="Configure the agent" onClose={onClose}>
       <form className="form-grid" onSubmit={submit}>
-        <div className="agent-setup-progress agent-setup-progress--two field--wide"><span className="agent-setup-progress__active">01 Profile &amp; limits</span><span>02 Circle wallet</span></div>
-        <div className="form-note field--wide"><Bot /><span>Your connected wallet remains the controller. PACT creates a separate Circle smart wallet for the agent after confirmation.</span></div>
-        <div className="registration-section field--wide"><span>01 / AGENT IDENTITY</span><strong>Name the agent and set its operating envelope</strong><small>Define the public capability manifest that creators use to match work to this agent.</small></div>
-        <div className="wallet-mode wallet-mode--active field--wide"><span><strong>Circle smart wallet <em>Required</em></strong><small>A dedicated Circle Arc smart-contract account is created for this agent. Your connected wallet remains its authenticated controller.</small></span><ShieldCheck /></div>
-        <label className="field">
-          <span>{t('Display name')}</span>
-          <input required minLength={2} maxLength={80} value={form.displayName} placeholder="e.g. Atlas Research Agent" onChange={(event) => update('displayName', event.target.value)} />
-        </label>
-        <label className="field">
-          <span>Primary specialty</span>
-          <select value={form.specialty} onChange={(event) => update('specialty', event.target.value)}>
-            <option>Research &amp; analysis</option>
-            <option>Engineering &amp; code</option>
-            <option>Security &amp; policy</option>
-            <option>Data &amp; documents</option>
-            <option>Creative &amp; media</option>
-            <option>Operations &amp; coordination</option>
-          </select>
-        </label>
-        <div className="registration-section field--wide"><span>02 / WORK CONTROLS</span><strong>Set the agent's operating limits</strong><small>These limits become part of the signed agent profile. Settlement always stays bounded by the task escrow.</small></div>
-        <label className="field">
-          <span>Per-task wallet cap / USDC</span>
-          <input min="1" step="1" type="number" required value={form.perTaskLimitUsdc} onChange={(event) => update('perTaskLimitUsdc', event.target.value)} />
-        </label>
-        <label className="field field--wide">
-          <span>Human approval above / USDC <small>optional</small></span>
-          <input min="1" step="1" type="number" value={form.humanApprovalAboveUsdc} placeholder="Leave empty for none" onChange={(event) => update('humanApprovalAboveUsdc', event.target.value)} />
-        </label>
-        <details className="agent-manifest-advanced field--wide">
-          <summary><span>Advanced manifest</span><small>Edit commands, inputs, evidence, and transaction preparation when the default fields need more detail.</small></summary>
-          <div className="agent-manifest-advanced__fields">
-            <label className="field field--wide"><span>Capability description</span><textarea required minLength={20} maxLength={500} rows={3} value={form.description} placeholder="What can this agent reliably do, and where does it stop?" onChange={(event) => update('description', event.target.value)} /></label>
-            <label className="field"><span>Accepted inputs</span><input required value={form.inputTypes} placeholder="PDF, URLs, task brief" onChange={(event) => update('inputTypes', event.target.value)} /></label>
-            <label className="field"><span>Produced outputs</span><input required value={form.outputTypes} placeholder="Report, JSON, hash" onChange={(event) => update('outputTypes', event.target.value)} /></label>
-            <label className="field"><span>Tools / integrations</span><input required value={form.tools} placeholder="HTTPS, Python, repository sandbox" onChange={(event) => update('tools', event.target.value)} /></label>
-            <label className="field"><span>Evidence returned</span><input required value={form.evidenceMethods} placeholder="Source manifest, test receipt" onChange={(event) => update('evidenceMethods', event.target.value)} /></label>
-            <label className="registration-check field--wide"><input type="checkbox" checked={form.allowTransactionPreparation} onChange={(event) => update('allowTransactionPreparation', event.target.checked)} /><span><strong>Allow transaction preparation</strong><small>Only prepares unsigned Arc transactions; signing remains subject to the connected wallet policy.</small></span></label>
-            <div className="form-note form-note--muted field--wide"><ShieldCheck /><span>Secrets never belong in this manifest. Only public commands, limits, and evidence policy are signed.</span></div>
+        <div className="agent-setup-progress agent-setup-progress--two field--wide">
+          <button className={activeStep === 1 ? 'agent-setup-progress__active' : ''} type="button" onClick={() => setActiveStep(1)}>01 Profile &amp; limits</button>
+          <button className={activeStep === 2 ? 'agent-setup-progress__active' : ''} type="button" onClick={advance}>02 Circle wallet</button>
+        </div>
+        {activeStep === 1 ? <>
+          <div className="form-note field--wide"><Bot /><span>Set the agent profile and its safe operating limits. The Circle smart wallet is created only after your confirmation on the next screen.</span></div>
+          <div className="registration-section field--wide"><span>01 / AGENT IDENTITY</span><strong>Name the agent and set its operating envelope</strong><small>Define the public capability manifest that creators use to match work to this agent.</small></div>
+          <label className="field">
+            <span>{t('Display name')}</span>
+            <input required minLength={2} maxLength={80} value={form.displayName} placeholder="e.g. Atlas Research Agent" onChange={(event) => update('displayName', event.target.value)} />
+          </label>
+          <label className="field">
+            <span>Primary specialty</span>
+            <select value={form.specialty} onChange={(event) => update('specialty', event.target.value)}>
+              <option>Research &amp; analysis</option>
+              <option>Engineering &amp; code</option>
+              <option>Security &amp; policy</option>
+              <option>Data &amp; documents</option>
+              <option>Creative &amp; media</option>
+              <option>Operations &amp; coordination</option>
+            </select>
+          </label>
+          <div className="registration-section field--wide"><span>02 / WORK CONTROLS</span><strong>Set the agent's operating limits</strong><small>These limits become part of the signed agent profile. Settlement always stays bounded by the task escrow.</small></div>
+          <label className="field">
+            <span>Per-task wallet cap / USDC</span>
+            <input min="1" step="1" type="number" required value={form.perTaskLimitUsdc} onChange={(event) => update('perTaskLimitUsdc', event.target.value)} />
+          </label>
+          <label className="field field--wide">
+            <span>Human approval above / USDC <small>optional</small></span>
+            <input min="1" step="1" type="number" value={form.humanApprovalAboveUsdc} placeholder="Leave empty for none" onChange={(event) => update('humanApprovalAboveUsdc', event.target.value)} />
+          </label>
+          <details className="agent-manifest-advanced field--wide">
+            <summary><span>Advanced manifest</span><small>Edit commands, inputs, evidence, and transaction preparation when the default fields need more detail.</small></summary>
+            <div className="agent-manifest-advanced__fields">
+              <label className="field field--wide"><span>Capability description</span><textarea required minLength={20} maxLength={500} rows={3} value={form.description} placeholder="What can this agent reliably do, and where does it stop?" onChange={(event) => update('description', event.target.value)} /></label>
+              <label className="field"><span>Accepted inputs</span><input required value={form.inputTypes} placeholder="PDF, URLs, task brief" onChange={(event) => update('inputTypes', event.target.value)} /></label>
+              <label className="field"><span>Produced outputs</span><input required value={form.outputTypes} placeholder="Report, JSON, hash" onChange={(event) => update('outputTypes', event.target.value)} /></label>
+              <label className="field"><span>Tools / integrations</span><input required value={form.tools} placeholder="HTTPS, Python, repository sandbox" onChange={(event) => update('tools', event.target.value)} /></label>
+              <label className="field"><span>Evidence returned</span><input required value={form.evidenceMethods} placeholder="Source manifest, test receipt" onChange={(event) => update('evidenceMethods', event.target.value)} /></label>
+              <label className="registration-check field--wide"><input type="checkbox" checked={form.allowTransactionPreparation} onChange={(event) => update('allowTransactionPreparation', event.target.checked)} /><span><strong>Allow transaction preparation</strong><small>Only prepares unsigned Arc transactions; signing remains subject to the connected wallet policy.</small></span></label>
+              <div className="form-note form-note--muted field--wide"><ShieldCheck /><span>Secrets never belong in this manifest. Only public commands, limits, and evidence policy are signed.</span></div>
+            </div>
+          </details>
+        </> : <>
+          <div className="form-note field--wide"><WalletCards /><span>Review the controller and limits. Creating the wallet registers a dedicated Circle smart-contract account for this agent on Arc Testnet.</span></div>
+          <div className="registration-section field--wide"><span>02 / CIRCLE WALLET</span><strong>Create the agent identity</strong><small>The controller wallet authorizes this action; it does not become the agent's settlement wallet.</small></div>
+          <div className="wallet-mode wallet-mode--active field--wide"><span><strong>Circle smart wallet <em>Required</em></strong><small>PACT will create a dedicated Arc smart-contract account. It is the agent identity for funding, task claims, proofs, and settlement.</small></span><ShieldCheck /></div>
+          <div className="agent-wallet-review field--wide">
+            <div><span>AGENT</span><strong>{form.displayName.trim() || 'Unnamed agent'}</strong><small>{form.specialty}</small></div>
+            <div><span>PER-TASK CAP</span><strong>{form.perTaskLimitUsdc || '—'} USDC</strong><small>{form.humanApprovalAboveUsdc ? `Approval above ${form.humanApprovalAboveUsdc} USDC` : 'No manual approval threshold'}</small></div>
+            <div><span>CONTROLLER</span><strong>{address ? shortAddress(address) : 'Not connected'}</strong><small>Can manage the agent; cannot replace its wallet.</small></div>
           </div>
-        </details>
+          {address ? <div className="registration-wallet-note field--wide"><WalletCards /><span>Circle wallet creation is bound to the connected controller: <strong>{shortAddress(address)}</strong></span></div> : null}
+        </>}
         {formError ? <div className="form-error field--wide" role="alert"><AlertTriangle /> {formError}</div> : null}
-        {address ? <div className="registration-wallet-note field--wide"><WalletCards /><span>Registration is bound to the connected wallet: <strong>{shortAddress(address)}</strong></span></div> : null}
         <div className="modal__actions field--wide">
-          <button className="button button--ghost" type="button" onClick={onClose}>Cancel</button>
-          <button className="button button--primary" type="submit" disabled={busy}>
+          <button className="button button--ghost" type="button" onClick={activeStep === 1 ? onClose : () => { setFormError(null); setActiveStep(1); }}>{activeStep === 1 ? 'Cancel' : 'Back'}</button>
+          {activeStep === 1 ? <button className="button button--primary" type="button" onClick={advance}>Continue to Circle wallet <ArrowRight /></button> : <button className="button button--primary" type="submit" disabled={busy}>
             {busy ? <RefreshCcw className="spin" /> : <BadgeCheck />}
             Create Circle wallet & register agent
-          </button>
+          </button>}
         </div>
       </form>
     </Modal>
@@ -1216,7 +1252,7 @@ function TrainingHubBoard({
               <article className={`hub-row ${template.inProgressToday ? 'hub-row--executing' : template.completedToday ? 'hub-row--verified' : ''}`} key={template.id} role="row">
                 <div className="hub-row__identity" role="cell">
                   <span className={`hub-row__icon hub-row__icon--${hub.level}`}><Icon aria-hidden="true" /></span>
-                  <span><strong>{template.title}</strong><small>{contract.packet} / {template.expectedMinutes} MIN</small></span>
+                  <span><strong>{template.title}</strong><small>{contract.packet} / COMPLEXITY {hub.difficulty} OF 5</small></span>
                 </div>
                 <div className="hub-lifecycle" role="cell" aria-label={`Agent state: ${lifecycleState}`}>
                   <span className={!template.inProgressToday && !template.completedToday ? 'hub-lifecycle__stage hub-lifecycle__stage--active' : 'hub-lifecycle__stage'}><i />Allocate</span><b /><span className={template.inProgressToday ? 'hub-lifecycle__stage hub-lifecycle__stage--active' : 'hub-lifecycle__stage'}><i />Execute</span><b /><span className={template.completedToday ? 'hub-lifecycle__stage hub-lifecycle__stage--active' : 'hub-lifecycle__stage'}><i />Verify</span>
