@@ -312,6 +312,8 @@ p { color: var(--muted); }
   box-shadow: 0 13px 34px rgba(145, 68, 37, .22);
 }
 .button--primary:hover { color: #080808; background: var(--rust-hot); border-color: var(--rust-hot); box-shadow: 0 0 28px rgba(203, 103, 63, .3); }
+.button:disabled, .button--locked:disabled { cursor: not-allowed; color: rgba(239, 233, 224, .48); border-color: rgba(203, 103, 63, .22); background: rgba(203, 103, 63, .12); box-shadow: none; opacity: .72; }
+.button:disabled:hover, .button--locked:disabled:hover { color: rgba(239, 233, 224, .48); border-color: rgba(203, 103, 63, .22); background: rgba(203, 103, 63, .12); box-shadow: none; }
 .button--outline, .icon-button, .language-switcher {
   color: var(--ink); background: rgba(255, 255, 255, .025); border-color: var(--line-strong);
 }

@@ -1008,9 +1008,9 @@ function RegisterAgentModal({
         {formError ? <div className="form-error field--wide" role="alert"><AlertTriangle /> {formError}</div> : null}
         <div className="modal__actions field--wide">
           <button className="button button--ghost" type="button" onClick={activeStep === 1 ? onClose : () => { setFormError(null); setActiveStep(1); }}>{activeStep === 1 ? 'Cancel' : 'Back'}</button>
-          {activeStep === 1 ? <button className="button button--primary" type="button" onClick={advance} disabled={form.displayName.trim().length < 2} title={form.displayName.trim().length < 2 ? 'Enter an agent name first' : undefined}>Continue to Circle wallet <ArrowRight /></button> : <button className="button button--primary" type="submit" disabled={busy || !walletTermsAccepted} title={!walletTermsAccepted ? 'Confirm the Circle wallet terms first' : undefined}>
+          {activeStep === 1 ? <button className="button button--primary" type="button" onClick={advance} disabled={form.displayName.trim().length < 2} title={form.displayName.trim().length < 2 ? 'Enter an agent name first' : undefined}>Continue to Circle wallet <ArrowRight /></button> : <button className={walletTermsAccepted && !busy ? 'button button--primary' : 'button button--primary button--locked'} type="submit" disabled={busy || !walletTermsAccepted} title={!walletTermsAccepted ? 'Accept the Circle wallet terms first' : undefined}>
             {busy ? <RefreshCcw className="spin" /> : <BadgeCheck />}
-            {busy ? 'Creating Circle wallet…' : 'Create Circle wallet & register agent'}
+            {busy ? 'Creating Circle wallet…' : walletTermsAccepted ? 'Create Circle wallet & register agent' : 'Accept terms to create wallet'}
           </button>}
         </div>
       </form>
@@ -2158,12 +2158,6 @@ function DappDashboard({
   const [cabinetSection, setCabinetSection] = useState<CabinetSection>('overview');
   const connected = Boolean(connectedAddress);
 
-  // Registration completes in a modal. When it closes, land the owner on the
-  // newly created identity rather than leaving them on the Cabinet overview.
-  useEffect(() => {
-    if (createdAgentNotice) setCabinetSection('agents');
-  }, [createdAgentNotice?.agentAddress]);
-
   if (!connected) {
     return (
       <div className="view-stack dapp-page">
@@ -2276,7 +2270,7 @@ function DappDashboard({
           ) : null}
 
           {cabinetSection === 'agents' ? (
-            <section className="cabinet-agents cabinet-section-panel" id="cabinet-agents" aria-labelledby="cabinet-agents-title">
+            <section className="cabinet-agents cabinet-section-panel" aria-labelledby="cabinet-agents-title">
               <header className="cabinet-section-header"><div><div className="eyebrow">AGENT IDENTITIES</div><h2 id="cabinet-agents-title">Your agents</h2></div><button className="button button--primary button--small" onClick={onCreateAgent} type="button"><Bot /> Create an agent</button></header>
               {myAgents.length ? <div className="cabinet-agents__grid">{myAgents.map((agent) => <CabinetAgentCard key={agent.agentAddress} agent={agent} automation={snapshot.agentAutomation?.[agent.agentAddress.toLowerCase()]} busy={trainingBusyAgentAddress?.toLowerCase() === agent.agentAddress.toLowerCase()} highlighted={agent.agentAddress.toLowerCase() === createdAgentNotice?.agentAddress.toLowerCase()} isPrimary={agent.agentAddress.toLowerCase() === primaryAgentAddress?.toLowerCase()} onFund={onFundAgent} onSetPrimary={onSetPrimaryAgent} onToggleTraining={onToggleTraining} />)}</div> : <div className="dapp-empty-state"><EmptyState icon={<Bot />} title="No agent profiles in this cabinet yet" copy="Create an agent to display its wallet and status here." /></div>}
             </section>
